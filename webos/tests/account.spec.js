@@ -13,6 +13,9 @@ async function mockAccount(page, { status = 'approved', startError = false, addo
     if (u.pathname.endsWith('tv-logins-exchange')) return json(token);
     if (u.pathname === '/auth/v1/user') return json(user);
     if (u.pathname === '/auth/v1/token') return json({ ...token, access_token: 'fixture-renewed-access', refresh_token: 'fixture-renewed-refresh' });
+    if (u.pathname.endsWith('sync_pull_profiles')) return json([{profile_index:1,name:'Principal'}]);
+    if (u.pathname.endsWith('sync_pull_profile_locks')) return json([{profile_index:1,pin_enabled:false}]);
+    if (u.pathname.endsWith('sync_pull_library')) return json([]);
     if (u.pathname.endsWith('get_sync_owner')) return json('fixture-sync-owner');
     if (u.pathname === '/rest/v1/addons') return json([{ url: 'https://account-addon.fixture/configuration/manifest.json', name: 'Addon da conta', sort_order: 0, enabled: true, profile_id: 1 }, { url: 'https://disabled.fixture/manifest.json', enabled: false }]);
     if (u.pathname === '/auth/v1/logout') return route.fulfill({ status: 204 });

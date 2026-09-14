@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+import { captureProfile } from './profiles.js';
 const KEY = 'nuvio-fork.webos.v1';
 export const initial = () => ({ addons: [], settings: { avoidDvOnly: true, autoPlay: false, preferences: {} }, progress: {}, library: {}, watched: {} });
 export function readState(storage) {
@@ -9,7 +10,12 @@ export function readState(storage) {
   } catch { return initial(); }
 }
 export function saveState(storage, state) {
-  try { storage.setItem(KEY, JSON.stringify(state)); return true; }
+  try {
+    captureProfile(state);
+    // Active data already lives at the top level; avoid serializing a duplicate copy.
+    const packed = state.profileStore ? { ...state, profileStore: { ...state.profileStore, buckets: Object.fromEntries(Object.entries(state.profileStore.buckets).filter(([key]) => key !== state.profileStore.activeKey)) } } : state;
+    storage.setItem(KEY, JSON.stringify(packed)); return true;
+  }
   catch { return false; }
 }
 export const progressKey = (type, id) => JSON.stringify([type, id]);

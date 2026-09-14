@@ -14,7 +14,7 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 | `src/core/account.js`, `account-sync.js` | `core/auth/AuthManager.kt`, `ui/screens/account/AccountViewModel.kt`, `core/sync/AddonSyncService.kt`: vinculação, renovação, resolução de proprietário e leitura de addons do perfil principal. Ver [ACCOUNT.md](ACCOUNT.md). |
 | `src/core/presentation.js`, opções em `app.js`/`style.css` | `LayoutPreferenceDataStore`, `ModernHomeContent`, `ModernSidebarBlurPanel`, `HeroSection`, `EpisodesSection`, `CastSection`. Ver [UI_REFERENCE.md](UI_REFERENCE.md) para dimensões e diferenças. |
 | `src/core/subtitles.js`, `media-tracks.js`, `player-tracks.js` | Contrato `SubtitleRepositoryImpl`, painéis `AudioSelectionOverlay`/`SubtitleSelectionOverlay`/`PanelComponents`, seleção por APIs web LG e renderização SRT/VTT local. Ver [PLAYER.md](PLAYER.md). |
-| `src/core/storage.js` | Nova persistência webOS; não compartilha o formato Android DataStore nem implementa a sincronização original. |
+| `src/core/storage.js`, `profiles.js`, `profile-screen.js` | Persistência por usuário/perfil, tela `ProfileSelectionScreen`, PIN `ProfileSyncService`, leitura paginada `SupabaseLibrarySyncRemoteDataSource`. Ver [PROFILES.md](PROFILES.md); envio à nuvem e histórico remoto pendentes. |
 | `src/app.js`, `src/remote.js` | Nova implementação de plataforma para os fluxos do fork; Compose/Media3 não são carregados no webOS. |
 
 ## Diferenças deliberadas

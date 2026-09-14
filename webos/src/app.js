@@ -7,6 +7,8 @@ import { createAccountClient } from './core/account.js';
 import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
 import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode, castMembers } from './core/presentation.js';
 import { installTrackControls } from './player-tracks.js';
+import { initializeProfiles, activateProfile, leaveAccountProfiles, mergeLibrary, setLibraryItem } from './core/profiles.js';
+import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
 import libraryIcon from '../public/assets/icons/sidebar_library.svg';
@@ -18,6 +20,9 @@ const state = readState(localStorage);
 state.settings.layout = readLayout(state.settings.layout);
 const layout = state.settings.layout;
 const account = createAccountClient({ storage: localStorage });
+initializeProfiles(state);
+let profileAccess = null;
+if (!account.hasSession) activateProfile(state, null);
 // Do not display another account's imported add-ons after local session loss.
 state.addons = state.addons.filter(a => !a.accountOwner || a.accountOwner === account.user?.id);
 if (state.accountSync?.userId !== account.user?.id) delete state.accountSync;
@@ -99,6 +104,7 @@ function navigate(next, replace = false) {
 function back() {
   const dialog = root.querySelector('[role=dialog]');
   if (dialog) { (dialog.querySelector('[data-dismiss]') || dialog.querySelector('button'))?.click(); return; }
+  if (route.name === 'profiles') { toast('Escolha um perfil para continuar.'); return; }
   if (root.querySelector('.sidebar') && !stack.length) {
     if (!drawerOpen) { setDrawer(true); return; }
     if (window.webOSSystem?.platformBack) window.webOSSystem.platformBack();
@@ -163,12 +169,13 @@ function notice(main, message) { main.append(el('p', { class: 'notice', role: 's
 function failure(main, error, retry) { main.append(el('div', { class: 'empty' }, el('h2', {}, 'Não foi possível carregar'), el('p', {}, error.message), button('Tentar novamente', retry))); }
 const current = signal => !signal.aborted;
 async function render() {
+  if (account.hasSession && (!profileAccess || profileAccess.userId !== account.user?.id) && !['account-login', 'profiles'].includes(route.name)) { route = { name: 'profiles', automatic: true }; stack = []; }
   clearTimeout(heroTimer); clearTimeout(pillTimer); heroRequest?.abort(); request?.abort(); request = new AbortController(); const signal = request.signal;
   if (cleanupPlayer) { cleanupPlayer(); cleanupPlayer = null; player = null; }
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal)) focusFirst();
   } catch (error) {
@@ -299,15 +306,27 @@ async function showHome(main, signal) {
   if (first) updateHomeHero(first);
   else notice(rows, 'Nenhum conteúdo encontrado.');
 }
-function showLibrary(main) {
+function showLibrary(main, signal) {
   heading(main, '', 'Biblioteca');
+  const status = el('p', { class: 'library-sync-status muted', role: 'status' }, profileAccess ? `${profileAccess.name} · ${state.librarySync ? `${state.librarySync.count} título(s) da conta` : 'Biblioteca da conta ainda não carregada'}. Alterações nesta TV são locais.` : 'Favoritos salvos nesta TV.');
+  let selectedType = route.libraryType || 'movie', pageIndex = route.libraryPage || 0;
   const rows = el('div', { class: 'library-content' });
   const draw = type => {
-    const saved = Object.values(state.library).filter(m => m.type === type);
-    rows.replaceChildren(saved.length ? el('div', { class: 'grid' }, saved.map(m => card(m, null))) : el('div', { class: 'library-empty' }, icon('library'), el('h2', {}, `Nenhum ${type === 'movie' ? 'filme' : 'série'} ainda`), el('p', { class: 'muted' }, 'Comece a salvar seus favoritos para vê-los aqui')));
+    selectedType = type; route.libraryType = type;
+    const saved = Object.values(state.library).filter(m => m.type === type).sort((a,b) => (b.addedAt || 0) - (a.addedAt || 0));
+    pageIndex = Math.min(pageIndex, Math.max(0, Math.ceil(saved.length / 100) - 1)); route.libraryPage = pageIndex;
+    rows.replaceChildren(saved.length ? el('div', { class: 'grid' }, saved.slice(pageIndex * 100, (pageIndex + 1) * 100).map(m => card(m, null))) : el('div', { class: 'library-empty' }, icon('library'), el('h2', {}, `Nenhum ${type === 'movie' ? 'filme' : 'série'} ainda`), el('p', { class: 'muted' }, 'Comece a salvar seus favoritos para vê-los aqui')));
+    if (saved.length > 100) rows.append(el('div', { class: 'toolbar' }, button('Página anterior', () => { pageIndex--; draw(type); rows.querySelector('.card')?.focus(); }, { disabled: pageIndex === 0 }), el('span', { class: 'muted' }, `Página ${pageIndex + 1} de ${Math.ceil(saved.length / 100)}`), button('Próxima página', () => { pageIndex++; draw(type); rows.querySelector('.card')?.focus(); }, { disabled: (pageIndex + 1) * 100 >= saved.length })));
     main.querySelectorAll('.library-tabs button').forEach(b => b.classList.toggle('selected', b.dataset.type === type));
   };
-  main.append(el('div', { class: 'library-tabs toolbar' }, ...[['movie', 'Filmes'], ['series', 'Séries']].map(([type, name]) => button(name, () => draw(type), { 'data-type': type }))), rows); draw('movie');
+  const tabs = el('div', { class: 'library-tabs toolbar' }, ...[['movie', 'Filmes'], ['series', 'Séries']].map(([type, name]) => button(name, () => { pageIndex = 0; draw(type); }, { 'data-type': type })));
+  if (profileAccess) tabs.append(button('Atualizar biblioteca', async event => {
+    const target = event.currentTarget; target.disabled = true; status.textContent = 'Carregando biblioteca da conta…';
+    try { const result = await syncLibrary(signal); if (!signal.aborted) { status.textContent = `${profileAccess.name} · ${result.count} título(s) da conta. Alterações nesta TV são locais.`; draw(selectedType); } }
+    catch (error) { if (!signal.aborted) status.textContent = error.message; }
+    finally { target.disabled = false; }
+  }));
+  main.append(tabs, status, rows); draw(selectedType);
 }
 function showAddons(main) {
   heading(main, '', 'Addons');
@@ -391,10 +410,10 @@ async function showDetail(main, signal) {
   const go = (id = meta.id, episode) => navigate({ name: 'streams', meta, addon, id, type: meta.type, episode });
   const key = progressKey(meta.type, meta.id);
   const toggleLibrary = button(icon(state.library[key] ? 'check' : 'add'), () => {
-    if (state.library[key]) delete state.library[key];
+    if (!Object.hasOwn(state.libraryOverrides || {}, key) && Object.keys(state.libraryOverrides || {}).length >= 500) { toast('Limite de 500 alterações locais atingido neste perfil.'); return; }
+    if (state.library[key]) setLibraryItem(state, key, null);
     else {
-      state.library[key] = { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster, background: meta.background, releaseInfo: meta.releaseInfo };
-      const entries = Object.entries(state.library); if (entries.length > 500) delete state.library[entries[0][0]];
+      setLibraryItem(state, key, { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster, background: meta.background, releaseInfo: meta.releaseInfo });
     }
     persist(); toggleLibrary.replaceChildren(icon(state.library[key] ? 'check' : 'add'));
     toggleLibrary.setAttribute('aria-label', state.library[key] ? 'Remover da biblioteca' : 'Adicionar à biblioteca');
@@ -524,14 +543,53 @@ async function showStreams(main, signal) {
 }
 function syncSummary(result) {
   if (result.failed) return `${result.imported} addon(s) carregado(s); ${result.failed} não responderam. Tente sincronizar novamente.`;
-  return result.imported ? `${result.imported} addon(s) da conta carregado(s).` : 'Nenhum addon habilitado no perfil principal da conta.';
+  return result.imported ? `${result.imported} addon(s) da conta carregado(s).` : 'Nenhum addon habilitado neste perfil da conta.';
 }
 async function syncAccount(signal) {
-  const result = await importAccountAddons(account, state, { signal });
+  if (!profileAccess) throw Error('Selecione um perfil antes de sincronizar.');
+  const profileId = profileAccess.id;
+  const result = await importAccountAddons(account, state, { signal, profileId, addonProfileId: profileAccess.usesPrimaryAddons ? 1 : profileId });
   persist(); metadataCache.clear(); return result;
 }
+async function syncLibrary(signal) {
+  const access = profileAccess;
+  if (!access) throw Error('Selecione um perfil antes de carregar a biblioteca.');
+  const library = await account.library(access.id, signal);
+  if (signal.aborted || access !== profileAccess || account.user?.id !== access.userId) throw new DOMException('Cancelado', 'AbortError');
+  mergeLibrary(state, library, access.id); persist(); return state.librarySync;
+}
+async function signOutProfiles() {
+  const signedOutUser = account.user?.id;
+  request?.abort(); profileAccess = null;
+  const revoked = await account.signOut();
+  leaveAccountProfiles(state, signedOutUser); detachAccountAddons(state); state.guestMode = true; persist(); metadataCache.clear(); stack = [];
+  navigate({ name: 'settings', category: 'account' }, true);
+  if (!revoked) toast('Login removido desta TV. Não foi possível confirmar a revogação no servidor; gerencie dispositivos na conta Nuvio.');
+}
+async function showProfiles(main, signal) {
+  profileAccess = null; stack = []; metadataCache.clear();
+  await profileScreen(main, signal, { account, el, button, poster, automatic: route.automatic,
+    signOut: signOutProfiles,
+    choose: async profile => {
+      if (signal.aborted || !account.user) return;
+      activateProfile(state, account.user.id, profile);
+      profileAccess = { ...profile, userId: account.user.id }; state.guestMode = false; persist();
+      const results = await Promise.allSettled([syncAccount(signal), syncLibrary(signal)]);
+      if (signal.aborted) return;
+      if (!account.user) { profileAccess = null; leaveAccountProfiles(state); persist(); navigate({ name: 'welcome' }, true); return; }
+      const addonResult = results[0], libraryResult = results[1];
+      const messages = [];
+      if (addonResult.status === 'rejected') messages.push(addonResult.reason.message);
+      if (libraryResult.status === 'rejected') messages.push(`Biblioteca: ${libraryResult.reason.message}`);
+      const failedAddons = addonResult.status === 'rejected' || addonResult.value.failed;
+      stack = []; navigate(failedAddons ? { name: 'settings', category: 'account' } : { name: 'home' }, true);
+      if (messages.length) toast(messages.join(' '));
+      else if (failedAddons) toast(syncSummary(addonResult.value));
+    }
+  });
+}
 function authBrand() {
-  return el('div', { class: 'auth-brand-panel' }, el('img', { src: 'assets/wordmark.png', alt: 'Nuvio', class: 'auth-brand' }), el('h1', {}, 'Sua conta Nuvio.\nAgora na sua TV.'), el('p', {}, 'Conecte a conta que você já usa para carregar seus addons do perfil principal.'), el('small', {}, 'Você autoriza a vinculação no site do Nuvio, pelo celular.'));
+  return el('div', { class: 'auth-brand-panel' }, el('img', { src: 'assets/wordmark.png', alt: 'Nuvio', class: 'auth-brand' }), el('h1', {}, 'Sua conta Nuvio.\nAgora na sua TV.'), el('p', {}, 'Conecte a conta que você já usa para carregar os addons do seu perfil.'), el('small', {}, 'Você autoriza a vinculação no site do Nuvio, pelo celular.'));
 }
 function showWelcome(main) {
   main.append(authBrand(), el('div', { class: 'auth-pane welcome-pane' }, el('h2', {}, 'Bem-vindo ao Nuvio'), el('p', { class: 'muted' }, 'Entre na sua conta para começar.'),
@@ -564,19 +622,8 @@ function showAccountLogin(main, signal) {
         stop(); message.textContent = 'Conectando à sua conta…';
         await account.exchange(pairing, signal);
         if (signal.aborted) return;
-        qr.replaceChildren(); code.textContent = ''; countdown.textContent = ''; message.textContent = 'Conta conectada. Carregando seus addons…';
-        try {
-          const summary = await syncAccount(signal);
-          if (signal.aborted) return;
-          state.guestMode = false; persist(); stack = [];
-          navigate(summary.failed ? { name: 'settings', category: 'account' } : { name: 'home' }, true); toast(syncSummary(summary));
-        } catch (error) {
-          if (signal.aborted) return;
-          message.textContent = `Conta conectada. ${error.message}`;
-          cancel.remove();
-          const open = button('Abrir conta e tentar sincronizar', () => { stack = []; navigate({ name: 'settings', category: 'account' }, true); }, { class: 'primary' });
-          pane.append(open); open.focus();
-        }
+        state.guestMode = false; persist(); stack = []; profileAccess = null;
+        navigate({ name: 'profiles', automatic: true }, true);
       } else if (['expired', 'used', 'cancelled', 'denied'].includes(result.status)) {
         expire(result.status === 'expired' ? 'O código expirou. Gere um novo código.' : 'A vinculação foi encerrada. Gere um novo código para tentar novamente.');
       } else if (result.status === 'pending') timer = setTimeout(poll, result.interval * 1000);
@@ -620,7 +667,7 @@ function showSettings(main, signal) {
     switch (category[0]) {
       case 'account':
         if (account.user) {
-          content.append(el('p', { class: 'account-email' }, account.user.email), el('p', { class: 'muted' }, 'Conta conectada · Addons do perfil principal'));
+          content.append(el('p', { class: 'account-email' }, account.user.email), el('p', { class: 'muted' }, `Conta conectada · ${profileAccess?.name || 'Perfil'}`));
           const syncStatus = el('p', { class: 'account-sync-status', role: 'status' }, state.accountSync?.at ? syncSummary(state.accountSync) : 'Sincronize para carregar os addons da sua conta.');
           const sync = row('Sincronizar addons', 'Carregar os addons da conta nesta TV', async () => {
             if (sync.disabled) return; sync.disabled = true; syncStatus.textContent = 'Carregando addons da conta…';
@@ -633,15 +680,16 @@ function showSettings(main, signal) {
             const stay = button('Cancelar', () => { dialog.remove(); logout.focus(); });
             const leave = button('Sair desta TV', async () => {
               leave.disabled = true;
-              const revoked = await account.signOut();
-              detachAccountAddons(state); state.guestMode = true; persist(); metadataCache.clear(); stack = [];
-              navigate({ name: 'settings', category: 'account' }, true);
-              if (!revoked) toast('Login removido desta TV. Não foi possível confirmar a revogação no servidor; gerencie dispositivos na conta Nuvio.');
+              await signOutProfiles();
             }, { class: 'primary' });
             dialog.append(el('div', { class: 'toolbar' }, stay, leave)); main.append(dialog); stay.focus();
           });
-          content.append(syncStatus, sync, logout);
+          content.append(row('Trocar perfil', profileAccess?.name || 'Selecionar perfil', () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); }), syncStatus, sync, logout);
         } else content.append(row('Entrar com Nuvio', 'Vincular a TV pelo celular e carregar seus addons', () => navigate({ name: 'account-login' })));
+        break;
+      case 'profiles':
+        content.append(account.user ? row('Selecionar perfil', profileAccess?.name || 'Perfis da conta', () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); }) : row('Entrar com Nuvio', 'Vincular a conta para carregar seus perfis', () => navigate({ name: 'account-login' })));
+        content.append(el('p', { class: 'muted' }, 'Criação, edição de perfis e alteração de PIN ainda devem ser feitas no Nuvio de referência.'));
         break;
       case 'discovery':
         content.append(row('Addons', 'Gerenciar add-ons, ordem dos catálogos e coleções', () => navigate({ name: 'addons' })));
@@ -683,7 +731,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.5.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, addons do perfil principal e opções de layout disponíveis. Outros perfis, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.6.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, addons do perfil principal e opções de layout disponíveis. Outros perfis, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -822,10 +870,11 @@ async function boot() {
     const controller = new AbortController();
     try { await account.restore(controller.signal); }
     catch (error) {
-      if (!account.hasSession) { detachAccountAddons(state); persist(); }
+      if (!account.hasSession) { activateProfile(state, null); detachAccountAddons(state); persist(); }
       toast(error.message);
     }
   }
+  if (account.hasSession) route = { name: 'profiles', automatic: true };
   if (!account.hasSession && !state.guestMode && !state.addons.length) route = { name: 'welcome' };
   await render();
 }

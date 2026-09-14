@@ -92,3 +92,12 @@ usam a geometria 320 dp/raio 20 dp dos overlays Android e rolam pelo controle.
 A barra de posição é um controle web acessível. O restante da barra do player,
 editor completo, seleção automática de idiomas e personalizações dos badges
 continuam diferentes. Rastreabilidade e limites: [PLAYER.md](PLAYER.md).
+
+## Entrega 0.6 — seleção de perfis e biblioteca
+
+Perfis seguem as medidas de `ProfileSelectionScreen`: logo 44, título 44/18,
+cartões 152/gap 28, modo compacto 128/gap 16, avatares circulares 96 ou 82.
+PIN com teclado numérico é adaptação webOS. A biblioteca recebe dados da conta,
+status de importação e paginação de 100 cartões. Editor de perfis, fundos, avatares
+do catálogo e a organização avançada da biblioteca ainda divergem do Android.
+Ver [PROFILES.md](PROFILES.md).

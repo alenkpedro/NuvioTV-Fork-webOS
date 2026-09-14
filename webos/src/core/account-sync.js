@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { loadAddon, manifestURL, mapLimit } from './addons.js';
-export async function importAccountAddons(client, state, { signal, loader = loadAddon } = {}) {
+export async function importAccountAddons(client, state, { signal, loader = loadAddon, profileId = 1, addonProfileId = profileId } = {}) {
   const userId = client.user?.id;
   if (!userId) throw Error('Entre na conta Nuvio para sincronizar.');
-  const rows = await client.addons(signal);
+  const rows = await client.addons(signal, addonProfileId);
   const urls = new Set();
   const unique = rows.filter(row => { const url = manifestURL(row.url); if (urls.has(url)) return false; urls.add(url); return true; });
   const results = await mapLimit(unique, async row => {
     const addon = await loader(row.url, { signal });
     if (row.name?.trim()) addon.manifest.name = row.name.trim();
-    return { ...addon, accountOwner: userId };
+    return { ...addon, accountOwner: userId, accountProfile: profileId };
   }, signal);
-  if (signal?.aborted || client.user?.id !== userId) throw new DOMException('Cancelado', 'AbortError');
+  if (signal?.aborted || client.user?.id !== userId || (state.activeProfile && state.activeProfile.id !== profileId)) throw new DOMException('Cancelado', 'AbortError');
   const locals = state.addons.filter(a => !a.accountOwner);
   const resolved = [];
   for (let i = 0; i < results.length; i++) {
@@ -24,7 +24,7 @@ export async function importAccountAddons(client, state, { signal, loader = load
   for (const addon of resolved) if (!merged.has(addon.url)) merged.set(addon.url, addon);
   if (merged.size > 30) throw Error('A conta e os addons locais ultrapassam o limite de 30. Remova addons locais e tente novamente.');
   state.addons = [...merged.values()];
-  state.accountSync = { userId, profileId: 1, at: Date.now(), imported: resolved.length, failed: results.filter(r => r.error).length };
+  state.accountSync = { userId, profileId, addonProfileId, at: Date.now(), imported: resolved.length, failed: results.filter(r => r.error).length };
   return { ...state.accountSync, remote: unique.length };
 }
 export function detachAccountAddons(state) {

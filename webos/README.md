@@ -18,13 +18,13 @@ permite coexistir com outras versões do Nuvio. O índice aponta para um IPK
 versionado e contém seu SHA-256 e tamanho. O aplicativo não exige root.
 
 Para entrar com uma conta existente, use **Ajustes → Conta → Entrar com Nuvio**
-e autorize pelo celular via QR code. Os addons habilitados do perfil principal
+e autorize pelo celular via QR code. Os addons habilitados do perfil selecionado
 são importados após a vinculação. Veja [ACCOUNT.md](ACCOUNT.md).
 
 Para instalar addons manualmente, pressione **Esquerda** ou **Voltar** para abrir o menu.
 Entre em **Ajustes → Conteúdo e Descoberta → Addons** e adicione a URL do `manifest.json` do seu add-on.
 Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
-Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil principal.
+Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
 ## O que funciona nesta prévia
@@ -32,7 +32,9 @@ Outras configurações do Android ainda não são sincronizadas.
 - Login Nuvio por QR code, sessão persistente, renovação e logout somente desta TV.
 - Importação dos addons da conta, com opção de repetir a sincronização e erros parciais visíveis.
 - Instalação/remoção local de add-ons, catálogos, busca e detalhes com episódios.
-- Biblioteca local com favoritos persistentes.
+- Perfis da conta com PIN, addons próprios/herdados e biblioteca Nuvio importada.
+  Favoritos editados na LG e histórico continuam locais e separados por perfil.
+  Veja [PROFILES.md](PROFILES.md).
 - Layout Modern do fork: tema Branco, fonte Inter, sidebar clássico/moderno/oculto,
   retrato/paisagem, fundo parcial/completo, rótulos e estilos de Continuar Assistindo.
   Ajustes em **Layout** são locais; o login não importa preferências visuais do Android.
@@ -82,7 +84,7 @@ separadamente. Não há alegação de otimização máxima medida no hardware.
 
 Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliação
 de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
-sincronização de biblioteca/histórico e perfis secundários; decodificadores FFmpeg/MPV; conversão Dolby Vision;
+envio de favoritos à nuvem, histórico remoto e edição de perfis; decodificadores FFmpeg/MPV; conversão Dolby Vision;
 passthrough lossless/MAT; legendas ASS/PGS/ZIP, preferências automáticas de idioma,
 ajuste de frequência e Up Next. A versão 0.5.0 acrescenta fontes, áudio e legendas; a
 0.4.0 ampliou as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers, coleções e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
@@ -114,7 +116,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.5.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.6.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Protocol: fork AuthManager.kt / AccountViewModel.kt / AddonSyncService.kt.
+import { parseProfiles, parseLibrary } from './profiles.js';
 import publicConfig from './nuvio-config.json' with { type: 'json' };
 export const SESSION_KEY = 'nuvio-fork.webos.account.v1';
 export class AccountError extends Error {
@@ -129,14 +130,41 @@ export function createAccountClient({ storage, fetcher = globalThis.fetch, confi
       commit(tokenSession(data, user));
       return { ...session.user };
     },
-    async addons(signal) {
+    async addons(signal, profileId = 1) {
+      if (!Number.isInteger(profileId) || profileId < 1 || profileId > 6) throw new AccountError('Perfil inválido.');
       const owner = await authorized('/rest/v1/rpc/get_sync_owner', {}, signal);
       if (typeof owner !== 'string' || !owner) throw new AccountError('Não foi possível identificar o proprietário dos addons.');
-      const query = new URLSearchParams({ select: 'url,name,enabled,sort_order,profile_id', user_id: `eq.${owner}`, profile_id: 'eq.1', order: 'sort_order.asc', limit: '31' });
+      const query = new URLSearchParams({ select: 'url,name,enabled,sort_order,profile_id', user_id: `eq.${owner}`, profile_id: `eq.${profileId}`, order: 'sort_order.asc', limit: '31' });
       const rows = await authorized(`/rest/v1/addons?${query}`, undefined, signal);
       if (!Array.isArray(rows) || rows.some(r => typeof r.url !== 'string')) throw new AccountError('A conta retornou uma lista de addons inválida.');
-      if (rows.length > 30) throw new AccountError('A conta tem mais de 30 addons no perfil principal; esta versão suporta até 30.');
+      if (rows.length > 30) throw new AccountError('A conta tem mais de 30 addons neste perfil; esta versão suporta até 30.');
       return rows.filter(r => r.enabled !== false);
+    },
+    async profiles(signal) {
+      const [profiles, locks] = await Promise.all([
+        authorized('/rest/v1/rpc/sync_pull_profiles', {}, signal),
+        authorized('/rest/v1/rpc/sync_pull_profile_locks', {}, signal)
+      ]);
+      return parseProfiles(profiles, locks);
+    },
+    async verifyPin(profileId, pin, signal) {
+      if (!Number.isInteger(profileId) || profileId < 1 || profileId > 6 || !/^\d{4}$/.test(pin)) throw new AccountError('Informe o PIN de quatro números.');
+      const rows = await authorized('/rest/v1/rpc/verify_profile_pin', { p_profile_id: profileId, p_pin: pin }, signal);
+      if (!Array.isArray(rows) || typeof rows[0]?.unlocked !== 'boolean') throw new AccountError('Não foi possível validar o PIN.');
+      return { unlocked: rows[0].unlocked, retryAfter: Math.max(0, Number(rows[0].retry_after_seconds) || 0) };
+    },
+    async library(profileId, signal) {
+      if (!Number.isInteger(profileId) || profileId < 1 || profileId > 6) throw new AccountError('Perfil inválido.');
+      const items = [];
+      // Paginated snapshot: commit only when every page succeeds, including empty snapshots.
+      for (let offset = 0; offset <= 2000; offset += 100) {
+        const page = await authorized('/rest/v1/rpc/sync_pull_library', { p_profile_id: profileId, p_limit: 100, p_offset: offset }, signal);
+        if (!Array.isArray(page) || page.length > 100) throw new AccountError('A conta retornou uma página de biblioteca inválida.');
+        items.push(...page);
+        if (items.length > 2000) throw new AccountError('Biblioteca acima do limite de 2.000 títulos desta versão. A cópia anterior foi preservada.');
+        if (page.length < 100) return parseLibrary(items, profileId);
+      }
+      throw new AccountError('Não foi possível concluir a leitura da biblioteca.');
     },
     async signOut() {
       try { if (refreshFlight) await refreshFlight; } catch { /* Revoke whatever session remains. */ }
