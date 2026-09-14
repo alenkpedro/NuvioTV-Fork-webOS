@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.7.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.8.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.7.0",
+        "version": "0.8.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Histórico Nuvio por perfil, retomada de filmes e episódios e resolução de conflitos.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.7.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.7.0",
+        "appDescription": "Progresso, assistidos e favoritos sincronizados com Nuvio, fila offline por perfil e conflitos.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.8.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.8.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.7.0/org.nuviofork.webos_0.7.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.8.0/org.nuviofork.webos_0.8.0_all.ipk",
         "ipkHash": {
-          "sha256": "84ce835d6bc383f427023bbba5fa391c0002d778faabd83e30cf700cbcd5ee3d"
+          "sha256": "5c2009a55b38131a779209ba39acb1cae7b57b20361e53785e5e3b625ee9be77"
         },
-        "ipkSize": 664192
+        "ipkSize": 667252
       },
       "pool": "main",
-      "shortDescription": "Perfis, histórico da conta e player para LG webOS 24."
+      "shortDescription": "Sincronização Nuvio por perfil e player para LG webOS 24."
     }
   ]
 }
