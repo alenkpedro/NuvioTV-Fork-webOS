@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.3.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.4.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Login Nuvio por QR code e importação dos addons do perfil principal. Atualização para LG webOS.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.3.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.3.0",
+        "appDescription": "Menu moderno, opções de layout e detalhes com cartões de episódios. Login Nuvio preservado.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.4.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.4.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.3.0/org.nuviofork.webos_0.3.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.4.0/org.nuviofork.webos_0.4.0_all.ipk",
         "ipkHash": {
-          "sha256": "7abdb6d011fe35cde32131975da9ec1276042a82c4c5934fbd08f145706d9db6"
+          "sha256": "ceb84db1e7d65ba33dba741e8639551d906cb0746d97c1cc719b6fb439db1ccb"
         },
-        "ipkSize": 645110
+        "ipkSize": 651128
       },
       "pool": "main",
-      "shortDescription": "Login Nuvio, addons da conta e layout do fork para LG webOS 24."
+      "shortDescription": "Layout Modern, detalhes e login Nuvio para LG webOS 24."
     }
   ]
 }
