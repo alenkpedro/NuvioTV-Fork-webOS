@@ -5,12 +5,15 @@ export function installRemote({ root, back, playerKey, boundaryLeft }) {
     const key = mapping[e.keyCode] ?? e.key;
     if (key === 'Escape' || (key === 'Backspace' && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName))) { e.preventDefault(); back(); return; }
     if (playerKey(key, e)) return;
-    if (!key.startsWith('Arrow')) return;
+    if (!key.startsWith('Arrow') && key !== 'Tab') return;
     const active = document.activeElement;
     if (/INPUT|TEXTAREA|SELECT/.test(active?.tagName) && (active.tagName === 'SELECT' || ['ArrowLeft', 'ArrowRight'].includes(key))) return;
     e.preventDefault();
-    const all = [...(root.querySelector('[role=dialog]') || root).querySelectorAll('button:not(:disabled), input, select, textarea, a[href]')].filter(x => x.getClientRects().length && !x.closest('[hidden]') && x.tabIndex >= 0);
+    const all = [...(root.querySelector('[role=dialog]') || root).querySelectorAll('button:not(:disabled), input, select, textarea, a[href], [data-focusable]')].filter(x => x.getClientRects().length && !x.closest('[hidden], [inert]') && x.tabIndex >= 0);
     if (!all.length) return;
+    if (key === 'Tab') {
+      const index = all.indexOf(active); all[(index + (e.shiftKey ? -1 : 1) + all.length) % all.length].focus(); return;
+    }
     if (!all.includes(active)) { all[0].focus(); return; }
     const a = active.getBoundingClientRect(), cx = a.x + a.width / 2, cy = a.y + a.height / 2;
     const horizontal = key === 'ArrowLeft' || key === 'ArrowRight', sign = key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1;

@@ -5,6 +5,7 @@ import { readState, saveState, progressKey, recordProgress } from './core/storag
 import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
 import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
+import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode, castMembers } from './core/presentation.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
 import libraryIcon from '../public/assets/icons/sidebar_library.svg';
@@ -13,12 +14,19 @@ import './style.css';
 
 const root = document.querySelector('#app');
 const state = readState(localStorage);
+state.settings.layout = readLayout(state.settings.layout);
+const layout = state.settings.layout;
 const account = createAccountClient({ storage: localStorage });
 // Do not display another account's imported add-ons after local session loss.
 state.addons = state.addons.filter(a => !a.accountOwner || a.accountOwner === account.user?.id);
 if (state.accountSync?.userId !== account.user?.id) delete state.accountSync;
 let route = { name: 'home' }, stack = [], request = null, player = null, cleanupPlayer = null;
-let toastTimer, persistWarning = false, heroTimer, drawerOpen = false, contentFocus = null;
+let toastTimer, persistWarning = false, heroTimer, heroRequest, pillTimer, drawerOpen = false, contentFocus = null;
+let pointerFocus = false;
+document.addEventListener('pointerdown', () => { pointerFocus = true; }, true);
+document.addEventListener('pointerup', () => { pointerFocus = false; }, true);
+document.addEventListener('pointercancel', () => { pointerFocus = false; }, true);
+document.addEventListener('keydown', () => { pointerFocus = false; }, true);
 // Compose TV uses a 960 × 540 dp canvas. Preserve the fork's dp/sp geometry
 // at webOS's 1920 × 1080 app resolution instead of inventing responsive layouts.
 function fitCanvas() {
@@ -76,14 +84,19 @@ function toast(message) {
 function persist() {
   if (!saveState(localStorage, state) && !persistWarning) { persistWarning = true; toast('Armazenamento indisponível. Alterações valem somente nesta sessão.'); }
 }
-function focusFirst() { requestAnimationFrame(() => { if (!drawerOpen) (root.querySelector('main [data-initial-focus]') || root.querySelector('main input, main button:not(:disabled)') || root.querySelector('main'))?.focus({ preventScroll: true }); }); }
+function focusFirst() { requestAnimationFrame(() => {
+  if (drawerOpen) return;
+  const restored = route.restoreFocus && [...root.querySelectorAll('[data-focus]')].find(e => e.dataset.focus === route.restoreFocus);
+  delete route.restoreFocus;
+  (restored || root.querySelector('main [data-initial-focus]') || root.querySelector('main input, main button:not(:disabled)') || root.querySelector('main'))?.focus({ preventScroll: true });
+}); }
 function navigate(next, replace = false) {
   if (!replace) stack.push({ route, focus: document.activeElement?.dataset.focus });
   route = next; render();
 }
 function back() {
-  const dialog = root.querySelector('.account-confirm');
-  if (dialog) { dialog.querySelector('button')?.click(); return; }
+  const dialog = root.querySelector('[role=dialog]');
+  if (dialog) { (dialog.querySelector('[data-dismiss]') || dialog.querySelector('button'))?.click(); return; }
   if (root.querySelector('.sidebar') && !stack.length) {
     if (!drawerOpen) { setDrawer(true); return; }
     if (window.webOSSystem?.platformBack) window.webOSSystem.platformBack();
@@ -92,8 +105,7 @@ function back() {
     return;
   }
   if (stack.length) {
-    const prior = stack.pop(); route = prior.route;
-    render().then(() => { if (prior.focus) [...root.querySelectorAll('[data-focus]')].find(e => e.dataset.focus === prior.focus)?.focus(); });
+    const prior = stack.pop(); route = { ...prior.route, restoreFocus: prior.focus }; render();
   } else if (route.name !== 'home') navigate({ name: 'home' }, true);
   else if (window.webOSSystem?.platformBack) window.webOSSystem.platformBack();
   else if (window.PalmSystem?.platformBack) window.PalmSystem.platformBack();
@@ -103,13 +115,34 @@ function setDrawer(open) {
   const nav = root.querySelector('.sidebar'); if (!nav) return;
   if (open && !drawerOpen && !nav.contains(document.activeElement)) contentFocus = document.activeElement;
   drawerOpen = open; root.classList.toggle('drawer-open', open);
+  root.querySelector('main')?.toggleAttribute('inert', open);
   nav.querySelectorAll('button').forEach(b => b.tabIndex = open ? 0 : -1);
   if (open) (nav.querySelector('.active') || nav.querySelector('button'))?.focus({ preventScroll: true });
   else if (contentFocus?.isConnected) contentFocus.focus({ preventScroll: true });
   else focusFirst();
 }
+function applyLayout() {
+  for (const [name, enabled] of Object.entries({ 'modern-sidebar': layout.modernSidebar, 'hidden-sidebar': layout.hideSidebar, 'sidebar-blur': layout.sidebarBlur,
+    'landscape-posters': layout.landscapePosters, 'full-backdrop': layout.fullBackdrop, 'hide-poster-labels': !layout.posterLabels })) root.classList.toggle(name, enabled);
+  const g = homeGeometry(layout);
+  for (const [key, value] of Object.entries(g)) root.style.setProperty(`--${key}`, `${value}px`);
+  syncSidebarPill();
+}
+function syncSidebarPill() {
+  const old = root.querySelector('.sidebar-pill');
+  if (!layout.modernSidebar || layout.hideSidebar || !root.querySelector('.sidebar') || route.name === 'search') { old?.remove(); return; }
+  if (old) return;
+  const title = { home: 'Início', library: 'Biblioteca', settings: 'Ajustes' }[route.name];
+  root.append(button([icon(route.name), el('span', {}, title)], () => setDrawer(true), { class: 'sidebar-pill', tabindex: -1, 'aria-label': 'Abrir menu lateral' }));
+  revealPill();
+}
+function revealPill() {
+  const pill = root.querySelector('.sidebar-pill'); if (!pill) return;
+  clearTimeout(pillTimer); pill.classList.remove('icon-only');
+  pillTimer = setTimeout(() => pill.classList.add('icon-only'), 3000);
+}
 function shell(active = '') {
-  root.replaceChildren(); root.classList.remove('drawer-open'); drawerOpen = false;
+  root.replaceChildren(); root.classList.remove('drawer-open'); drawerOpen = false; applyLayout();
   const hasSidebar = ['home', 'search', 'library', 'settings'].includes(active);
   if (hasSidebar) {
     const nav = el('nav', { 'aria-label': 'Navegação principal', class: 'sidebar' },
@@ -119,6 +152,7 @@ function shell(active = '') {
         stack = []; navigate({ name }, true);
       }, { class: active === name ? 'nav-item active' : 'nav-item', 'aria-label': title, tabindex: -1, 'aria-current': active === name ? 'page' : null, 'data-focus': `nav-${name}` }))));
     root.append(el('div', { class: 'drawer-scrim', onclick: () => setDrawer(false), 'aria-hidden': true }), nav);
+    syncSidebarPill();
   }
   const main = el('main', { class: `screen-${active}${hasSidebar ? ' with-sidebar' : ''}`, tabindex: -1 }); root.append(main); return main;
 }
@@ -127,7 +161,7 @@ function notice(main, message) { main.append(el('p', { class: 'notice', role: 's
 function failure(main, error, retry) { main.append(el('div', { class: 'empty' }, el('h2', {}, 'Não foi possível carregar'), el('p', {}, error.message), button('Tentar novamente', retry))); }
 const current = signal => !signal.aborted;
 async function render() {
-  clearTimeout(heroTimer); request?.abort(); request = new AbortController(); const signal = request.signal;
+  clearTimeout(heroTimer); clearTimeout(pillTimer); heroRequest?.abort(); request?.abort(); request = new AbortController(); const signal = request.signal;
   if (cleanupPlayer) { cleanupPlayer(); cleanupPlayer = null; player = null; }
   try {
     if (route.name === 'player') { showPlayer(route); return; }
@@ -139,25 +173,40 @@ async function render() {
     if (current(signal)) { const main = root.querySelector('main'); if (main) failure(main, error, render); focusFirst(); }
   }
 }
-function card(meta, addon, progress) {
+function card(meta, addon, progress, rowKey = '') {
   const id = text(meta.id), type = text(meta.type || 'movie');
-  const node = button([poster(meta.poster, meta.name), el('strong', {}, meta.name || id), el('span', { class: 'muted' }, progress ? `Retomar em ${clock(progress.time)}` : meta.releaseInfo || '')], () => navigate(progress ? { name: 'streams', meta: { ...meta, type }, addon, type: progress.type, id: progress.id, episode: progress.episode } : { name: 'detail', meta: { ...meta, type }, addon }), { class: 'card', 'aria-label': meta.name || id, 'data-focus': `card-${type}-${progress?.id || id}` });
+  const wide = progress ? layout.continueStyle !== 'poster' : layout.landscapePosters;
+  const image = wide ? meta.background || meta.fanart || meta.poster : meta.poster;
+  const node = button([poster(image, meta.name), el('strong', {}, meta.name || id), el('span', { class: 'muted' }, progress ? [progress.episode ? `T${progress.episode.season}:E${progress.episode.episode}` : '', `Retomar em ${clock(progress.time)}`].filter(Boolean).join(' · ') : meta.releaseInfo || '')], () => navigate(progress ? { name: 'streams', meta: { ...meta, type }, addon, type: progress.type, id: progress.id, episode: progress.episode } : { name: 'detail', meta: { ...meta, type }, addon }), { class: `card${progress ? ' continue-card' : ''}`, 'aria-label': meta.name || id, 'data-focus': `card-${rowKey}-${type}-${progress?.id || id}` });
   node.addEventListener('focus', () => {
     const section = node.closest('.home-rows .catalog-section');
     if (section) {
       const viewport = section.parentElement;
-      viewport.scrollTop = Math.max(0, section.offsetTop - 40);
-      node.parentElement.scrollLeft = Math.max(0, node.offsetLeft - 52);
+      if (!pointerFocus) {
+        viewport.scrollTop = Math.max(0, section.offsetTop - 40);
+        node.parentElement.scrollLeft = Math.max(0, node.offsetLeft - 52);
+      }
       clearTimeout(heroTimer);
-      heroTimer = setTimeout(() => { if (route.name === 'home') updateHomeHero(meta); }, 450);
+      heroRequest?.abort();
+      section.dataset.lastFocus = node.dataset.focus;
+      heroTimer = setTimeout(() => { if (route.name === 'home') enrichHomeHero(meta, addon); }, 450);
     }
   });
   if (progress) node.querySelector('.art').append(el('progress', { max: progress.duration, value: progress.time, 'aria-label': 'Progresso assistido' }));
   return node;
 }
-function catalogSection(main, title, metas, addon, more) {
-  const section = el('section', { class: 'catalog-section' }, el('div', { class: 'section-head' }, el('h2', {}, title)), el('div', { class: 'rail' }, metas.slice(0, 16).map(m => card(m, addon))));
-  if (more) section.querySelector('.rail').append(button([icon('next'), el('strong', {}, 'Ver todos')], more, { class: 'card more-card', 'aria-label': `Ver todos: ${title}` }));
+function catalogSection(main, title, metas, addon, more, rowKey = title) {
+  const section = el('section', { class: 'catalog-section' }, el('div', { class: 'section-head' }, el('h2', {}, title), layout.catalogAddonName && addon ? el('span', { class: 'catalog-addon muted' }, addon.manifest.name) : null), el('div', { class: 'rail' }, metas.slice(0, 16).map(m => card(m, addon, null, rowKey))));
+  if (more) {
+    const all = button([icon('next'), el('strong', {}, 'Ver todos')], more, { class: 'card more-card', 'aria-label': `Ver todos: ${title}`, 'data-focus': `more-${rowKey}` });
+    all.addEventListener('focus', () => {
+      if (!section.parentElement?.classList.contains('home-rows')) return;
+      section.dataset.lastFocus = all.dataset.focus;
+      clearTimeout(heroTimer); heroRequest?.abort();
+      if (!pointerFocus) { section.parentElement.scrollTop = Math.max(0, section.offsetTop - 40); all.parentElement.scrollLeft = Math.max(0, all.offsetLeft - 52); }
+    });
+    section.querySelector('.rail').append(all);
+  }
   main.append(section);
 }
 function titleArt(meta, className = 'hero-title') {
@@ -169,11 +218,30 @@ function titleArt(meta, className = 'hero-title') {
   }
   return title;
 }
-function metaLine(meta) {
+function metaLine(meta, detail = false) {
   return el('div', { class: 'hero-meta' },
-    el('span', {}, [meta.type === 'series' ? 'Série' : 'Filme', meta.genres?.[0]].filter(Boolean).join(' • ')),
-    ...[meta.runtime, meta.releaseInfo].filter(Boolean).map(value => el('span', { class: 'meta-divider' }, value)),
+    el('span', {}, (Array.isArray(meta.genres) ? meta.genres.slice(0, detail ? 3 : 2) : []).join(' • ') || (meta.type === 'series' ? 'Série' : 'Filme')),
+    ...[runtimeText(meta.runtime), releaseText(meta)].filter(Boolean).map(value => el('span', { class: 'meta-divider' }, value)),
     meta.imdbRating ? el('span', { class: 'imdb-rating' }, el('b', {}, 'IMDb'), text(meta.imdbRating)) : null);
+}
+async function loadMeta(meta, addon, signal) {
+  const urls = new Set();
+  const providers = [addon, ...state.addons].filter(a => a && !urls.has(a.url) && urls.add(a.url) && supports(a, 'meta', meta.type, meta.id));
+  for (const a of providers.slice(0, 3)) {
+    try {
+      const result = await cachedMetaJSON(resourceURL(a, 'meta', meta.type, meta.id), signal);
+      if (signal.aborted) return null;
+      if (result.meta?.id === meta.id) return { meta: { ...meta, ...result.meta, type: meta.type }, addon: a };
+    } catch (error) { if (signal.aborted) return null; }
+  }
+  return { meta, addon };
+}
+async function enrichHomeHero(meta, addon) {
+  updateHomeHero(meta);
+  if (document.hidden) return;
+  heroRequest?.abort(); const controller = heroRequest = new AbortController();
+  const enriched = await loadMeta(meta, addon, controller.signal);
+  if (!controller.signal.aborted && route.name === 'home' && enriched) updateHomeHero(enriched.meta);
 }
 function updateHomeHero(meta) {
   const hero = root.querySelector('.home-hero'); if (!hero) return;
@@ -189,6 +257,7 @@ async function cachedMetaJSON(url, signal) {
   const cached = metadataCache.get(url);
   if (cached && Date.now() - cached.time < 120000) return cached.value;
   const value = await getJSON(url, { signal });
+  if (signal.aborted) return value;
   const weight = JSON.stringify(value).length * 2;
   if (weight <= 2 * 1024 * 1024) {
     metadataCache.delete(url); metadataCache.set(url, { time: Date.now(), value, weight });
@@ -201,14 +270,14 @@ async function showHome(main, signal) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon instalado. Adicione um para começar.')); return;
   }
   const catalogs = state.addons.flatMap(addon => normalCatalogs(addon).map(catalog => ({ addon, catalog }))).slice(0, 6);
-  const recent = Object.values(state.progress).filter(x => !x.complete).sort((a, b) => b.updated - a.updated).slice(0, 12);
+  const recent = layout.continueWatching ? Object.values(state.progress).filter(x => !x.complete).sort((a, b) => b.updated - a.updated).slice(0, 12) : [];
   if (!catalogs.length && !recent.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon de catálogo instalado. Instale um para ver conteúdos.')); return;
   }
   main.append(el('section', { class: 'home-hero', 'aria-label': 'Título em destaque' }, el('div', { class: 'hero-fade' }), el('div', { class: 'hero-copy' })));
   const rows = el('div', { class: 'home-rows' }); main.append(rows);
   if (recent.length) {
-    rows.append(el('section', { class: 'catalog-section' }, el('div', { class: 'section-head' }, el('h2', {}, 'Continuar assistindo')), el('div', { class: 'rail' }, recent.map(p => card(p.meta, null, p)))));
+    rows.append(el('section', { class: 'catalog-section continue-section' }, el('div', { class: 'section-head' }, el('h2', {}, 'Continuar assistindo')), el('div', { class: 'rail' }, recent.map(p => card(p.meta, null, p, 'continue')))));
     updateHomeHero(recent[0].meta);
   }
   const loading = el('p', { class: 'loading', role: 'status' }, 'Carregando…'); rows.append(loading);
@@ -222,7 +291,7 @@ async function showHome(main, signal) {
     const r = results[i];
     if (r.value?.metas.length) {
       first ||= r.value.metas[0];
-      catalogSection(rows, r.value.catalog.name || r.value.catalog.id, r.value.metas, r.value.addon, () => navigate({ name: 'catalog', addon: r.value.addon, catalog: r.value.catalog }));
+      catalogSection(rows, catalogTitle(r.value.catalog, layout), r.value.metas, r.value.addon, () => navigate({ name: 'catalog', addon: r.value.addon, catalog: r.value.catalog }), `home-${i}`);
     } else if (r.error) notice(rows, `${catalogs[i].addon.manifest.name}: ${r.error.message}`);
   }
   if (first) updateHomeHero(first);
@@ -301,19 +370,22 @@ function showSearch(main, signal) {
   } }, input, button('Buscar', null, { type: 'submit', class: 'primary' }));
   main.append(form, results);
 }
+function textDialog(title, body) {
+  const previous = document.activeElement;
+  const dialog = el('div', { class: 'app-dialog', role: 'dialog', 'aria-modal': true, 'aria-label': title },
+    el('section', { class: 'dialog-panel' }, el('h2', {}, title), el('p', { class: 'dialog-copy', tabindex: 0, 'data-focusable': true }, body)));
+  const close = button('Fechar', () => { dialog.remove(); previous?.focus({ preventScroll: true }); }, { 'data-dismiss': true });
+  dialog.firstChild.append(close); root.append(dialog); close.focus();
+}
 async function showDetail(main, signal) {
   let { meta, addon } = route;
   heading(main, meta.type === 'series' ? 'SÉRIE' : 'FILME', meta.name || meta.id);
-  const providers = [...new Set([addon, ...state.addons].filter(Boolean))].filter(a => supports(a, 'meta', meta.type, meta.id));
-  for (const a of providers) {
-    try { const r = await cachedMetaJSON(resourceURL(a, 'meta', meta.type, meta.id), signal); if (r.meta?.id) { meta = { ...meta, ...r.meta }; addon = a; break; } }
-    catch (e) { if (!current(signal)) return; }
-  }
-  if (!current(signal)) return;
+  const enriched = await loadMeta(meta, addon, signal);
+  if (!current(signal) || !enriched) return;
+  ({ meta, addon } = enriched);
   main.replaceChildren();
   const backdrop = safeImage(meta.background || meta.fanart);
-  if (backdrop) main.append(el('img', { class: 'detail-backdrop', src: backdrop, alt: '', decoding: 'async' }));
-  main.append(el('div', { class: 'detail-fade' }));
+  main.append(el('div', { class: 'detail-scene' }, backdrop ? el('img', { class: 'detail-backdrop', src: backdrop, alt: '', decoding: 'async', onerror: e => e.target.remove() }) : null, el('div', { class: 'detail-fade' })));
   const go = (id = meta.id, episode) => navigate({ name: 'streams', meta, addon, id, type: meta.type, episode });
   const key = progressKey(meta.type, meta.id);
   const toggleLibrary = button(icon(state.library[key] ? 'check' : 'add'), () => {
@@ -325,35 +397,67 @@ async function showDetail(main, signal) {
     persist(); toggleLibrary.replaceChildren(icon(state.library[key] ? 'check' : 'add'));
     toggleLibrary.setAttribute('aria-label', state.library[key] ? 'Remover da biblioteca' : 'Adicionar à biblioteca');
   }, { class: 'round-button', 'aria-label': state.library[key] ? 'Remover da biblioteca' : 'Adicionar à biblioteca' });
-  const watch = button([icon('play'), meta.type === 'series' ? 'Assistir: T1:E1' : 'Assistir'], () => {
-    if (meta.type === 'series') main.querySelector('.episode')?.click(); else go();
-  }, { class: 'primary play-button', 'data-initial-focus': true });
-  const watched = button(icon(state.watched[key] ? 'check' : 'eye'), () => {
+  const next = meta.type === 'series' ? nextEpisode(meta, state.progress) : null;
+  const resume = meta.type === 'movie' && state.progress[key] && !state.progress[key].complete;
+  const watchText = next ? `${next.resume ? 'Retomar' : 'Assistir'}: T${next.video.season}:E${next.video.episode}` : resume ? 'Retomar' : 'Assistir';
+  const watch = button([icon('play'), watchText], () => {
+    if (next) go(next.video.id, { title: next.video.title, season: next.video.season, episode: next.video.episode });
+    else if (meta.type === 'movie') go();
+  }, { class: 'primary play-button', disabled: meta.type === 'series' && !next, 'data-initial-focus': meta.type !== 'series' || Boolean(next), 'data-focus': 'detail-play' });
+  const watched = button(icon(state.watched[key] ? 'eye' : 'eye-off'), () => {
     state.watched[key] = !state.watched[key]; persist();
-    watched.replaceChildren(icon(state.watched[key] ? 'check' : 'eye'));
+    watched.replaceChildren(icon(state.watched[key] ? 'eye' : 'eye-off'));
     watched.setAttribute('aria-label', state.watched[key] ? 'Marcar como não assistido' : 'Marcar como assistido');
   }, { class: 'round-button', 'aria-label': state.watched[key] ? 'Marcar como não assistido' : 'Marcar como assistido' });
+  const credits = [['Direção', meta.director], ['Roteiro', meta.writer]].filter(([, v]) => v && (!Array.isArray(v) || v.length)).map(([label, v]) => `${label}: ${[].concat(v).join(', ')}`).join(' • ');
+  const synopsis = meta.description ? button(meta.description, () => textDialog(meta.name || 'Sinopse', meta.description), { class: 'synopsis', 'aria-label': 'Ler sinopse completa', 'data-focus': 'detail-synopsis' }) : null;
   const detail = el('section', { class: 'detail-hero' }, titleArt(meta, 'detail-title'),
     el('div', { class: 'detail-actions toolbar' }, watch, toggleLibrary, meta.type === 'movie' ? watched : null),
-    el('div', { class: 'detail-credit muted' }, meta.director ? `Direção: ${[].concat(meta.director).join(', ')}` : ''),
+    el('div', { class: 'detail-credit muted' }, credits),
     el('div', { class: 'detail-source-space' }),
-    el('p', { class: 'synopsis' }, meta.description || ''), metaLine(meta));
+    synopsis, metaLine(meta, true));
   main.append(detail);
   if (meta.type === 'series') {
-    const videos = (meta.videos ?? []).filter(v => v.id).sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || (a.episode ?? 0) - (b.episode ?? 0));
-    if (!videos.length) { notice(main, 'Nenhum episódio foi retornado pelo catálogo.'); return; }
-    watch.replaceChildren(icon('play'), `Assistir: T${videos[0].season ?? 0}:E${videos[0].episode ?? 1}`);
-    const seasons = [...new Set(videos.map(v => v.season ?? 0))];
-    const list = el('div', { class: 'episodes' });
+    const videos = episodeList(meta);
+    if (!videos.length) notice(main, 'Nenhum episódio foi retornado pelo catálogo.');
+    const seasons = [...new Set(videos.map(v => v.season))];
+    const group = el('section', { class: 'episode-section' }, el('h2', {}, 'Episódios'));
+    const tabs = el('div', { class: 'season-tabs', role: 'tablist', 'aria-label': 'Temporada' });
+    const list = el('div', { class: 'episodes', role: 'tabpanel', 'aria-label': 'Episódios da temporada' });
+    let seasonTimer;
+    signal.addEventListener('abort', () => clearTimeout(seasonTimer), { once: true });
     const draw = season => {
-      list.replaceChildren(...videos.filter(v => (v.season ?? 0) === Number(season)).slice(0, 150).map(v => {
+      clearTimeout(seasonTimer); route.season = season;
+      tabs.querySelectorAll('button').forEach(b => { const selected = Number(b.dataset.season) === season; b.classList.toggle('selected', selected); b.setAttribute('aria-selected', String(selected)); });
+      list.replaceChildren(...videos.filter(v => v.season === season).slice(0, 150).map(v => {
         const p = state.progress[progressKey(meta.type, v.id)];
-        return button([el('span', { class: 'episode-number' }, String(v.episode ?? '•').padStart(2, '0')), el('span', { class: 'grow' }, el('strong', {}, v.title || `Episódio ${v.episode}`), el('small', { class: 'muted' }, p ? p.complete ? 'Assistido' : `Retomar em ${clock(p.time)}` : v.released ? text(v.released).slice(0, 10) : '')), el('span', {}, '→')], () => go(v.id, { title: v.title, season: v.season, episode: v.episode }), { class: 'episode', 'data-focus': `episode-${v.id}` });
+        const future = Number.isFinite(Date.parse(v.released)) && Date.parse(v.released) > Date.now();
+        const status = future ? 'Ainda não lançado' : p?.complete ? 'Assistido' : p ? `Retomar em ${clock(p.time)}` : '';
+        const card = button([poster(v.thumbnail || meta.background || meta.poster, v.title, 'episode-art'), el('span', { class: 'episode-fade' }),
+          el('span', { class: 'episode-copy' }, el('span', { class: 'episode-code' }, `T${v.season}:E${v.episode}`), el('strong', {}, v.title || `Episódio ${v.episode}`), el('p', {}, v.overview || v.description || ''),
+            el('small', { class: 'muted' }, [runtimeText(v.runtime), v.released ? releaseText({ type: 'movie', released: v.released }) : ''].filter(Boolean).join(' • '))),
+          status ? el('small', { class: 'episode-status' }, status) : null,
+          p ? el('progress', { max: p.duration, value: p.time, 'aria-label': 'Progresso assistido' }) : null], () => future ? toast('Este episódio ainda não foi lançado.') : go(v.id, { title: v.title, season: v.season, episode: v.episode }), { class: 'episode', 'aria-disabled': future ? 'true' : null, 'data-focus': `episode-${v.id}` });
+        card.addEventListener('focus', () => { list.dataset.lastFocus = card.dataset.focus; if (!pointerFocus) { main.scrollTop = group.offsetTop - 24; card.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } });
+        return card;
       }));
+      list.scrollLeft = 0;
     };
-    const select = el('select', { 'aria-label': 'Temporada', onchange: e => draw(e.target.value) }, seasons.map(s => el('option', { value: s }, s === 0 ? 'Especiais' : `Temporada ${s}`)));
-    main.append(el('div', { class: 'section-head' }, el('h2', {}, 'Episódios'), select), list); draw(seasons[0]);
+    for (const season of seasons) {
+      const tab = button(season === 0 ? 'Especiais' : `Temporada ${season}`, () => { draw(season); list.querySelector('.episode')?.focus(); }, { role: 'tab', 'data-season': season, 'data-focus': `season-${season}` });
+      tab.addEventListener('focus', () => { clearTimeout(seasonTimer); if (!pointerFocus) main.scrollTop = group.offsetTop - 24; if (route.season !== season) seasonTimer = setTimeout(() => draw(season), 150); });
+      tabs.append(tab);
+    }
+    if (seasons.length) { group.append(tabs, list); main.append(group); draw(seasons.includes(route.season) ? route.season : next?.video.season ?? seasons[0]); }
   }
+  const cast = castMembers(meta);
+  if (cast.length) {
+    const roles = { Creator: 'Criação', Director: 'Direção', Writer: 'Roteiro' };
+    main.append(el('section', { class: 'cast-section' }, el('h2', {}, 'Elenco'), el('div', { class: 'cast-rail' }, cast.map((member, i) => button([
+      poster(member.photo, member.name, 'cast-photo'), el('strong', {}, member.name), el('small', { class: 'muted' }, roles[member.character] || member.character || '')],
+      () => textDialog(member.name, roles[member.character] || member.character || 'Integrante do elenco.'), { class: 'cast-card', 'data-focus': `cast-${i}` })))));
+  }
+  main.querySelectorAll('.detail-actions button, .synopsis').forEach(b => b.addEventListener('focus', () => { if (!pointerFocus) main.scrollTop = 0; }));
 }
 async function showStreams(main, signal) {
   const context = { ...route };
@@ -529,13 +633,37 @@ function showSettings(main, signal) {
         content.append(row('Tema', 'Branco', () => toast('Tema Branco do fork.')), row('Fonte', 'Inter', () => toast('Fonte Inter original incluída no aplicativo.')));
         break;
       case 'layout':
-        content.append(row('Menu lateral', 'Clássico', () => toast('Layout padrão do fork de referência.')), row('Pôsteres', 'Retrato', () => toast('Proporção e espaçamento do fork de referência.')));
+        content.append(el('p', { class: 'muted' }, 'Página inicial Modern'));
+        for (const [key, title, description] of [
+          ['modernSidebar', 'Barra lateral moderna', 'Ative a navegação lateral flutuante.'],
+          ['hideSidebar', 'Recolher barra lateral', 'Esconda o menu; exiba-o apenas ao focar.'],
+          ['sidebarBlur', 'Desfoque no menu lateral', 'Ative o efeito de desfoque no menu moderno.'],
+          ['landscapePosters', 'Pôsteres Horizontais', 'Alterne os pôsteres para o formato horizontal.'],
+          ['fullBackdrop', 'Fundo em tela cheia', 'Expanda o fundo do modo Moderno por toda a tela.'],
+          ['posterLabels', 'Títulos nos pôsteres', 'Exiba os títulos abaixo das imagens e grades.'],
+          ['catalogAddonName', 'Nome do addon', 'Exiba o nome do addon ao lado do catálogo.'],
+          ['catalogType', 'Tipo de conteúdo', 'Indique se é Filme ou Série ao lado do subtítulo.'],
+          ['continueWatching', 'Continuar Assistindo', 'Exiba os títulos que você começou a assistir nesta TV.'],
+        ]) {
+          const toggle = button([el('span', { class: 'grow' }, el('strong', {}, title), el('small', { class: 'muted' }, description)), el('span', { class: 'switch-track', 'aria-hidden': true })], () => {
+            layout[key] = !layout[key]; persist(); applyLayout(); toggle.setAttribute('aria-checked', String(layout[key]));
+          }, { class: 'settings-row', role: 'switch', 'aria-label': title, 'aria-checked': String(layout[key]) });
+          content.append(toggle);
+        }
+        {
+          const styles = { card: 'Cartão', poster: 'Pôster', wide: 'Amplo' };
+          const value = el('small', { class: 'muted' }, styles[layout.continueStyle]);
+          content.append(button([el('span', { class: 'grow' }, el('strong', {}, 'Estilo de Continuar Assistindo'), value), icon('next')], () => {
+            const keys = Object.keys(styles); layout.continueStyle = keys[(keys.indexOf(layout.continueStyle) + 1) % keys.length];
+            persist(); applyLayout(); value.textContent = styles[layout.continueStyle];
+          }, { class: 'settings-row' }));
+        }
         break;
       case 'advanced':
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.3.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio e importação de addons do perfil principal disponíveis. Outros perfis, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.4.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, addons do perfil principal e opções de layout disponíveis. Outros perfis, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -628,6 +756,15 @@ function showPlayer(context) {
 }
 function layoutKey(key, event) {
   const active = document.activeElement;
+  if (root.querySelector('[role=dialog]')) {
+    if (active?.classList.contains('dialog-copy') && ['ArrowUp', 'ArrowDown'].includes(key)) {
+      const direction = key === 'ArrowUp' ? -1 : 1;
+      if (direction < 0 ? active.scrollTop > 0 : active.scrollTop + active.clientHeight < active.scrollHeight - 1) {
+        active.scrollTop += direction * 72; event.preventDefault(); return true;
+      }
+    }
+    return false;
+  }
   if (drawerOpen) {
     if (key === 'ArrowRight') { event.preventDefault(); setDrawer(false); return true; }
     if (key === 'ArrowUp' || key === 'ArrowDown') {
@@ -647,7 +784,10 @@ function layoutKey(key, event) {
       const sections = [...section.parentElement.querySelectorAll('.catalog-section')];
       const target = sections[sections.indexOf(section) + (key === 'ArrowDown' ? 1 : -1)];
       const nextCards = [...(target?.querySelectorAll('.card') || [])];
-      nextCards[Math.min(index, nextCards.length - 1)]?.focus({ preventScroll: true });
+      const remembered = target?.dataset.lastFocus && nextCards.find(c => c.dataset.focus === target.dataset.lastFocus);
+      (remembered || nextCards[Math.min(index, nextCards.length - 1)])?.focus({ preventScroll: true });
+      if (key === 'ArrowUp') revealPill();
+      else root.querySelector('.sidebar-pill')?.classList.add('icon-only');
     }
     event.preventDefault(); return true;
   }
@@ -658,6 +798,7 @@ function layoutKey(key, event) {
 }
 installRemote({ root, back, playerKey: (key, event) => (player?.key(key, event) ?? false) || layoutKey(key, event), boundaryLeft: () => setDrawer(true) });
 window.addEventListener('pagehide', () => cleanupPlayer?.());
+document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(heroTimer); heroRequest?.abort(); } });
 async function boot() {
   if (account.hasSession) {
     const controller = new AbortController();

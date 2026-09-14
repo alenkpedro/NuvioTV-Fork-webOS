@@ -65,8 +65,7 @@ origem `null`. Nenhuma conta real foi autenticada durante o desenvolvimento.
 Testes simulados cobrem aprovação, validação de usuário, importação sem vazar
 tokens para addons, refresh concorrente, expiração/revogação, falha parcial,
 logout, cancelamento e entrada `file://`. QR e tela conectada foram revisados em
-1920×1080. A aprovação pelo usuário e o funcionamento no firmware LG precisam
-ser confirmados na TV.
+1920×1080. O usuário confirmou que conseguiu entrar na conta na LG 55UT8050 com a 0.3.0. Isso não valida todos os recursos de sincronização ou reprodução do aplicativo.
 
 Esta versão **não sincroniza** perfis secundários, favoritos/histórico da nuvem,
 credenciais de debrid direto, plugins Android ou outras preferências. Os addons

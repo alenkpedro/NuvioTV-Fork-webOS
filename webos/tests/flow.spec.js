@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
 });
 async function navigation(page, title) {
   for (let i = 0; i < 5 && !await page.locator('.sidebar').count(); i++) await page.keyboard.press('Escape');
-  if (!await page.locator('#app').evaluate(e => e.classList.contains('drawer-open'))) await page.locator('.nav-item').first().click();
+  if (!await page.locator('#app').evaluate(e => e.classList.contains('drawer-open'))) await page.keyboard.press('Escape');
   await page.getByRole('button', { name: title, exact: true }).click();
 }
 async function openAddons(page) {
@@ -174,4 +174,133 @@ test('poster focus updates reference hero and restores after drawer, library sur
   await navigation(page, 'Ajustes');
   await page.getByRole('button', { name: 'Conteúdo e Descoberta', exact: true }).click();
   await page.screenshot({ path: 'test-results/reference-settings-1920.png' });
+});
+
+test('Modern layout options persist and remote can always recover a hidden sidebar', async ({ page }) => {
+  await install(page); await navigation(page, 'Ajustes');
+  await page.getByRole('button', { name: 'Layout', exact: true }).click();
+  for (const title of ['Barra lateral moderna', 'Pôsteres Horizontais', 'Fundo em tela cheia']) {
+    const toggle = page.getByRole('switch', { name: title, exact: true });
+    await toggle.click(); await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  }
+  await page.getByRole('switch', { name: 'Títulos nos pôsteres', exact: true }).click();
+  await navigation(page, 'Início');
+  const first = page.getByRole('button', { name: 'Horizonte de teste', exact: true });
+  await expect(first).toBeFocused();
+  const art = await first.locator('.art').boundingBox();
+  expect(art.x).toBeCloseTo(104, 0);
+  expect(art.width).toBeCloseTo(418.7232, 0); expect(art.height).toBeCloseTo(236.5668, 0);
+  await expect(first.locator('strong')).toBeHidden();
+  await expect(page.locator('.hero-backdrop')).toHaveCSS('height', '540px');
+  await page.locator('#toast').evaluate(e => e.hidden = true);
+  await page.screenshot({ path: 'test-results/modern-landscape-full-1920.png' });
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('.sidebar')).toHaveCSS('width', '208px');
+  await expect(page.locator('.sidebar')).toHaveCSS('opacity', '1');
+  await expect(page.locator('main')).toHaveAttribute('inert', '');
+  await page.keyboard.press('Tab'); // Inert content must not receive focus behind the menu.
+  await expect(page.locator(':focus')).toHaveClass(/nav-item/);
+  await page.screenshot({ path: 'test-results/modern-sidebar-1920.png' });
+  await page.keyboard.press('ArrowRight'); await expect(first).toBeFocused();
+  await navigation(page, 'Ajustes'); await page.getByRole('button', { name: 'Layout', exact: true }).click();
+  await page.getByRole('switch', { name: 'Recolher barra lateral', exact: true }).click();
+  await page.reload();
+  await expect(page.locator('#app')).toHaveClass(/modern-sidebar/);
+  await expect(page.locator('.sidebar')).toBeHidden();
+  await expect(page.locator('.sidebar-pill')).toHaveCount(0);
+  await page.keyboard.press('ArrowLeft'); await expect(page.getByRole('button', { name: 'Início', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowRight'); await expect(first).toBeFocused();
+});
+
+test('focused hero metadata enriches after settling and ignores a late response for the previous card', async ({ page }) => {
+  let releaseOld, requests = 0;
+  const gate = new Promise(resolve => releaseOld = resolve);
+  await page.route('https://fixture.example/meta/movie/**', async route => {
+    requests++; await gate;
+    await route.fulfill({ json: { meta: { ...movie, name: 'Resposta antiga' } } }).catch(() => {});
+  });
+  await page.route('https://fixture.example/meta/series/**', route => route.fulfill({ json: { meta: { ...show, description: 'Sinopse completa do serviço de metadados.', logo: origin + '/poster.svg' } } }));
+  await install(page); await navigation(page, 'Início');
+  await expect.poll(() => requests).toBe(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.hero-description')).toHaveText('Sinopse completa do serviço de metadados.');
+  releaseOld();
+  await expect(page.locator('.home-hero .title-logo')).toHaveAttribute('alt', 'Série de teste');
+  await expect(page.getByRole('button', { name: 'Série de teste', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Assistir: T1:E1', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Série de teste', exact: true })).toBeFocused();
+});
+
+test('series uses horizontal episode cards, restores chosen season and resumes independently of visible season', async ({ page }) => {
+  const enriched = { ...show, videos: [
+    { id: 'ttshow:0:1', title: 'Especial', season: 0, episode: 1 },
+    { id: 'ttshow:1:1', title: 'Primeiro episódio', season: 1, episode: 1, overview: 'Descrição do episódio para validar o cartão do fork.', thumbnail: origin + '/backdrop.svg', runtime: '45 min' },
+    { id: 'ttshow:2:1', title: 'Segunda temporada', season: 2, episode: 1 },
+    { id: 'ttshow:2:2', title: 'Lançamento futuro', season: 2, episode: 2, released: '2099-01-01T00:00:00Z' },
+  ] };
+  await page.route('https://fixture.example/meta/series/**', route => route.fulfill({ json: { meta: enriched } }));
+  await install(page);
+  await page.evaluate(() => { const key = 'nuvio-fork.webos.v1'; const s = JSON.parse(localStorage.getItem(key)); s.progress[JSON.stringify(['series', 'ttshow:1:1'])] = { id: 'ttshow:1:1', type: 'series', meta: { id: 'ttshow', name: 'Série de teste', type: 'series' }, time: 90, duration: 2700, complete: false, updated: Date.now() }; localStorage.setItem(key, JSON.stringify(s)); });
+  await page.reload();
+  await page.locator('.catalog-section:not(.continue-section)').getByRole('button', { name: 'Série de teste', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Retomar: T1:E1', exact: true })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Temporada 1', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: 'Temporada 1', exact: true }).click();
+  await expect(page.locator('.episode').first()).toBeFocused();
+  const rect = await page.locator('.episode').first().boundingBox();
+  expect(rect.width).toBe(640); expect(rect.height).toBe(414);
+  await page.locator('#toast').evaluate(e => e.hidden = true);
+  await page.screenshot({ path: 'test-results/detail-episodes-1920.png' });
+  await page.getByRole('tab', { name: 'Temporada 2', exact: true }).click();
+  await page.getByRole('button', { name: /Lançamento futuro/ }).click({ force: true });
+  await expect(page.locator('#toast')).toContainText('ainda não foi lançado');
+  await expect(page.locator('.screen-streams')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retomar: T1:E1', exact: true }).click();
+  await expect(page.getByText('Temporada 1 · Episódio 1', { exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('tab', { name: 'Temporada 2', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: 'Temporada 2', exact: true }).click();
+  await page.getByRole('button', { name: /Segunda temporada/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /Segunda temporada/ })).toBeFocused();
+});
+
+test('detail full synopsis traps focus and cast metadata never becomes HTML', async ({ page }) => {
+  const description = 'Uma descrição longa para leitura completa. '.repeat(40);
+  await page.route('https://fixture.example/meta/movie/**', route => route.fulfill({ json: { meta: { ...movie, description, director: ['Diretor de teste'], runtime: '123 min', cast: ['Pessoa de teste', '<img src=x onerror="window.injected=true">'] } } }));
+  await install(page); await navigation(page, 'Início');
+  await page.getByRole('button', { name: 'Horizonte de teste', exact: true }).click();
+  await expect(page.locator('.detail-title')).toHaveCSS('font-weight', '700');
+  await page.getByRole('button', { name: 'Ler sinopse completa', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByRole('dialog')).toContainText(description);
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.dialog-copy')).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  expect(await page.locator('.dialog-copy').evaluate(e => e.scrollTop)).toBeGreaterThan(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Ler sinopse completa', exact: true })).toBeFocused();
+  await page.locator('.cast-card').first().focus();
+  await page.locator('.cast-card').first().evaluate(e => e.scrollIntoView({ block: 'nearest' }));
+  await expect(page.locator('.cast-card')).toHaveCount(3);
+  await expect(page.locator('.cast-card').first()).toContainText('Diretor de teste');
+  expect(await page.evaluate(() => window.injected)).toBeUndefined();
+  await page.locator('#toast').evaluate(e => e.hidden = true);
+  await page.screenshot({ path: 'test-results/detail-cast-1920.png' });
+});
+
+test('duplicate titles in different home catalogs restore focus to their own row', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.route('https://fixture.example/manifest.json', route => route.fulfill({ json: { id: 'local.test', name: 'Catálogo de teste', resources: ['catalog', 'meta'], types: ['movie', 'series'], catalogs: [{ id: 'first', name: 'Primeira faixa', type: 'movie' }, { id: 'second', name: 'Segunda faixa', type: 'movie' }] } }));
+  await install(page); await navigation(page, 'Início');
+  await expect(page.locator('.catalog-section').first().locator('.card').first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  expect(errors).toEqual([]);
+  const second = page.locator('.catalog-section').nth(1).locator('.card').first();
+  await expect(second).toBeFocused();
+  await page.keyboard.press('Enter'); await expect(page.locator('.detail-title')).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(second).toBeFocused();
+  await page.keyboard.press('ArrowUp'); await expect(page.locator('.catalog-section').first().locator('.card').first()).toBeFocused();
 });

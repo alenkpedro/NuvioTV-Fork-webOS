@@ -33,8 +33,14 @@ Outras configurações do Android ainda não são sincronizadas.
 - Importação dos addons da conta, com opção de repetir a sincronização e erros parciais visíveis.
 - Instalação/remoção local de add-ons, catálogos, busca e detalhes com episódios.
 - Biblioteca local com favoritos persistentes.
-- Layout padrão do fork: tema Branco, fonte Inter, menu recolhido e destaque
-  atualizado após estabilizar o foco por 450 ms.
+- Layout Modern do fork: tema Branco, fonte Inter, sidebar clássico/moderno/oculto,
+  retrato/paisagem, fundo parcial/completo, rótulos e estilos de Continuar Assistindo.
+  Ajustes em **Layout** são locais; o login não importa preferências visuais do Android.
+- Destaque atualizado após estabilizar o foco por 450 ms, com consulta cancelável
+  de metadados aos addons (até três provedores elegíveis, um por vez).
+- Detalhes com sinopse completa, créditos/elenco dos addons, temporadas e cartões
+  horizontais de episódios. Assistir considera a retomada local e pula especiais
+  na primeira reprodução quando há uma temporada regular disponível.
 - Controle por setas/OK/Voltar (incluindo código 461 da LG) e ponteiro.
 - Extração de resolução, qualidade, grupo, áudio, HDR, codec, idioma e tamanho.
 - Ranking determinístico do fork, listas de grupos e filtros estritos; o botão de
@@ -77,8 +83,7 @@ Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliaç
 de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
 sincronização de biblioteca/histórico e perfis secundários; decodificadores FFmpeg/MPV; conversão Dolby Vision;
 passthrough lossless/MAT; troca de faixa de áudio e legendas ASS/SRT ou obtidas de
-add-ons de legenda; ajuste de frequência e Up Next. A versão 0.2.0 reconstrói a tela inicial Modern, o menu lateral clássico e as
-principais telas a partir do código de referência. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
+add-ons de legenda; ajuste de frequência e Up Next. A versão 0.4.0 amplia as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers, coleções e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
 para medidas, origem e limitações; ainda não há comparação pixel a pixel com
 uma captura da mesma configuração executada no Android.
 
@@ -107,7 +112,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.3.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.4.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em
@@ -119,7 +124,7 @@ Os testes de fluxo usam um vídeo sintético de 60 segundos, gerado com FFmpeg,
 e respostas de add-on locais interceptadas no navegador. Não acessam conteúdo
 de terceiros. Isso comprova o fluxo no navegador, não a reprodução na TV.
 
-Veja [PORTING.md](PORTING.md) para rastreabilidade e pendências.
+Veja [PORTING.md](PORTING.md) para rastreabilidade e [ROADMAP.md](ROADMAP.md) para etapas, pendências e próxima entrega sugerida.
 
 ## Licença
 

@@ -12,6 +12,7 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 | `src/core/ranking.js: sizeBytes` | Port de `core/debrid/StreamTextSizeParser.kt`, incluindo unidades binárias e precedência de campos estruturados. |
 | `src/core/addons.js` | Contratos de `data/remote/api/AddonApi.kt` e comportamento de URLs de `data/repository/AddonRepositoryImpl.kt`; transporte substituído por fetch limitado/cancelável. |
 | `src/core/account.js`, `account-sync.js` | `core/auth/AuthManager.kt`, `ui/screens/account/AccountViewModel.kt`, `core/sync/AddonSyncService.kt`: vinculação, renovação, resolução de proprietário e leitura de addons do perfil principal. Ver [ACCOUNT.md](ACCOUNT.md). |
+| `src/core/presentation.js`, opções em `app.js`/`style.css` | `LayoutPreferenceDataStore`, `ModernHomeContent`, `ModernSidebarBlurPanel`, `HeroSection`, `EpisodesSection`, `CastSection`. Ver [UI_REFERENCE.md](UI_REFERENCE.md) para dimensões e diferenças. |
 | `src/core/storage.js` | Nova persistência webOS; não compartilha o formato Android DataStore nem implementa a sincronização original. |
 | `src/app.js`, `src/remote.js` | Nova implementação de plataforma para os fluxos do fork; Compose/Media3 não são carregados no webOS. |
 
@@ -33,8 +34,9 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 
 ## Próximos marcos
 
-- Instalação da 0.1.0 confirmada pelo usuário na UT8050. Validar atualização 0.2.0, testar add-ons reais e registrar
-  falhas de acesso sem incluir tokens de configuração nos logs.
+Sequência e acompanhamento: [ROADMAP.md](ROADMAP.md). A cada entrega, sugerir a próxima etapa ao usuário.
+
+- Instalação, melhoria visual da 0.2 e login da 0.3 confirmados pelo usuário na UT8050. Validar as novas opções da 0.4 e os formatos de reprodução sem registrar tokens de configuração.
 - Validar formatos HTTP/HLS, 4K, HDR10/HLG, áudio, legendas e suspensão na TV.
 - Implementar um serviço local de transporte e investigar integração com o
   player antes de portar `ParallelRangeDataSource` e `StreamSweepEngine`.

@@ -1,4 +1,4 @@
-# Referência visual da revisão 0.2.0
+# Referência visual — revisões 0.2 e 0.4
 
 Base: **ysosrs123/NuvioTV-Fork**, commit
 `45e0984c18460d2a65c5d745999011b4314328eb`, branch `nuvio-test`.
@@ -10,7 +10,7 @@ As medidas Compose são traduzidas para um canvas web de **960×540**, escalado
 para **1920×1080**. Os valores abaixo são dp/sp antes da escala 2×.
 Preferências padrão da base: **tema Branco, Inter, escala 100%, home Modern,
 pôsteres em retrato, sidebar clássico e hero parcial**. O fork também oferece
-outras combinações; esta revisão não as reproduz todas.
+outras combinações; a 0.4 implementa as variações listadas abaixo, mas não todas as personalizações.
 
 ## Medidas e origem
 
@@ -48,16 +48,38 @@ As capturas usam conteúdo sintético; não são screenshots do Android.
 
 Isso **não comprova identidade pixel a pixel** entre Compose e o Chromium da LG.
 Ainda falta uma comparação com o Android usando os mesmos catálogos e
-preferências. A revisão 0.2.0 precisa de validação na TV; a foto do usuário
-confirma a instalação da 0.1.0.
+preferências. O usuário confirmou que a 0.2 ficou mais parecida e que o login da 0.3 funcionou. As variações da 0.4 ainda precisam de validação no aparelho.
 
 Persistem diferenças nas telas secundárias: a conta passou a funcionar na 0.3.0 via QR code e importação de addons;
-outras integrações não portadas são identificadas como indisponíveis; busca usa o teclado da LG; episódios usam
-lista simples; player usa controles web/nativos; filtros de fontes têm ações
-próprias do port. TMDB/MDBList, trailers do hero, variantes landscape/fullscreen,
-sidebar Modern alternativo, efeitos de profundidade e outras personalizações
-ainda não estão implementados. Logos, artes e sinopses dependem dos metadados
+outras integrações não portadas são identificadas como indisponíveis; busca usa o teclado da LG; player usa controles web/nativos; filtros de fontes têm ações próprias do port. TMDB/MDBList, trailers do hero, expansão temporizada, efeitos de profundidade, temas/fontes alternativos e outras personalizações ainda não estão implementados. Logos, artes e sinopses dependem dos metadados
 dos addons instalados.
 
 A atualização preserva `org.nuviofork.webos` e o armazenamento da 0.1.0.
 Favoritos ficam na TV; não representam sincronização com uma conta Nuvio.
+
+## Entrega 0.4 — opções Modern e detalhes
+
+O próprio `LayoutPreferenceDataStore.selectedLayout` força **MODERN** no fork
+(nt20). Não foi criado um seletor de Classic/Grid que a base não oferece mais.
+As opções abaixo funcionam e persistem nesta TV; não são botões de demonstração.
+
+| Recurso | Medidas/regra do fork aplicada |
+|---|---|
+| Pôsteres horizontais | `126 × 1,24 × 1,34 = 209,3616` de largura; altura `/1,77`; viewport de faixas 49% em vez de 52%. `ModernHomeContent.kt` |
+| Fundo em tela cheia | Arte ocupa 960×540; modo parcial continua em 72% da largura. `modernHeroFullScreenBackdropEnabled` |
+| Sidebar Modern | Contêiner 230, padding inicial 14/final 8: superfície 208, topo 16, fundo 12, raio 30; wordmark ou perfil no original. Nesta etapa usa wordmark. `MainActivity.ModernSidebarScaffold`, `ModernSidebarBlurPanel.kt` |
+| Menu recolhido | Pill com ícone e nome da tela, reduz ao ícone após 3 s; ocultação total opcional e reabertura por Esquerda/Voltar. Desfoque de 24 opcional e desligado por padrão |
+| Rótulos/catálogos | Liga/desliga título dos pôsteres, nome do addon e sufixo Filme/Série. `LayoutPreferenceDataStore`, `ModernHomeModels.catalogRowTitle` |
+| Continuar Assistindo | Liga/desliga; estilos Cartão (209,3616×118,2834), Pôster (114,3072×171,4608) e Amplo (264,6×105,84). `ModernHomeContent.kt` |
+| Metadados do destaque | Após 450 ms, consulta o recurso `meta` dos addons, mantendo os dados de catálogo como fallback. Requisição anterior cancelada ao mover foco/sair/ocultar app; mesma cache limitada dos detalhes |
+| Detalhes | Gradientes lateral (78% da largura) e inferior (a partir de 38%) de `MetaDetailsScreen`; título 36/44 bold de `Type.kt`; sinopse expansível, créditos e metadados sem fabricar notas/dados ausentes |
+| Episódios | Cartões 320×207, padding lateral 48, gap 16, raio 12 (faixa 760–999 dp de `EpisodesSection.rememberEpisodeCardMetrics`). Temporadas em botões, troca por foco após 150 ms |
+| Assistir série | Retoma o último episódio iniciado ou procura o próximo disponível. Especiais não passam à frente da primeira temporada regular. A temporada visível não altera o destino do botão principal |
+| Elenco | Dados recebidos do addon, até 40 pessoas, fotos circulares de 100 e células de 150. `CastSection.kt`. Filmografia/TMDB ainda pendentes |
+| Controle | Restaura título/faixa/temporada ao voltar, inclusive quando dois catálogos contêm o mesmo título. Modal mantém foco dentro dele. Rolagem por foco não desloca botões durante um clique do ponteiro |
+
+O fluxo de sinopse e os cartões foram verificados com metadados sintéticos,
+incluindo atrasos/falhas e HTML malicioso tratado como texto. Os controles de
+fontes/player, biografia/filmografia, menus long-press de episódios, avaliações,
+trailers e recomendações ainda não são equivalentes ao Android. O próximo marco
+sugerido e as demais pendências estão em [ROADMAP.md](ROADMAP.md).
