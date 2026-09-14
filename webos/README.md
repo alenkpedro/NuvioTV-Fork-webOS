@@ -17,14 +17,18 @@ Atualize a lista e instale **Nuvio Fork**. O identificador `org.nuviofork.webos`
 permite coexistir com outras versões do Nuvio. O índice aponta para um IPK
 versionado e contém seu SHA-256 e tamanho. O aplicativo não exige root.
 
-Primeiro uso: abra **Add-ons** e adicione a URL do `manifest.json` do seu add-on.
-Depois abra **Início** ou **Buscar**, selecione um título, episódio e fonte.
+Primeiro uso: pressione **Esquerda** ou **Voltar** para abrir o menu.
+Entre em **Ajustes → Conteúdo e Descoberta → Addons** e adicione a URL do `manifest.json` do seu add-on.
+Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. Esta versão não importa a conta
 Nuvio nem sua configuração do Android automaticamente.
 
 ## O que funciona nesta prévia
 
 - Instalação/remoção local de add-ons, catálogos, busca e detalhes com episódios.
+- Biblioteca local com favoritos persistentes.
+- Layout padrão do fork: tema Branco, fonte Inter, menu recolhido e destaque
+  atualizado após estabilizar o foco por 450 ms.
 - Controle por setas/OK/Voltar (incluindo código 461 da LG) e ponteiro.
 - Extração de resolução, qualidade, grupo, áudio, HDR, codec, idioma e tamanho.
 - Ranking determinístico do fork, listas de grupos e filtros estritos; o botão de
@@ -67,8 +71,10 @@ Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliaç
 de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
 login e sincronização; decodificadores FFmpeg/MPV; conversão Dolby Vision;
 passthrough lossless/MAT; troca de faixa de áudio e legendas ASS/SRT ou obtidas de
-add-ons de legenda; ajuste de frequência e Up Next. A interface é uma primeira
-implementação funcional, ainda sem paridade visual completa com o layout Modern.
+add-ons de legenda; ajuste de frequência e Up Next. A versão 0.2.0 reconstrói a tela inicial Modern, o menu lateral clássico e as
+principais telas a partir do código de referência. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
+para medidas, origem e limitações; ainda não há comparação pixel a pixel com
+uma captura da mesma configuração executada no Android.
 
 Add-ons precisam permitir requisições do app web (CORS). Fontes que exigem
 cabeçalhos HTTP especiais ou resolução local são identificadas como indisponíveis.
@@ -95,7 +101,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.1.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.2.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

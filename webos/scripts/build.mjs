@@ -5,6 +5,6 @@ await mkdir('dist', { recursive: true });
 await cp('public', 'dist', { recursive: true });
 await cp('../LICENSE', 'dist/LICENSE');
 await cp('THIRD_PARTY_NOTICES.md', 'dist/THIRD_PARTY_NOTICES.md');
-await build({ entryPoints: ['src/app.js'], bundle: true, format: 'iife', target: ['chrome108'], outdir: 'dist', minify: true, sourcemap: false, legalComments: 'eof', loader: { '.ttf': 'file' }, logLevel: 'info' });
+await build({ entryPoints: ['src/app.js'], bundle: true, format: 'iife', external: ['./assets/fonts/*'], target: ['chrome108'], outdir: 'dist', minify: true, sourcemap: false, legalComments: 'eof', loader: { '.ttf': 'file', '.svg': 'text' }, logLevel: 'info' });
 const app = JSON.parse(await readFile('dist/appinfo.json', 'utf8'));
 await writeFile('dist/build-info.json', JSON.stringify({ app: app.id, version: app.version, upstream: 'ysosrs123/NuvioTV-Fork', upstreamCommit: '45e0984c18460d2a65c5d745999011b4314328eb', target: 'LG 55UT8050 / webOS 24', hardwareTested: false }, null, 2));

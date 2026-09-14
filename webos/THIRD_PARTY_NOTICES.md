@@ -32,5 +32,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-The interface uses the operating-system sans-serif font; no external font
-service is contacted. Build/test tools are development dependencies only.
+The interface bundles the original, unmodified Inter variable font from the
+Android fork. Copyright (c) 2016 The Inter Project Authors
+(https://github.com/rsms/inter). SIL Open Font License 1.1; the complete license
+is included at assets/fonts/OFL.txt. No external font service is contacted.
+
+Sidebar search/library/settings SVGs are copied unchanged from the fork's
+res/raw directory. Their SVG Repo attribution comments remain intact.
+Material icon paths follow the Android Material icons used by the reference.
+They are distributed under Apache License 2.0; see assets/icons/MATERIAL-LICENSE.txt.
+Build/test tools are development dependencies only.

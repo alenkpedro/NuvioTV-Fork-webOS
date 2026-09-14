@@ -92,3 +92,23 @@ test('progress is bounded and never saves expiring source URLs', () => {
   assert.ok(!JSON.stringify(state).includes('private.example'));
   assert.deepEqual(readState({ getItem: () => '{broken' }), initial());
 });
+
+test('0.1 storage migrates without losing add-ons, source preferences or progress', async () => {
+  const { readState } = await import('../src/core/storage.js');
+  const previous = { addons: [{ url: 'https://fixture.example/manifest.json', manifest: { id: 'fixture', resources: [] } }], settings: { avoidDvOnly: false, autoPlay: true, preferences: { excludedReleaseGroups: ['MyGroup'] } }, progress: { old: { time: 15 } } };
+  const next = readState({ getItem: () => JSON.stringify(previous) });
+  assert.deepEqual(next.addons, previous.addons);
+  assert.deepEqual(next.settings, previous.settings);
+  assert.deepEqual(next.progress, previous.progress);
+  assert.deepEqual(next.library, {});
+  assert.deepEqual(next.watched, {});
+});
+
+test('font, branding and legacy sidebar artwork are byte-identical to the selected fork', async () => {
+  const { readFile } = await import('node:fs/promises');
+  for (const [origin, bundled] of [
+    ['font/inter_variable.ttf', 'fonts/inter.ttf'],
+    ['drawable/app_logo_wordmark.png', 'wordmark.png'],
+    ...['search', 'library', 'settings'].map(name => [`raw/sidebar_${name}.svg`, `icons/sidebar_${name}.svg`])
+  ]) assert.deepEqual(await readFile(`public/assets/${bundled}`), await readFile(`../app/src/main/res/${origin}`));
+});

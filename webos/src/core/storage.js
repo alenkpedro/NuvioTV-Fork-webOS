@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const KEY = 'nuvio-fork.webos.v1';
-export const initial = () => ({ addons: [], settings: { avoidDvOnly: true, autoPlay: false, preferences: {} }, progress: {} });
+export const initial = () => ({ addons: [], settings: { avoidDvOnly: true, autoPlay: false, preferences: {} }, progress: {}, library: {}, watched: {} });
 export function readState(storage) {
   try {
     const parsed = JSON.parse(storage.getItem(KEY));
     if (!parsed || !Array.isArray(parsed.addons) || typeof parsed.progress !== 'object' || !parsed.progress) return initial();
-    return { ...initial(), ...parsed, settings: { ...initial().settings, ...parsed.settings }, addons: parsed.addons.filter(a => a?.url && a?.manifest?.id && Array.isArray(a.manifest.resources)).slice(0, 30) };
+    return { ...initial(), ...parsed, library: parsed.library && typeof parsed.library === 'object' ? parsed.library : {}, watched: parsed.watched && typeof parsed.watched === 'object' ? parsed.watched : {}, settings: { ...initial().settings, ...parsed.settings }, addons: parsed.addons.filter(a => a?.url && a?.manifest?.id && Array.isArray(a.manifest.resources)).slice(0, 30) };
   } catch { return initial(); }
 }
 export function saveState(storage, state) {

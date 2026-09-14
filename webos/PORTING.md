@@ -32,14 +32,15 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 
 ## Próximos marcos
 
-- Confirmar instalação via Homebrew na UT8050; testar add-ons reais e registrar
+- Instalação da 0.1.0 confirmada pelo usuário na UT8050. Validar atualização 0.2.0, testar add-ons reais e registrar
   falhas de acesso sem incluir tokens de configuração nos logs.
 - Validar formatos HTTP/HLS, 4K, HDR10/HLG, áudio, legendas e suspensão na TV.
 - Implementar um serviço local de transporte e investigar integração com o
   player antes de portar `ParallelRangeDataSource` e `StreamSweepEngine`.
 - Adaptar MDBList, Trakt, Simkl e debrid direto com credenciais fornecidas pelo
   usuário na própria interface; separar persistência e autenticação por serviço.
-- Expandir fidelidade do layout Modern e paridade de ajustes do fork.
+- Comparar a renderização Android/webOS com os mesmos dados e preferências;
+  concluir telas, integrações e variações ainda não portadas. Ver [UI_REFERENCE.md](UI_REFERENCE.md).
 
 Referências de plataforma:
 

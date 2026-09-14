@@ -15,13 +15,18 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.1.0
+## Estado: prévia 0.2.0
 
-Esta é a primeira versão funcional, **ainda não validada na TV** e sem paridade completa com o fork Android.
-Tem add-ons, catálogos, busca, episódios, ranking/filtros do fork, reprodução HTTP(S) e retomada local.
+A 0.2.0 substitui a interface genérica da primeira prévia por uma reconstrução baseada no layout do fork.
+A instalação da 0.1.0 foi confirmada em uma LG 55UT8050; a revisão 0.2.0 ainda requer validação no aparelho.
+Não há paridade completa de recursos com o fork Android.
+Tem biblioteca local, add-ons, catálogos, busca, episódios, ranking/filtros do fork, reprodução HTTP(S) e retomada local.
 Downloads paralelos, debrid direto, trackers, plugins e processamento avançado de áudio/vídeo ainda não foram portados.
 
-A interface foi feita para ser leve: UI em 1080p, vídeo na resolução original, três consultas simultâneas,
+Use **Esquerda/Voltar → Ajustes → Conteúdo e Descoberta → Addons** para instalar seus catálogos.
+A atualização preserva os dados da 0.1.0. [Referência visual e medidas](webos/UI_REFERENCE.md).
+
+A interface mantém: UI em 1080p, vídeo na resolução original, três consultas simultâneas,
 cache limitado e imagens carregadas sob demanda. Não contém contas, credenciais ou add-ons pré-instalados.
 
 ## Base e créditos
