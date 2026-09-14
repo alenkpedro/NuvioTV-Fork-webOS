@@ -22,6 +22,7 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
 | 0.2 | Reconstrução do layout padrão a partir do fork | Usuário confirmou que ficou mais parecido |
 | 0.3 | Login por QR e importação dos addons do perfil principal | Login confirmado pelo usuário |
 | 0.4 | Variações Modern, menu flutuante/oculto, metadados do destaque, detalhes/episódios e restauração de foco | Pendente |
+| 0.5 | Fontes com filtro/refresh/retorno, painéis de áudio, legendas externas SRT/WebVTT e ajustes | Pendente; troca de áudio testada com API simulada |
 
 ## Sequência proposta
 
@@ -32,11 +33,14 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    cartões e temporadas com restauração. Permanecem temas/fontes/escala,
    efeitos de profundidade, expansão temporizada, trailers, coleções e comparação
    Android/webOS com os mesmos dados. Preferências de layout ainda são locais.
-2. **Fontes, áudio e legendas — próxima etapa sugerida.** Aproximar a organização
-   e os controles de StreamScreen/PlayerScreen, testar troca de áudio e legendas
-   oferecidas pelo player LG, integrar addons de legendas e documentar formatos
-   efetivamente suportados. Conservar as regras de seleção do fork.
-3. **Biblioteca, histórico e perfis.** Ler/sincronizar favoritos, progresso e
+2. **Fontes, áudio e legendas — primeira entrega 0.5.** Organização de fontes,
+   filtro por addon, atualização e retorno com foco. Painéis de áudio/faixas
+   internas expostas pela plataforma; legendas da fonte e de addons em SRT/VTT,
+   tamanho/fundo/atraso e busca na timeline. Testes de UI/renderização no navegador;
+   áudio simulado, sem confirmação no hardware. Permanecem ASS/PGS/ZIP,
+   seleção automática de idioma, busca manual, estilos avançados, personalização
+   de badges e paridade completa do player. Ver [PLAYER.md](PLAYER.md).
+3. **Biblioteca, histórico e perfis — próxima etapa sugerida.** Ler/sincronizar favoritos, progresso e
    assistidos, implementar seleção de perfil e respeitar PIN/regras do perfil.
    Tratar conflitos de sincronização e não sobrescrever a nuvem com estado vazio.
 4. **Descoberta e metadados.** Busca/Descobrir, organização de todos os catálogos,

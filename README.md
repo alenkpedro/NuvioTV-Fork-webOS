@@ -15,9 +15,16 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.4.0
+## Estado: prévia 0.5.0
 
-A 0.4.0 amplia a fidelidade visual ao fork: **menu moderno ou clássico**, pôsteres horizontais ou em retrato, fundo em tela cheia, metadados no destaque e detalhes com sinopse completa, elenco e cartões de episódios. Configure em **Ajustes → Layout**. As opções são salvas nesta TV.
+A 0.5.0 acrescenta **painéis de áudio e legendas**, legendas **SRT/WebVTT de addons**,
+controle de tamanho/fundo/sincronização e barra de posição. A seleção de fontes
+agora tem atualização, filtro por addon, badges e restauração do foco ao voltar
+do vídeo. O botão de melhor fonte respeita o addon selecionado.
+
+O layout Modern e seus ajustes da 0.4.0 continuam disponíveis. Os novos painéis
+usam as dimensões do fork Android; veja [PLAYER.md](webos/PLAYER.md) para uso,
+referências e diferenças ainda abertas.
 
 O **login Nuvio por QR code** e a importação dos addons do **perfil principal** continuam disponíveis. O usuário confirmou o login na LG com a 0.3.0; não é necessário sair da conta para atualizar.
 
@@ -30,11 +37,11 @@ O **login Nuvio por QR code** e a importação dos addons do **perfil principal*
 
 Sem login, é possível usar **Continuar sem conta** e instalar addons manualmente. Perfil secundário, biblioteca/histórico da nuvem, debrid direto e plugins Android ainda não são sincronizados. Favoritos e histórico de reprodução continuam locais.
 
-Validação: testes de regras, conta e navegação com dados sintéticos; instalação e login da 0.3.0 confirmados pelo usuário. As novas combinações visuais da 0.4.0 e os formatos de reprodução precisam de validação na TV. Não se afirma identidade pixel a pixel. [Detalhes da conta](webos/ACCOUNT.md) · [Referência visual](webos/UI_REFERENCE.md).
+Validação: testes de regras, conta e navegação com dados sintéticos; instalação e login da 0.3.0 confirmados pelo usuário. Os painéis e o renderizador de legendas foram testados no navegador. A troca efetiva de áudio, formatos e sincronismo precisam de validação na TV. Não se afirma identidade pixel a pixel. [Detalhes da conta](webos/ACCOUNT.md) · [Referência visual](webos/UI_REFERENCE.md).
 
 ## Próxima etapa
 
-**Fontes, áudio e legendas:** aproximar a seleção de fontes e os controles de reprodução do fork e testar os recursos disponíveis no player LG. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Biblioteca, histórico e perfis:** começar pela leitura da biblioteca da conta e seleção de perfil, preservando favoritos/progresso e respeitando as regras de acesso do fork. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 

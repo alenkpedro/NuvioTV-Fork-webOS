@@ -47,7 +47,8 @@ Outras configurações do Android ainda não são sincronizadas.
   melhor fonte mantém o fallback de exclusões do original entre fontes elegíveis.
 - Ajustes de grupos, exclusões de codecs/qualidades, limite de resultados e autoplay.
 - Reprodução HTTP(S) no player da plataforma, pausa, avanço/recuo, retomada local,
-  histórico limitado e legendas WebVTT anunciadas diretamente pela fonte.
+  histórico limitado, painel de áudio quando a plataforma expõe faixas e legendas
+  SRT/WebVTT da fonte e de addons, com tamanho, fundo e sincronização. Veja [PLAYER.md](PLAYER.md).
 - Diagnóstico de resolução decodificada, buffer temporal e frames perdidos,
   quando expostos pelo player. HDR e áudio de saída são explicitamente não medidos.
 
@@ -82,8 +83,9 @@ separadamente. Não há alegação de otimização máxima medida no hardware.
 Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliação
 de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
 sincronização de biblioteca/histórico e perfis secundários; decodificadores FFmpeg/MPV; conversão Dolby Vision;
-passthrough lossless/MAT; troca de faixa de áudio e legendas ASS/SRT ou obtidas de
-add-ons de legenda; ajuste de frequência e Up Next. A versão 0.4.0 amplia as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers, coleções e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
+passthrough lossless/MAT; legendas ASS/PGS/ZIP, preferências automáticas de idioma,
+ajuste de frequência e Up Next. A versão 0.5.0 acrescenta fontes, áudio e legendas; a
+0.4.0 ampliou as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers, coleções e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
 para medidas, origem e limitações; ainda não há comparação pixel a pixel com
 uma captura da mesma configuração executada no Android.
 
@@ -112,7 +114,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.4.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.5.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

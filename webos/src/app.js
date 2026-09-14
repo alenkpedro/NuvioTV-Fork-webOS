@@ -6,6 +6,7 @@ import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
 import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
 import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode, castMembers } from './core/presentation.js';
+import { installTrackControls } from './player-tracks.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
 import libraryIcon from '../public/assets/icons/sidebar_library.svg';
@@ -84,11 +85,12 @@ function toast(message) {
 function persist() {
   if (!saveState(localStorage, state) && !persistWarning) { persistWarning = true; toast('Armazenamento indisponível. Alterações valem somente nesta sessão.'); }
 }
-function focusFirst() { requestAnimationFrame(() => {
-  if (drawerOpen) return;
+function focusFirst() { const expectedRoute = route, expectedRequest = request; requestAnimationFrame(() => {
+  if (drawerOpen || route !== expectedRoute || request !== expectedRequest) return;
   const restored = route.restoreFocus && [...root.querySelectorAll('[data-focus]')].find(e => e.dataset.focus === route.restoreFocus);
   delete route.restoreFocus;
   (restored || root.querySelector('main [data-initial-focus]') || root.querySelector('main input, main button:not(:disabled)') || root.querySelector('main'))?.focus({ preventScroll: true });
+  if (restored?.classList.contains('source')) restored.scrollIntoView({ block: 'nearest' });
 }); }
 function navigate(next, replace = false) {
   if (!replace) stack.push({ route, focus: document.activeElement?.dataset.focus });
@@ -460,7 +462,9 @@ async function showDetail(main, signal) {
   main.querySelectorAll('.detail-actions button, .synopsis').forEach(b => b.addEventListener('focus', () => { if (!pointerFocus) main.scrollTop = 0; }));
 }
 async function showStreams(main, signal) {
-  const context = { ...route };
+  // Ephemeral route state preserves selection on Back; signed source URLs are not persisted.
+  route.sourceView ||= { showAll: false, provider: null };
+  const context = { ...route }, view = context.sourceView;
   const backdrop = safeImage(context.meta.background);
   if (backdrop) main.append(el('img', { class: 'stream-backdrop', src: backdrop, alt: '' }));
   main.append(el('div', { class: 'stream-fade' }));
@@ -468,39 +472,55 @@ async function showStreams(main, signal) {
     el('p', { class: 'muted' }, context.episode ? `Temporada ${context.episode.season} · Episódio ${context.episode.episode}` : [context.meta.genres?.join(', '), context.meta.releaseInfo].filter(Boolean).join(' • ')),
     context.episode?.title ? el('p', {}, context.episode.title) : null));
   const pane = el('div', { class: 'stream-pane' }); main.append(identity, pane); main = pane;
-  const loading = el('p', { class: 'loading' }, 'Buscando fontes nos seus add-ons…'); main.append(loading);
-  const providers = state.addons.filter(a => supports(a, 'stream', context.type, context.id));
-  const responses = await mapLimit(providers, async addon => {
-    const result = await getJSON(resourceURL(addon, 'stream', context.type, context.id), { signal });
-    return (Array.isArray(result.streams) ? result.streams : []).slice(0, 300).map(s => ({ ...s, addonName: addon.manifest.name }));
-  }, signal);
-  if (!current(signal)) return; loading.remove();
-  const all = responses.flatMap(r => r.value ?? []);
-  for (let i = 0; i < responses.length; i++) if (responses[i].error) notice(main, `${providers[i].manifest.name}: ${responses[i].error.message}`);
-  if (!all.length) { notice(main, providers.length ? 'Nenhuma fonte encontrada para este título.' : 'Nenhum add-on instalado fornece fontes para este título.'); return; }
-  const playable = all.filter(s => !playbackIssue(s, state.settings.avoidDvOnly));
-  const ordered = rankStreams(playable, state.settings.preferences);
-  if (state.settings.autoPlay && ordered.length) { navigate({ ...context, name: 'player', stream: ordered[0] }, true); return; }
-  let showAll = false, selectedAddon = null;
+  const providers = state.addons.filter(a => supports(a, 'stream', context.type, context.id)).slice(0, 30);
+  if (!view.rows || Date.now() - view.loadedAt > 120000) {
+    const loading = el('p', { class: 'loading' }, 'Buscando fontes nos seus add-ons…'); main.append(loading);
+    const responses = await mapLimit(providers, async (addon, provider) => {
+      const result = await getJSON(resourceURL(addon, 'stream', context.type, context.id), { signal });
+      if (!Array.isArray(result.streams)) throw Error('Resposta de fontes inválida.');
+      return result.streams.slice(0, 300).filter(s => s && typeof s === 'object').map((s, index) => ({ ...s, addonName: addon.manifest.name, sourceProvider: provider, sourceKey: `source-${provider}-${index}` }));
+    }, signal);
+    if (!current(signal)) return; loading.remove();
+    view.rows = responses.flatMap(r => r.value ?? []);
+    view.failed = responses.filter(r => r.error).length; view.loadedAt = Date.now();
+  }
+  const all = view.rows;
+  const chooseBest = rows => rankStreams(rows.filter(s => !playbackIssue(s, state.settings.avoidDvOnly)), state.settings.preferences)[0];
+  if (state.settings.autoPlay && !view.visited) {
+    view.visited = true; const best = chooseBest(all);
+    if (best) { navigate({ ...context, name: 'player', stream: best }); return; }
+  }
+  view.visited = true;
   const list = el('div', { class: 'streams' });
+  const count = el('p', { class: 'stream-count', role: 'status' });
+  const subset = () => all.filter(s => view.provider === null || s.sourceProvider === view.provider);
   const display = () => {
-    // Manual list uses strict filters. Auto-pick retains the original exclusion fallback.
-    const visible = showAll ? [...rankStreams(all, { ...state.settings.preferences, excludedResolutions: [], excludedQualities: [], excludedVisualTags: [], excludedAudioTags: [], excludedAudioChannels: [], excludedEncodes: [], excludedLanguages: [], excludedReleaseGroups: [] })] : filterAndSort(all, state.settings.preferences);
+    // Manual list uses strict filters. Auto-pick retains the fork's exclusion fallback.
+    const rows = subset();
+    const visible = view.showAll ? rankStreams(rows, { ...state.settings.preferences, excludedResolutions: [], excludedQualities: [], excludedVisualTags: [], excludedAudioTags: [], excludedAudioChannels: [], excludedEncodes: [], excludedLanguages: [], excludedReleaseGroups: [] }) : filterAndSort(rows, state.settings.preferences);
     list.replaceChildren();
-    if (!visible.length) notice(list, 'Nenhuma fonte passou pelos filtros. Use “Mostrar todas” para revisar.');
-    for (const s of visible.filter(s => !selectedAddon || s.addonName === selectedAddon).slice(0, 100)) {
+    count.textContent = `${Math.min(100, visible.length)} de ${rows.length} fonte(s)${view.failed ? ` · ${view.failed} addon(s) não responderam` : ''}`;
+    if (!visible.length) notice(list, !providers.length ? 'Nenhum add-on instalado fornece fontes para este título.' : !rows.length ? 'Nenhuma fonte encontrada. Tente atualizar ou escolher outro addon.' : 'Nenhuma fonte passou pelos filtros. Use “Mostrar todas” para revisar.');
+    for (const s of visible.slice(0, 100)) {
       const f = factsFor(s, state.settings.preferences), issue = playbackIssue(s, state.settings.avoidDvOnly);
-      const info = [labels[f.resolution], labels[f.quality], f.releaseGroup, bytes(sizeBytes(s))].filter(Boolean).join(' · ');
-      list.append(button([el('div', { class: 'source-top' }, el('span', { class: 'source-addon' }, s.addonName), el('span', { class: 'source-quality' }, labels[f.resolution])), el('strong', {}, s.name || s.title || 'Fonte'), el('p', {}, s.description || s.title || info), el('small', { class: issue ? 'warning' : 'muted' }, issue || info)], () => issue ? toast(issue) : navigate({ ...context, name: 'player', stream: s }), { class: `source ${issue ? 'unavailable' : ''}`, 'aria-disabled': issue ? 'true' : null, 'data-initial-focus': !list.childElementCount }));
+      const badges = [labels[f.resolution], labels[f.quality], labels[f.encode], ...(f.visualTags || []).map(v => labels[v]), ...(f.audioTags || []).map(v => labels[v]), ...(f.audioChannels || []).map(v => labels[v]), f.releaseGroup, bytes(sizeBytes(s))].filter(v => v && !/unknown|desconhecid|not available/i.test(v));
+      const sourceIcon = providers[s.sourceProvider]?.manifest.logo;
+      list.append(button([el('div', { class: 'source-heading' }, el('div', { class: 'grow' }, el('strong', {}, s.name || s.title || 'Fonte'), el('span', { class: 'source-addon' }, s.addonName)), sourceIcon ? poster(sourceIcon, s.addonName, 'source-icon') : null),
+        el('p', {}, s.description || s.title || ''), el('div', { class: 'source-badges' }, [...new Set(badges)].map(value => el('span', {}, value))),
+        issue ? el('small', { class: 'warning' }, issue) : null],
+      () => issue ? toast(issue) : navigate({ ...context, name: 'player', stream: s }),
+      { class: `source ${issue ? 'unavailable' : ''}`, 'aria-disabled': issue ? 'true' : null, 'data-focus': s.sourceKey, 'data-initial-focus': !list.childElementCount }));
     }
   };
-  const toggle = button('Mostrar todas', () => { showAll = !showAll; toggle.textContent = showAll ? 'Aplicar filtros do fork' : 'Mostrar todas'; display(); });
-  const chips = el('div', { class: 'stream-chips' });
-  for (const name of [null, ...new Set(all.map(s => s.addonName))]) chips.append(button(name || 'Todos', () => {
-    selectedAddon = name; [...chips.children].forEach(b => b.classList.toggle('selected', b.textContent === (name || 'Todos'))); display();
-  }, { class: name === null ? 'selected' : '' }));
-  const actions = el('div', { class: 'stream-actions' }, button('Reproduzir melhor fonte', () => ordered.length ? navigate({ ...context, name: 'player', stream: ordered[0] }) : toast('Não há fonte HTTP(S) elegível nesta prévia.')), toggle);
-  main.append(chips, list, actions); display();
+  const toggle = button(view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas', () => { view.showAll = !view.showAll; toggle.textContent = view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas'; display(); }, { 'data-focus': 'source-filters' });
+  const chips = el('div', { class: 'stream-chips' }, button('Atualizar', () => { view.rows = null; route.restoreFocus = 'source-refresh'; render(); }, { 'data-focus': 'source-refresh', 'aria-label': 'Atualizar fontes' }));
+  for (const provider of [null, ...providers.map((_, i) => i)]) chips.append(button(provider === null ? 'Todos' : providers[provider].manifest.name, () => {
+    view.provider = provider; [...chips.querySelectorAll('[data-provider]')].forEach(b => b.classList.toggle('selected', b.dataset.provider === String(provider))); display();
+  }, { class: provider === view.provider ? 'selected' : '', 'data-provider': String(provider), 'data-focus': `source-addon-${provider}` }));
+  const actions = el('div', { class: 'stream-actions' }, button('Reproduzir melhor fonte', () => {
+    const best = chooseBest(subset()); best ? navigate({ ...context, name: 'player', stream: best }) : toast('Não há fonte HTTP(S) elegível nesta seleção.');
+  }, { 'data-focus': 'source-best' }), toggle);
+  main.append(chips, count, list, actions); display();
 }
 function syncSummary(result) {
   if (result.failed) return `${result.imported} addon(s) carregado(s); ${result.failed} não responderam. Tente sincronizar novamente.`;
@@ -663,7 +683,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.4.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, addons do perfil principal e opções de layout disponíveis. Outros perfis, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.5.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, addons do perfil principal e opções de layout disponíveis. Outros perfis, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -702,28 +722,24 @@ function showPlayer(context) {
   const video = el('video', { autoplay: true, playsinline: true, preload: 'metadata' });
   const title = context.episode ? `${context.meta.name} · T${context.episode.season} E${context.episode.episode}` : context.meta.name;
   const status = el('p', { class: 'player-status', role: 'status' }, 'Abrindo vídeo…');
-  const timeline = el('progress', { max: 1, value: 0, 'aria-label': 'Progresso do vídeo' });
+  const timeline = el('input', { type: 'range', class: 'player-timeline', min: 0, max: 1, value: 0, step: 5, disabled: true, 'aria-label': 'Posição do vídeo', onchange: e => seekTo(Number(e.target.value)) });
   const time = el('span', { class: 'player-time' }, '00:00');
   const stats = el('pre', { class: 'stats', hidden: true });
   const pause = button('Pausar', toggle);
-  const controls = el('div', { class: 'player-controls' }, el('div', { class: 'section-head' }, el('h1', {}, title), time), timeline, el('div', { class: 'toolbar' }, button('Voltar às fontes', back), button('−30 s', () => seek(-30)), pause, button('+30 s', () => seek(30)), button('Legendas', cycleSubtitle), button('Diagnóstico', () => { stats.hidden = !stats.hidden; updateStats(); })));
-  const screen = el('div', { class: 'player-screen' }, video, status, stats, controls); root.append(screen);
-  let disposed = false, hideTimer, savedAt = 0, resumeApplied = false, subtitleIndex = -1;
+  const controls = el('div', { class: 'player-controls' }, el('div', { class: 'section-head' }, el('h1', {}, title), time), timeline, el('div', { class: 'toolbar' }, button('Voltar às fontes', back), button('−30 s', () => seek(-30)), pause, button('+30 s', () => seek(30)), button('Áudio', () => tracks.openAudio()), button('Legendas', () => tracks.openSubtitles()), button('Diagnóstico', () => { stats.hidden = !stats.hidden; updateStats(); })));
+  const screen = el('div', { class: 'player-screen controls-visible' }, video, status, stats, controls); root.append(screen);
+  let disposed = false, hideTimer, savedAt = 0, resumeApplied = false;
   const listeners = [];
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
   const resume = state.progress[progressKey(context.type, context.id)];
-  const subtitles = (context.stream.subtitles ?? []).filter(s => safeImage(s.url) && (/\.vtt(?:[?#]|$)/i.test(s.url) || s.format === 'vtt')).slice(0, 20);
-  for (const [index, s] of subtitles.entries()) video.append(el('track', { kind: 'subtitles', src: s.url, srclang: s.lang || 'und', label: s.lang || `Legenda ${index + 1}` }));
+  const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, persist, el, button,
+    onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, onClose: reveal });
   function save() { recordProgress(state, { ...context, time: video.currentTime, duration: video.duration }); persist(); }
-  function reveal() { controls.classList.remove('faded'); clearTimeout(hideTimer); if (!video.paused) hideTimer = setTimeout(() => controls.classList.add('faded'), 4500); }
-  function seek(delta) { if (Number.isFinite(video.duration)) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, video.currentTime + delta)); reveal(); }
+  function reveal() { if (tracks.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen()) hideTimer = setTimeout(() => { controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, 4500); }
+  function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
+  function seek(delta) { seekTo(video.currentTime + delta); }
   async function play() { try { await video.play(); } catch { if (!disposed) { status.hidden = false; status.textContent = 'Pressione Reproduzir para iniciar.'; pause.textContent = 'Reproduzir'; } } }
   function toggle() { video.paused ? play() : video.pause(); reveal(); }
-  function cycleSubtitle() {
-    const tracks = video.textTracks; subtitleIndex = tracks.length ? (subtitleIndex + 2) % (tracks.length + 1) - 1 : -1;
-    for (let i = 0; i < tracks.length; i++) tracks[i].mode = i === subtitleIndex ? 'showing' : 'disabled';
-    toast(tracks.length ? subtitleIndex < 0 ? 'Legendas desativadas.' : `Legenda: ${tracks[subtitleIndex].label || tracks[subtitleIndex].language}` : 'Esta fonte não forneceu legendas WebVTT.'); reveal();
-  }
   function updateStats() {
     if (stats.hidden) return;
     let buffered = 0;
@@ -731,11 +747,11 @@ function showPlayer(context) {
     const q = video.getVideoPlaybackQuality?.();
     stats.textContent = `Resolução decodificada: ${video.videoWidth || '—'} × ${video.videoHeight || '—'}\nBuffer disponível: ${buffered.toFixed(1)} s\nFrames perdidos: ${q?.droppedVideoFrames ?? 'indisponível'}\nFonte: ${context.stream.addonName || 'direta'}\nHDR e saída de áudio: não medidos\nTransporte: player nativo / HTTP(S)`;
   }
-  on('loadedmetadata', () => { if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; });
+  on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; });
   on('playing', () => { status.hidden = true; pause.textContent = 'Pausar'; reveal(); });
   on('waiting', () => { status.hidden = false; status.textContent = 'Carregando vídeo…'; });
   on('pause', () => { pause.textContent = 'Reproduzir'; reveal(); save(); });
-  on('timeupdate', () => { timeline.max = Number.isFinite(video.duration) ? video.duration : 1; timeline.value = video.currentTime; time.textContent = `${clock(video.currentTime)} / ${clock(video.duration)}`; updateStats(); if (Date.now() - savedAt > 10000) { save(); savedAt = Date.now(); } });
+  on('timeupdate', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = Number.isFinite(video.duration) ? video.duration : 1; timeline.value = video.currentTime; timeline.setAttribute('aria-valuetext', clock(video.currentTime)); time.textContent = `${clock(video.currentTime)} / ${Number.isFinite(video.duration) ? clock(video.duration) : 'Ao vivo'}`; updateStats(); if (Date.now() - savedAt > 10000) { save(); savedAt = Date.now(); } });
   on('ended', () => { save(); status.hidden = false; status.textContent = 'Reprodução concluída.'; reveal(); });
   on('error', () => { status.hidden = false; status.textContent = 'Não foi possível reproduzir esta fonte. O link pode ter expirado ou o formato não ser compatível. Volte e escolha outra fonte.'; controls.classList.remove('faded'); clearTimeout(hideTimer); });
   const visibility = () => { if (document.hidden) { video.pause(); save(); } };
@@ -745,13 +761,15 @@ function showPlayer(context) {
   if (issue) status.textContent = issue;
   else { video.src = context.stream.url; play(); }
   player = { key(key, e) {
+    if (tracks.isOpen()) return false;
     if (['MediaPlay', 'MediaPause', 'MediaStop', 'MediaRewind', 'MediaFastForward', ' '].includes(key)) {
       e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') video.pause(); else if (key === 'MediaStop') back(); else if (key === 'MediaRewind') seek(-30); else if (key === 'MediaFastForward') seek(30); else toggle(); return true;
     }
     if (controls.classList.contains('faded') && ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) { e.preventDefault(); reveal(); pause.focus(); return true; }
+    if (document.activeElement === timeline && ['ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); seek(key === 'ArrowLeft' ? -10 : 10); return true; }
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; save(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; save(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   pause.focus();
 }
 function layoutKey(key, event) {

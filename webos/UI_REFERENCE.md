@@ -83,3 +83,12 @@ incluindo atrasos/falhas e HTML malicioso tratado como texto. Os controles de
 fontes/player, biografia/filmografia, menus long-press de episódios, avaliações,
 trailers e recomendações ainda não são equivalentes ao Android. O próximo marco
 sugerido e as demais pendências estão em [ROADMAP.md](ROADMAP.md).
+
+## Entrega 0.5 — fontes e painéis do player
+
+A lista de fontes recebe chips, refresh, logos e badges seguindo StreamScreen.
+Filtro por addon e foco sobrevivem ao retorno do vídeo. Os painéis Áudio/Legendas
+usam a geometria 320 dp/raio 20 dp dos overlays Android e rolam pelo controle.
+A barra de posição é um controle web acessível. O restante da barra do player,
+editor completo, seleção automática de idiomas e personalizações dos badges
+continuam diferentes. Rastreabilidade e limites: [PLAYER.md](PLAYER.md).
