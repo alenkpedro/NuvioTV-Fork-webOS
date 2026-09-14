@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.6.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.7.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.6.0",
+        "version": "0.7.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Perfis Nuvio com PIN, addons por perfil e leitura da biblioteca da conta.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.6.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.6.0",
+        "appDescription": "Histórico Nuvio por perfil, retomada de filmes e episódios e resolução de conflitos.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.7.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.7.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.6.0/org.nuviofork.webos_0.6.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.7.0/org.nuviofork.webos_0.7.0_all.ipk",
         "ipkHash": {
-          "sha256": "552a3edc649328697be60506de9a4ae4ebe39d278b539036077b3299d26ff1c6"
+          "sha256": "84ce835d6bc383f427023bbba5fa391c0002d778faabd83e30cf700cbcd5ee3d"
         },
-        "ipkSize": 660114
+        "ipkSize": 664192
       },
       "pool": "main",
-      "shortDescription": "Perfis, biblioteca da conta e player para LG webOS 24."
+      "shortDescription": "Perfis, histórico da conta e player para LG webOS 24."
     }
   ]
 }
