@@ -177,7 +177,7 @@ async function render() {
     const main = shell(route.name);
     const screens = { profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
-    if (current(signal)) focusFirst();
+    if (current(signal) && route.name !== 'profiles') focusFirst();
   } catch (error) {
     if (current(signal)) { const main = root.querySelector('main'); if (main) failure(main, error, render); focusFirst(); }
   }

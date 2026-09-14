@@ -50,7 +50,7 @@ test('all six fork profiles fit the TV canvas and remain reachable by remote',as
   for(let i=0;i<5;i++)await page.keyboard.press('ArrowRight');await expect(page.locator('.profile-card').last()).toBeFocused();
   const boxes=await page.locator('.profile-card').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom}}));
   for(const b of boxes){expect(b.left).toBeGreaterThanOrEqual(0);expect(b.right).toBeLessThanOrEqual(1920);expect(b.bottom).toBeLessThanOrEqual(1080);}
-  await page.screenshot({path:'test-results/profiles-six-1920.png'});
+  await page.screenshot({path:'test-results/profiles-six-1920.png'});await expect(page.locator('.profile-card').last()).toBeFocused();
 });
 test('late PIN approval after cancelling the dialog cannot activate a profile',async({page})=>{
   const {calls}=await setup(page);let release;const pending=new Promise(r=>release=r);await page.route('**/verify_profile_pin',async r=>{await pending;await r.fulfill({json:[{unlocked:true,retry_after_seconds:0}]}).catch(()=>{});});
