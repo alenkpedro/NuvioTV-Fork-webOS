@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.1.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.2.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Prévia do port NuvioTV-Fork para LG UT8050. Sem validação no aparelho.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.1.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.1.0",
+        "appDescription": "Port para LG UT8050: revisão visual baseada no fork. Esta atualização ainda requer validação na TV.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.2.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.2.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.1.0/org.nuviofork.webos_0.1.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.2.0/org.nuviofork.webos_0.2.0_all.ipk",
         "ipkHash": {
-          "sha256": "eb4bd5afc72e8a62a0c9c550045f263036d90cf9583e38302d7c805e022324dd"
+          "sha256": "804a5fbe384876ffbae0f50cf0b2409ef994cb91c66f66e7973b1d10055e305a"
         },
-        "ipkSize": 94832
+        "ipkSize": 633044
       },
       "pool": "main",
-      "shortDescription": "Port experimental para LG webOS 24; reprodução HTTP(S) e ranking do fork."
+      "shortDescription": "Layout do fork, biblioteca local, addons e player HTTP(S) para LG webOS 24."
     }
   ]
 }
