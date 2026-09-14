@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.5.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.6.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.5.0",
+        "version": "0.6.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Seleção de fontes, painéis de áudio e legendas SRT/WebVTT de addons. Login Nuvio preservado.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.5.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.5.0",
+        "appDescription": "Perfis Nuvio com PIN, addons por perfil e leitura da biblioteca da conta.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.6.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.6.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.5.0/org.nuviofork.webos_0.5.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.6.0/org.nuviofork.webos_0.6.0_all.ipk",
         "ipkHash": {
-          "sha256": "a410f90c50e8bd1ac063905756d5e3212cc54dc18606cf2e582a7bc50356fa96"
+          "sha256": "552a3edc649328697be60506de9a4ae4ebe39d278b539036077b3299d26ff1c6"
         },
-        "ipkSize": 656534
+        "ipkSize": 660114
       },
       "pool": "main",
-      "shortDescription": "Fontes, áudio, legendas e login Nuvio para LG webOS 24."
+      "shortDescription": "Perfis, biblioteca da conta e player para LG webOS 24."
     }
   ]
 }
