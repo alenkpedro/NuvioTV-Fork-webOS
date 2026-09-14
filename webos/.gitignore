@@ -1,0 +1,8 @@
+node_modules/
+dist/
+packages/
+test-results/
+playwright-report/
+.npm-cache/
+.browsers/
+.cli-data/

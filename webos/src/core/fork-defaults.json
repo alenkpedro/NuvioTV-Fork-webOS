@@ -1,0 +1,880 @@
+{
+  "source": "ysosrs123/NuvioTV-Fork",
+  "sha256": "1a578cd3cfe41c8ca7c5b837ed25b2fb306947252c1b56226197aea6647cb3af",
+  "defaults": {
+    "maxResults": 8,
+    "maxPerResolution": 0,
+    "maxPerQuality": 0,
+    "sizeMinGb": 0,
+    "sizeMaxGb": 0,
+    "preferredResolutions": [
+      "P2160",
+      "P1440",
+      "P1080",
+      "P720",
+      "P576",
+      "P480",
+      "P360",
+      "UNKNOWN"
+    ],
+    "requiredResolutions": [
+      "P2160",
+      "P1440",
+      "P1080",
+      "P720"
+    ],
+    "excludedResolutions": [],
+    "preferredQualities": [
+      "BLURAY_REMUX",
+      "BLURAY",
+      "WEB_DL",
+      "WEBRIP",
+      "HDRIP",
+      "HD_RIP",
+      "DVDRIP",
+      "HDTV",
+      "CAM",
+      "TS",
+      "TC",
+      "SCR",
+      "UNKNOWN"
+    ],
+    "requiredQualities": [],
+    "excludedQualities": [
+      "CAM",
+      "TS",
+      "TC",
+      "SCR"
+    ],
+    "preferredVisualTags": [
+      "HDR_DV",
+      "DV_ONLY",
+      "HDR_ONLY",
+      "HDR10_PLUS",
+      "HDR10",
+      "DV",
+      "HDR",
+      "HLG",
+      "TEN_BIT",
+      "IMAX",
+      "SDR",
+      "THREE_D",
+      "AI",
+      "H_OU",
+      "H_SBS",
+      "UNKNOWN"
+    ],
+    "requiredVisualTags": [],
+    "excludedVisualTags": [
+      "THREE_D",
+      "H_OU",
+      "H_SBS",
+      "AI"
+    ],
+    "preferredAudioTags": [
+      "TRUEHD",
+      "DTS_HD_MA",
+      "ATMOS",
+      "DTS_X",
+      "FLAC",
+      "DTS_HD",
+      "DTS_ES",
+      "DD_PLUS",
+      "DTS",
+      "DD",
+      "OPUS",
+      "AAC",
+      "UNKNOWN"
+    ],
+    "requiredAudioTags": [],
+    "excludedAudioTags": [],
+    "preferredAudioChannels": [
+      "CH_7_1",
+      "CH_6_1",
+      "CH_5_1",
+      "CH_2_0",
+      "UNKNOWN"
+    ],
+    "requiredAudioChannels": [],
+    "excludedAudioChannels": [],
+    "preferredEncodes": [
+      "HEVC",
+      "AVC",
+      "AV1",
+      "XVID",
+      "DIVX",
+      "UNKNOWN"
+    ],
+    "requiredEncodes": [],
+    "excludedEncodes": [
+      "AV1"
+    ],
+    "preferredLanguages": [],
+    "requiredLanguages": [],
+    "excludedLanguages": [],
+    "preferredReleaseGroups": [
+      "3L",
+      "BiZKiT",
+      "BLURANiUM",
+      "BMF",
+      "CiNEPHiLES",
+      "FraMeSToR",
+      "PiRAMiDHEAD",
+      "PmP",
+      "WiLDCAT",
+      "ZQ",
+      "ATELiER",
+      "NCmt",
+      "playBD",
+      "SiCFoI",
+      "SURFINBIRD",
+      "TEPES",
+      "12GaugeShotgun",
+      "decibeL",
+      "EPSiLON",
+      "HiFi",
+      "iFT",
+      "KRaLiMaRKo",
+      "NTb",
+      "PTP",
+      "SumVision",
+      "TOA",
+      "TRiToN",
+      "CtrlHD",
+      "MainFrame",
+      "DON",
+      "W4NK3R",
+      "HiDt",
+      "HQMUX",
+      "BHDStudio",
+      "hallowed",
+      "HONE",
+      "PTer",
+      "SPHD",
+      "WEBDV",
+      "BBQ",
+      "c0kE",
+      "Chotab",
+      "CRiSC",
+      "D-Z0N3",
+      "Dariush",
+      "EbP",
+      "EDPH",
+      "Geek",
+      "LolHD",
+      "TayTO",
+      "TDD",
+      "TnP",
+      "VietHD",
+      "ZoroSenpai",
+      "EA",
+      "HiSD",
+      "QOQ",
+      "SA89",
+      "sbR",
+      "LoRD",
+      "playHD",
+      "ABBIE",
+      "AJP69",
+      "APEX",
+      "PAXA",
+      "PEXA",
+      "XEPA",
+      "BLUTONiUM",
+      "BYNDR",
+      "CMRG",
+      "CRFW",
+      "CRUD",
+      "FLUX",
+      "GNOME",
+      "KiNGS",
+      "Kitsune",
+      "MADSKY",
+      "NOSiViD",
+      "NTG",
+      "RAWR",
+      "SiC",
+      "TheFarm",
+      "dB",
+      "Flights",
+      "MiU",
+      "monkee",
+      "MZABI",
+      "PHOENiX",
+      "playWEB",
+      "SMURF",
+      "TOMMY",
+      "XEBEC",
+      "4KBEC",
+      "CEBEX",
+      "BLOOM",
+      "Dooky",
+      "GNOMiSSiON",
+      "HHWEB",
+      "NINJACENTRAL",
+      "NPMS",
+      "ROCCaT",
+      "SiGMA",
+      "SLiGNOME",
+      "SwAgLaNdEr"
+    ],
+    "requiredReleaseGroups": [],
+    "excludedReleaseGroups": [
+      "24xHD",
+      "41RGB",
+      "4K4U",
+      "AOC",
+      "AROMA",
+      "aXXo",
+      "AZAZE",
+      "BARC0DE",
+      "BAUCKLEY",
+      "BdC",
+      "beAst",
+      "BTM",
+      "C1NEM4",
+      "C4K",
+      "CDDHD",
+      "CHAOS",
+      "CHD",
+      "CiNE",
+      "CLEANUP",
+      "COLLECTiVE",
+      "CREATiVE24",
+      "CrEwSaDe",
+      "CTFOH",
+      "d3g",
+      "DDR",
+      "DNL",
+      "DRX",
+      "E",
+      "EPiC",
+      "EuReKA",
+      "FaNGDiNG0",
+      "Feranki1980",
+      "FGT",
+      "FMD",
+      "FRDS",
+      "FS",
+      "FZHD",
+      "GalaxyRG",
+      "GHD",
+      "GPTHD",
+      "HDHUB4U",
+      "HDS",
+      "HDT",
+      "HDTime",
+      "HDWinG",
+      "iNTENSO",
+      "iPlanet",
+      "iVy",
+      "jennaortegaUHD",
+      "jennaortega",
+      "JFF",
+      "KC",
+      "KiNGDOM",
+      "KIRA",
+      "L0SERNIGHT",
+      "LAMA",
+      "Leffe",
+      "Liber8",
+      "LiGaS",
+      "LUCY",
+      "MarkII",
+      "MeGusta",
+      "Mesc",
+      "mHD",
+      "mSD",
+      "MTeam",
+      "MT",
+      "MySiLU",
+      "NhaNc3",
+      "nHD",
+      "nikt0",
+      "NoGroup",
+      "NoGrp",
+      "nSD",
+      "OFT",
+      "Pahe.ph",
+      "Pahe",
+      "Pahe.in",
+      "PATOMiEL",
+      "PRODJi",
+      "PSA",
+      "PTNK",
+      "RARBG",
+      "RBB",
+      "RDN",
+      "Rifftrax",
+      "RU4HD",
+      "SANTi",
+      "Scene",
+      "SHD",
+      "ShieldBearer",
+      "STUTTERSHIT",
+      "SUNSCREEN",
+      "SyncUP",
+      "TBS",
+      "TEKNO3D",
+      "Tigole",
+      "TIKO",
+      "VISIONPLUSHDR-X",
+      "VISIONPLUSHDR1000",
+      "VISIONPLUSHDR",
+      "WAF",
+      "WiKi",
+      "x0r",
+      "YIFY",
+      "YTS.MX",
+      "YTS",
+      "YTS.LT",
+      "YTS.AG",
+      "Zeus",
+      "alfaHD",
+      "BAT",
+      "BlackBit",
+      "BNd",
+      "C.A.A",
+      "C76",
+      "Cory",
+      "CYPHER",
+      "EniaHD",
+      "EXTREME",
+      "FF",
+      "FOXX",
+      "G4RiS",
+      "GUEIRA",
+      "LCD",
+      "MGE",
+      "MLH",
+      "N3G4N",
+      "ONLYMOViE",
+      "PD",
+      "PTHome",
+      "RiPER",
+      "RK",
+      "SiGLA",
+      "Tars",
+      "TM",
+      "tokar86a",
+      "TURG",
+      "TvR",
+      "vnlls",
+      "WTV",
+      "XiQUEXiQUE",
+      "Yatogam1",
+      "YusukeFLA",
+      "ZigZag",
+      "ZNM",
+      "BiTOR",
+      "DepraveD",
+      "GuyZo",
+      "BR-GuyZo",
+      "SasukeducK",
+      "tarunk9c",
+      "VD0N",
+      "VECTOR",
+      "VisionXpert"
+    ],
+    "sortCriteria": [
+      {
+        "key": "RESOLUTION",
+        "direction": "DESC"
+      },
+      {
+        "key": "QUALITY",
+        "direction": "DESC"
+      },
+      {
+        "key": "RELEASE_GROUP",
+        "direction": "DESC"
+      },
+      {
+        "key": "VISUAL_TAG",
+        "direction": "DESC"
+      },
+      {
+        "key": "AUDIO_TAG",
+        "direction": "DESC"
+      },
+      {
+        "key": "AUDIO_CHANNEL",
+        "direction": "DESC"
+      },
+      {
+        "key": "ENCODE",
+        "direction": "DESC"
+      },
+      {
+        "key": "SIZE",
+        "direction": "DESC"
+      }
+    ],
+    "trashDefaultsVersion": 2
+  },
+  "enums": {
+    "DebridStreamMinimumQuality": {
+      "entries": []
+    },
+    "DebridStreamResolution": {
+      "entries": [
+        {
+          "id": "P2160",
+          "label": "2160p"
+        },
+        {
+          "id": "P1440",
+          "label": "1440p"
+        },
+        {
+          "id": "P1080",
+          "label": "1080p"
+        },
+        {
+          "id": "P720",
+          "label": "720p"
+        },
+        {
+          "id": "P576",
+          "label": "576p"
+        },
+        {
+          "id": "P480",
+          "label": "480p"
+        },
+        {
+          "id": "P360",
+          "label": "360p"
+        },
+        {
+          "id": "UNKNOWN",
+          "label": "Unknown"
+        }
+      ],
+      "order": [
+        "P2160",
+        "P1440",
+        "P1080",
+        "P720",
+        "P576",
+        "P480",
+        "P360",
+        "UNKNOWN"
+      ]
+    },
+    "DebridStreamQuality": {
+      "entries": [
+        {
+          "id": "BLURAY_REMUX",
+          "label": "BluRay REMUX"
+        },
+        {
+          "id": "BLURAY",
+          "label": "BluRay"
+        },
+        {
+          "id": "WEB_DL",
+          "label": "WEB-DL"
+        },
+        {
+          "id": "WEBRIP",
+          "label": "WEBRip"
+        },
+        {
+          "id": "HDRIP",
+          "label": "HDRip"
+        },
+        {
+          "id": "HD_RIP",
+          "label": "HC HD-Rip"
+        },
+        {
+          "id": "DVDRIP",
+          "label": "DVDRip"
+        },
+        {
+          "id": "HDTV",
+          "label": "HDTV"
+        },
+        {
+          "id": "CAM",
+          "label": "CAM"
+        },
+        {
+          "id": "TS",
+          "label": "TS"
+        },
+        {
+          "id": "TC",
+          "label": "TC"
+        },
+        {
+          "id": "SCR",
+          "label": "SCR"
+        },
+        {
+          "id": "UNKNOWN",
+          "label": "Unknown"
+        }
+      ],
+      "order": [
+        "BLURAY_REMUX",
+        "BLURAY",
+        "WEB_DL",
+        "WEBRIP",
+        "HDRIP",
+        "HD_RIP",
+        "DVDRIP",
+        "HDTV",
+        "CAM",
+        "TS",
+        "TC",
+        "SCR",
+        "UNKNOWN"
+      ]
+    },
+    "DebridStreamVisualTag": {
+      "entries": [
+        {
+          "id": "HDR_DV",
+          "label": "HDR+DV"
+        },
+        {
+          "id": "DV_ONLY",
+          "label": "DV Only"
+        },
+        {
+          "id": "HDR_ONLY",
+          "label": "HDR Only"
+        },
+        {
+          "id": "HDR10_PLUS",
+          "label": "HDR10+"
+        },
+        {
+          "id": "HDR10",
+          "label": "HDR10"
+        },
+        {
+          "id": "DV",
+          "label": "DV"
+        },
+        {
+          "id": "HDR",
+          "label": "HDR"
+        },
+        {
+          "id": "HLG",
+          "label": "HLG"
+        },
+        {
+          "id": "TEN_BIT",
+          "label": "10bit"
+        },
+        {
+          "id": "THREE_D",
+          "label": "3D"
+        },
+        {
+          "id": "IMAX",
+          "label": "IMAX"
+        },
+        {
+          "id": "AI",
+          "label": "AI"
+        },
+        {
+          "id": "SDR",
+          "label": "SDR"
+        },
+        {
+          "id": "H_OU",
+          "label": "H-OU"
+        },
+        {
+          "id": "H_SBS",
+          "label": "H-SBS"
+        },
+        {
+          "id": "UNKNOWN",
+          "label": "Unknown"
+        }
+      ],
+      "order": [
+        "HDR_DV",
+        "DV_ONLY",
+        "HDR_ONLY",
+        "HDR10_PLUS",
+        "HDR10",
+        "DV",
+        "HDR",
+        "HLG",
+        "TEN_BIT",
+        "IMAX",
+        "SDR",
+        "THREE_D",
+        "AI",
+        "H_OU",
+        "H_SBS",
+        "UNKNOWN"
+      ]
+    },
+    "DebridStreamAudioTag": {
+      "entries": [
+        {
+          "id": "ATMOS",
+          "label": "Atmos"
+        },
+        {
+          "id": "DD_PLUS",
+          "label": "DD+"
+        },
+        {
+          "id": "DD",
+          "label": "DD"
+        },
+        {
+          "id": "DTS_X",
+          "label": "DTS:X"
+        },
+        {
+          "id": "DTS_HD_MA",
+          "label": "DTS-HD MA"
+        },
+        {
+          "id": "DTS_HD",
+          "label": "DTS-HD"
+        },
+        {
+          "id": "DTS_ES",
+          "label": "DTS-ES"
+        },
+        {
+          "id": "DTS",
+          "label": "DTS"
+        },
+        {
+          "id": "TRUEHD",
+          "label": "TrueHD"
+        },
+        {
+          "id": "OPUS",
+          "label": "OPUS"
+        },
+        {
+          "id": "FLAC",
+          "label": "FLAC"
+        },
+        {
+          "id": "AAC",
+          "label": "AAC"
+        },
+        {
+          "id": "UNKNOWN",
+          "label": "Unknown"
+        }
+      ],
+      "order": [
+        "TRUEHD",
+        "DTS_HD_MA",
+        "ATMOS",
+        "DTS_X",
+        "FLAC",
+        "DTS_HD",
+        "DTS_ES",
+        "DD_PLUS",
+        "DTS",
+        "DD",
+        "OPUS",
+        "AAC",
+        "UNKNOWN"
+      ]
+    },
+    "DebridStreamAudioChannel": {
+      "entries": [
+        {
+          "id": "CH_2_0",
+          "label": "2.0"
+        },
+        {
+          "id": "CH_5_1",
+          "label": "5.1"
+        },
+        {
+          "id": "CH_6_1",
+          "label": "6.1"
+        },
+        {
+          "id": "CH_7_1",
+          "label": "7.1"
+        },
+        {
+          "id": "UNKNOWN",
+          "label": "Unknown"
+        }
+      ],
+      "order": [
+        "CH_7_1",
+        "CH_6_1",
+        "CH_5_1",
+        "CH_2_0",
+        "UNKNOWN"
+      ]
+    },
+    "DebridStreamEncode": {
+      "entries": [
+        {
+          "id": "AV1",
+          "label": "AV1"
+        },
+        {
+          "id": "HEVC",
+          "label": "HEVC"
+        },
+        {
+          "id": "AVC",
+          "label": "AVC"
+        },
+        {
+          "id": "XVID",
+          "label": "XviD"
+        },
+        {
+          "id": "DIVX",
+          "label": "DivX"
+        },
+        {
+          "id": "UNKNOWN",
+          "label": "Unknown"
+        }
+      ],
+      "order": [
+        "HEVC",
+        "AVC",
+        "AV1",
+        "XVID",
+        "DIVX",
+        "UNKNOWN"
+      ]
+    },
+    "DebridStreamLanguage": {
+      "entries": [
+        {
+          "id": "EN",
+          "label": "English",
+          "code": "en"
+        },
+        {
+          "id": "HI",
+          "label": "Hindi",
+          "code": "hi"
+        },
+        {
+          "id": "IT",
+          "label": "Italian",
+          "code": "it"
+        },
+        {
+          "id": "ES",
+          "label": "Spanish",
+          "code": "es"
+        },
+        {
+          "id": "FR",
+          "label": "French",
+          "code": "fr"
+        },
+        {
+          "id": "DE",
+          "label": "German",
+          "code": "de"
+        },
+        {
+          "id": "PT",
+          "label": "Portuguese",
+          "code": "pt"
+        },
+        {
+          "id": "PL",
+          "label": "Polish",
+          "code": "pl"
+        },
+        {
+          "id": "CS",
+          "label": "Czech",
+          "code": "cs"
+        },
+        {
+          "id": "LA",
+          "label": "Latino",
+          "code": "la"
+        },
+        {
+          "id": "JA",
+          "label": "Japanese",
+          "code": "ja"
+        },
+        {
+          "id": "KO",
+          "label": "Korean",
+          "code": "ko"
+        },
+        {
+          "id": "ZH",
+          "label": "Chinese",
+          "code": "zh"
+        },
+        {
+          "id": "MULTI",
+          "label": "Multi",
+          "code": "multi"
+        },
+        {
+          "id": "UNKNOWN",
+          "label": "Unknown",
+          "code": "unknown"
+        }
+      ]
+    },
+    "DebridStreamSortKey": {
+      "entries": [
+        {
+          "id": "RESOLUTION",
+          "label": "Resolution"
+        },
+        {
+          "id": "QUALITY",
+          "label": "Quality"
+        },
+        {
+          "id": "VISUAL_TAG",
+          "label": "Visual tag"
+        },
+        {
+          "id": "AUDIO_TAG",
+          "label": "Audio"
+        },
+        {
+          "id": "AUDIO_CHANNEL",
+          "label": "Audio channel"
+        },
+        {
+          "id": "ENCODE",
+          "label": "Encode"
+        },
+        {
+          "id": "SIZE",
+          "label": "Size"
+        },
+        {
+          "id": "LANGUAGE",
+          "label": "Language"
+        },
+        {
+          "id": "RELEASE_GROUP",
+          "label": "Release group"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "nuvio-fork-webos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "sync:defaults": "node scripts/sync-defaults.mjs",
+    "build": "node scripts/sync-defaults.mjs --check && node scripts/build.mjs",
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:ui": "playwright test",
+    "package:webos": "npm run build && node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@webos-tools/cli": "3.2.6",
+    "esbuild": "0.28.2"
+  }
+}

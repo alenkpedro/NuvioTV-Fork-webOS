@@ -1,0 +1,116 @@
+# NuvioTV-Fork: alvo LG webOS
+
+Port experimental dentro do fork **ysosrs123/NuvioTV-Fork**, iniciado no commit
+`45e0984c18460d2a65c5d745999011b4314328eb`. Nenhum código do NuvioTVSmart foi usado.
+Este alvo usa a estrutura de dados e regras do fork, com interface e serviços de
+plataforma reimplementados para webOS. Não é uma compilação do APK para a LG.
+
+## Instalar pelo Homebrew Channel
+
+Em Configurações → Adicionar repositório, informe:
+
+```text
+https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos/apps.json
+```
+
+Atualize a lista e instale **Nuvio Fork**. O identificador `org.nuviofork.webos`
+permite coexistir com outras versões do Nuvio. O índice aponta para um IPK
+versionado e contém seu SHA-256 e tamanho. O aplicativo não exige root.
+
+Primeiro uso: abra **Add-ons** e adicione a URL do `manifest.json` do seu add-on.
+Depois abra **Início** ou **Buscar**, selecione um título, episódio e fonte.
+Nenhum add-on, conta ou credencial vem instalado. Esta versão não importa a conta
+Nuvio nem sua configuração do Android automaticamente.
+
+## O que funciona nesta prévia
+
+- Instalação/remoção local de add-ons, catálogos, busca e detalhes com episódios.
+- Controle por setas/OK/Voltar (incluindo código 461 da LG) e ponteiro.
+- Extração de resolução, qualidade, grupo, áudio, HDR, codec, idioma e tamanho.
+- Ranking determinístico do fork, listas de grupos e filtros estritos; o botão de
+  melhor fonte mantém o fallback de exclusões do original entre fontes elegíveis.
+- Ajustes de grupos, exclusões de codecs/qualidades, limite de resultados e autoplay.
+- Reprodução HTTP(S) no player da plataforma, pausa, avanço/recuo, retomada local,
+  histórico limitado e legendas WebVTT anunciadas diretamente pela fonte.
+- Diagnóstico de resolução decodificada, buffer temporal e frames perdidos,
+  quando expostos pelo player. HDR e áudio de saída são explicitamente não medidos.
+
+## Alvo e otimização
+
+LG 55UT8050PSA, com webOS 24 / Chromium 108 como baseline. A interface é
+renderizada em 1920×1080; essa resolução de UI não reduz a resolução do vídeo.
+A compatibilidade real de 4K/HDR/áudio precisa de testes no aparelho.
+
+- Sem framework de UI, biblioteca externa de player, fontes remotas ou animações contínuas.
+- JavaScript/CSS empacotados e minificados; sem servidor externo para hospedar a UI.
+- Três consultas a add-ons simultâneas, timeout, cancelamento ao sair da tela e
+  limite de 6 MiB por resposta JSON decodificada.
+- Cache de metadados com TTL de 2 minutos, até 8 entradas e orçamento estimado
+  de 2 MiB serializados (isso não é uma medição do heap total).
+- Até seis catálogos na home, 16 cartões por faixa, imagens lazy e decodificação
+  assíncrona. A visualização completa pagina até 200 cartões; episódios mostram
+  até 150 itens por temporada. Até 30 add-ons instalados.
+- Até 300 fontes por add-on; a lista renderiza no máximo 100 fontes por vez.
+- Histórico de até 100 itens, gravação no máximo a cada 10 segundos durante a
+  reprodução e em pausa/saída; a URL temporária de vídeo não é salva no histórico.
+- Vídeo é pausado quando o app perde visibilidade e o recurso de mídia é liberado
+  ao fechar o player. Nenhum prefetch de vídeo compete com o player nesta versão.
+
+O perfil da UT8050 evita fontes que anunciam somente Dolby Vision; isso é uma
+checagem de metadados, não uma inspeção do bitstream. É possível desativá-la nos
+ajustes. Os padrões originais do fork, incluindo a exclusão de AV1, são mantidos
+separadamente. Não há alegação de otimização máxima medida no hardware.
+
+## Ainda não portado
+
+Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliação
+de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
+login e sincronização; decodificadores FFmpeg/MPV; conversão Dolby Vision;
+passthrough lossless/MAT; troca de faixa de áudio e legendas ASS/SRT ou obtidas de
+add-ons de legenda; ajuste de frequência e Up Next. A interface é uma primeira
+implementação funcional, ainda sem paridade visual completa com o layout Modern.
+
+Add-ons precisam permitir requisições do app web (CORS). Fontes que exigem
+cabeçalhos HTTP especiais ou resolução local são identificadas como indisponíveis.
+Links externos, YouTube e magnet não são tratados como vídeos HTTP. HLS usa o
+suporte nativo da LG; Chrome desktop pode não reproduzir os mesmos formatos.
+
+Parte do pipeline de áudio do Android está disponível somente em binário no
+fork. Não há promessa de transportar esse código diretamente para a LG.
+
+## Desenvolvimento
+
+```sh
+cd webos
+npm ci
+npm test
+npm run build
+npm start
+```
+
+Prévia em `http://127.0.0.1:4173`. Em macOS, os testes de interface usam o Chrome
+instalado. Em Linux, instale Chromium com `npx playwright install chromium`.
+Também é possível informar `CHROME_PATH`.
+
+```sh
+npm run test:ui
+npm run package:webos
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.1.0
+```
+
+O CLI da LG está instalado localmente. O script de pacote mantém seus dados em
+`.cli-data/` dentro deste diretório. Pacotes saem em `packages/`.
+`npm run sync:defaults` atualiza as listas a partir do Kotlin após revisão; o build
+detecta divergências por hash/conteúdo para evitar alterações silenciosas.
+
+Os testes de fluxo usam um vídeo sintético de 60 segundos, gerado com FFmpeg,
+e respostas de add-on locais interceptadas no navegador. Não acessam conteúdo
+de terceiros. Isso comprova o fluxo no navegador, não a reprodução na TV.
+
+Veja [PORTING.md](PORTING.md) para rastreabilidade e pendências.
+
+## Licença
+
+GPL-3.0. Créditos a NuvioMedia, aos autores do NuvioTV e ao fork de ysosrs123.
+Dados de grupos: TRaSH Guides, conforme atribuição do fork. Consulte
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) e a licença na raiz.

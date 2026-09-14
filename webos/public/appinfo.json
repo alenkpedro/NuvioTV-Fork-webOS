@@ -1,0 +1,13 @@
+{
+  "id": "org.nuviofork.webos",
+  "version": "0.1.0",
+  "vendor": "NuvioTV-Fork community port",
+  "type": "web",
+  "main": "index.html",
+  "title": "Nuvio Fork",
+  "icon": "assets/icon.png",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "requiredACG": [],
+  "appDescription": "Port experimental do NuvioTV-Fork para LG webOS"
+}
