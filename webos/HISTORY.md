@@ -1,5 +1,9 @@
 # Histórico Nuvio por perfil — 0.7.0
 
+> Atualização 0.8: progresso, assistidos e favoritos agora têm envio ao Nuvio com fila
+> por perfil, conflitos e recuperação offline. Ver [SYNC.md](SYNC.md). As descrições
+> de leitura/local abaixo registram o escopo da entrega original.
+
 Esta versão importa progresso e assistidos do backend nativo Nuvio, usando o
 contrato do **ysosrs123/NuvioTV-Fork@45e0984**. As alterações feitas na LG ainda
 são locais. Não há chamadas de escrita de histórico, biblioteca ou preferências.

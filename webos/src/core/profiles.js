@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// ProfileManager (six profiles) + isolated webOS persistence. No cloud mutations.
-const fields = ['addons', 'library', 'progress', 'watched', 'libraryOverrides', 'librarySync', 'accountSync', 'historySync', 'historyConflicts', 'historyChoices', 'watchedRecords', 'watchedOverrides', 'historyInitialized'];
+// ProfileManager (six profiles) + isolated webOS persistence.
+import { enqueueKnown, observeSnapshot } from './outbox.js';
+const fields = ['addons', 'library', 'progress', 'watched', 'libraryOverrides', 'librarySync', 'accountSync', 'historySync', 'historyConflicts', 'historyChoices', 'watchedRecords', 'watchedOverrides', 'historyInitialized', 'outbox', 'outboxInitialized', 'outboxRevision', 'outboxStatus', 'syncBases', 'syncKnown'];
 const empty = () => ({ addons: [], library: {}, progress: {}, watched: {}, libraryOverrides: {} });
 export const profileKey = (userId, id) => JSON.stringify([userId, id]);
 function snapshot(state) { return Object.fromEntries(fields.filter(k => state[k] !== undefined).map(k => [k, state[k]])); }
@@ -66,6 +67,7 @@ export function parseLibrary(rows, profileId) {
   return out;
 }
 export function mergeLibrary(state, cloud, profileId) {
+  observeSnapshot(state,'library',cloud);
   // Existing webOS favorites become local overrides on the first import only.
   const overrides = state.librarySync ? (state.libraryOverrides || {}) : { ...state.library, ...state.libraryOverrides };
   const merged = { ...cloud };
@@ -74,6 +76,8 @@ export function mergeLibrary(state, cloud, profileId) {
   state.librarySync = { profileId, at: Date.now(), count: Object.keys(cloud).length };
 }
 export function setLibraryItem(state, key, item) {
+  if(item) item={...item,addedAt:item.addedAt || Date.now()};
+  enqueueKnown(state,'library',key,item);
   state.libraryOverrides ||= {};
   state.libraryOverrides[key] = item;
   if (item) state.library[key] = item; else delete state.library[key];

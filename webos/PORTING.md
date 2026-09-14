@@ -61,3 +61,10 @@ Referências de plataforma:
 Leitura nativa Nuvio, unidades em milissegundos convertidas para o player,
 conclusão a 90%, identidade de episódio e precedência de alterações locais sem
 escrita remota. Contratos, limites e fallback de provedores: [HISTORY.md](HISTORY.md).
+
+## Envio nativo — entrega 0.8
+
+`core/outbox.js` implementa fila persistente por perfil, preflight completo,
+revisões locais e confirmações por item. `account.mutate` usa as RPCs de
+`WatchProgressSyncService`, `WatchedItemsSyncService` e
+`SupabaseLibrarySyncRemoteDataSource`. Contratos e limites: [SYNC.md](SYNC.md).

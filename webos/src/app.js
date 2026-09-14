@@ -9,6 +9,7 @@ import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episo
 import { installTrackControls } from './player-tracks.js';
 import { initializeProfiles, activateProfile, leaveAccountProfiles, mergeLibrary, setLibraryItem } from './core/profiles.js';
 import { initializeHistory, mergeHistory, markWatched, isWatched, continueHistory, progressWithWatched, historySummary, resolveHistoryConflict } from './core/history.js';
+import { initializeOutbox, flushOutbox, syncSummary as outboundSummary, resolveOutbound } from './core/outbox.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
@@ -23,6 +24,8 @@ const layout = state.settings.layout;
 const account = createAccountClient({ storage: localStorage });
 initializeProfiles(state);
 let profileAccess = null;
+let syncTimer, syncFlight, syncController, syncDelay=3000, syncNextAt=0;
+state.syncClientId ||= `nuvio-webos-${crypto.randomUUID().replaceAll('-','')}`;
 if (!account.hasSession) activateProfile(state, null);
 // Do not display another account's imported add-ons after local session loss.
 state.addons = state.addons.filter(a => !a.accountOwner || a.accountOwner === account.user?.id);
@@ -89,8 +92,38 @@ function toast(message) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { node.hidden = true; }, 6000);
 }
 function persist() {
-  if (!saveState(localStorage, state) && !persistWarning) { persistWarning = true; toast('Armazenamento indisponível. Alterações valem somente nesta sessão.'); }
+  const saved=saveState(localStorage,state);
+  if(!saved && !persistWarning) { persistWarning=true;toast('Armazenamento indisponível. Alterações valem somente nesta sessão; envio pausado.'); }
+  if(saved) scheduleSync();
+  return saved;
 }
+function stopSync() { clearTimeout(syncTimer);syncTimer=null;syncController?.abort(); }
+function scheduleSync() {
+  if(syncTimer || syncFlight || !profileAccess || route.name==='profiles' || document.hidden || navigator.onLine===false || !Object.values(state.outbox || {}).some(op=>!op.conflict))return;
+  syncTimer=setTimeout(()=>{syncTimer=null;runSync();},Math.max(syncDelay,syncNextAt-Date.now()));
+}
+async function runSync() {
+  if(syncFlight)return syncFlight;
+  if(!profileAccess || document.hidden || navigator.onLine===false)return;
+  const access=profileAccess, controller=new AbortController();syncController=controller;
+  const isCurrent=()=>access===profileAccess && state.activeProfile?.userId===access.userId && state.activeProfile?.id===access.id;
+  clearTimeout(syncTimer);syncTimer=null;
+  if(!saveState(localStorage,state)) {toast('Não foi possível salvar a fila. O envio foi pausado.');return;}
+  syncFlight=(async()=>{
+    try {
+      await flushOutbox({state,account,access,signal:controller.signal,persist,isCurrent,clientId:state.syncClientId});
+      syncDelay=3000;syncNextAt=Date.now()+30000;if(isCurrent() && state.outboxStatus?.error)delete state.outboxStatus.error;
+    } catch(error) {
+      if(!controller.signal.aborted && isCurrent()) {state.outboxStatus={...state.outboxStatus,error:error.message};syncDelay=Math.min(300000,Math.max(30000,syncDelay*2));}
+    } finally {
+      syncFlight=null;
+      if(isCurrent()) {persist();root.dispatchEvent(new Event('syncstatus'));}
+      scheduleSync();
+    }
+  })();
+  return syncFlight;
+}
+
 function focusFirst() { const expectedRoute = route, expectedRequest = request; requestAnimationFrame(() => {
   if (drawerOpen || route !== expectedRoute || request !== expectedRequest) return;
   const restored = route.restoreFocus && [...root.querySelectorAll('[data-focus]')].find(e => e.dataset.focus === route.restoreFocus);
@@ -176,9 +209,9 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
-    if (current(signal) && route.name !== 'profiles') focusFirst();
+    if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
     if (current(signal)) { const main = root.querySelector('main'); if (main) failure(main, error, render); focusFirst(); }
   }
@@ -324,6 +357,27 @@ function enrichRecentCards(recent, main, signal) {
     }
   },signal,2).then(() => { if(!signal.aborted) persist(); });
 }
+function showSync(main,signal) {
+  heading(main,'','Sincronização Nuvio');
+  main.append(el('p',{class:'muted'},'Progresso, assistidos e favoritos deste perfil são enviados ao Nuvio. Trakt, Simkl e MDBList externos continuam pendentes.'));
+  const status=el('p',{role:'status','data-sync-status':true});
+  const refresh=button('Sincronizar agora',async()=>{refresh.disabled=true;await runSync();if(!signal.aborted){refresh.disabled=false;draw();if(document.activeElement===document.body || document.activeElement===main)refresh.focus();}},{disabled:!profileAccess});
+  const content=el('div',{class:'history-content'});main.append(status,el('div',{class:'toolbar'},refresh),content);
+  function draw() {
+    status.textContent=(navigator.onLine===false?'Sem conexão. ':'')+outboundSummary(state);content.replaceChildren();
+    const ops=Object.entries(state.outbox || {}), conflicts=ops.filter(([,op])=>op.conflict);
+    if(conflicts.length)content.append(el('h2',{},'Revisar antes de enviar'),el('p',{class:'muted'},'A conta mudou ou esta alteração veio de uma versão anterior. Escolha qual manter.'));
+    const describe=(kind,v)=>!v || (kind==='watched' && !v.value)?'Removido / não assistido':kind==='progress'?`${clock(v.time)} / ${clock(v.duration)}`:kind==='watched'?'Assistido':'Na biblioteca';
+    for(const [id,op] of conflicts.slice(0,20)) {
+      const value=op.value || op.conflict.remote, episode=op.kind==='progress'?value?.episode:value?.season!=null?{season:value.season,episode:value.episode}:null;
+      const choose=remote=>{try{resolveOutbound(state,id,remote,op.revision);persist();draw();(content.querySelector('button') || refresh).focus();}catch(error){toast(error.message);}};
+      content.append(el('section',{class:'history-conflict','data-sync-conflict':true},el('h3',{},`${value?.meta?.name || value?.name || JSON.parse(op.key)[1]}${episode?` · T${episode.season}:E${episode.episode}`:''}`),el('p',{},`Nesta TV: ${describe(op.kind,op.value)}`),el('p',{},`Na conta: ${describe(op.kind,op.conflict.remote)}`),el('div',{class:'toolbar'},button('Enviar desta TV',()=>choose(false)),button('Usar da conta',()=>choose(true)))));
+    }
+    if(conflicts.length>20)content.append(el('p',{},`Mostrando 20 de ${conflicts.length}. As próximas escolhas aparecem após resolver estas.`));
+    if(!ops.length)content.append(el('p',{},'Nenhuma alteração pendente neste perfil.'));
+  }
+  root.addEventListener('syncstatus',draw,{signal});draw();
+}
 function showHistory(main,signal) {
   initializeHistory(state);
   heading(main,'','Histórico e assistidos');
@@ -334,7 +388,7 @@ function showHistory(main,signal) {
     catch(error){if(!signal.aborted)status.textContent=error.message;}
     finally{refresh.disabled=false;}
   },{disabled:!profileAccess,'data-focus':'history-refresh'});
-  const content=el('div',{class:'history-content'});main.append(status,el('div',{class:'toolbar'},refresh),content);
+  const content=el('div',{class:'history-content'});main.append(status,el('div',{class:'toolbar'},refresh,button('Sincronização',()=>navigate({name:'sync'}))),content);
   const stamp=value=>value?new Date(value).toLocaleString('pt-BR'):'Data não informada';
   const episodeLabel=p=>{const e=p.kind==='progress'?p.episode:p.season!==null?{season:p.season,episode:p.episode}:null;return e?` · T${e.season}:E${e.episode}`:'';};
   const label=p=>p.kind==='progress'?`${clock(p.time)} / ${clock(p.duration)}`:p.value?'Assistido':'Não assistido';
@@ -343,7 +397,7 @@ function showHistory(main,signal) {
     content.replaceChildren();
     const conflicts=Object.entries(state.historyConflicts || {});
     if(conflicts.length){
-      content.append(el('h2',{},'Escolha qual versão manter'),el('p',{class:'muted'},'A versão desta TV foi preservada. A escolha abaixo altera somente esta TV.'));
+      content.append(el('h2',{},'Escolha qual versão manter'),el('p',{class:'muted'},'A versão desta TV foi preservada. Manter desta TV coloca a escolha na fila de envio ao Nuvio.'));
       for(const [id,c] of conflicts) content.append(el('section',{class:'history-conflict'},el('h3',{},(c.local.meta?.name || c.local.name || c.local.id)+episodeLabel({...c.local,kind:c.kind})),el('p',{},`Nesta TV: ${label({...c.local,kind:c.kind})} · ${stamp(c.local.updated)}`),el('p',{},`Na conta: ${label({...c.remote,kind:c.kind})} · ${stamp(c.remote.updated)}`),el('div',{class:'toolbar'},button('Manter desta TV',()=>action(id,false)),button('Usar da conta',()=>action(id,true)))));
     }
     const tabs=el('div',{class:'toolbar history-tabs'}),list=el('div',{class:'history-list'});content.append(tabs,list);
@@ -369,7 +423,7 @@ function showHistory(main,signal) {
 }
 function showLibrary(main, signal) {
   heading(main, '', 'Biblioteca');
-  const status = el('p', { class: 'library-sync-status muted', role: 'status' }, profileAccess ? `${profileAccess.name} · ${state.librarySync ? `${state.librarySync.count} título(s) da conta` : 'Biblioteca da conta ainda não carregada'}. Alterações nesta TV são locais.` : 'Favoritos salvos nesta TV.');
+  const status = el('p', { class: 'library-sync-status muted', role: 'status' }, profileAccess ? `${profileAccess.name} · ${state.librarySync ? `${state.librarySync.count} título(s) da conta` : 'Biblioteca da conta ainda não carregada'}. Alterações nesta TV entram na fila de envio ao Nuvio.` : 'Favoritos salvos nesta TV.');
   let selectedType = route.libraryType || 'movie', pageIndex = route.libraryPage || 0;
   const rows = el('div', { class: 'library-content' });
   const draw = type => {
@@ -383,11 +437,11 @@ function showLibrary(main, signal) {
   const tabs = el('div', { class: 'library-tabs toolbar' }, ...[['movie', 'Filmes'], ['series', 'Séries']].map(([type, name]) => button(name, () => { pageIndex = 0; draw(type); }, { 'data-type': type })));
   if (profileAccess) tabs.append(button('Atualizar biblioteca', async event => {
     const target = event.currentTarget; target.disabled = true; status.textContent = 'Carregando biblioteca da conta…';
-    try { const result = await syncLibrary(signal); if (!signal.aborted) { status.textContent = `${profileAccess.name} · ${result.count} título(s) da conta. Alterações nesta TV são locais.`; draw(selectedType); } }
+    try { const result = await syncLibrary(signal); if (!signal.aborted) { status.textContent = `${profileAccess.name} · ${result.count} título(s) da conta. Alterações nesta TV entram na fila de envio ao Nuvio.`; draw(selectedType); } }
     catch (error) { if (!signal.aborted) status.textContent = error.message; }
     finally { target.disabled = false; }
   }));
-  tabs.append(button('Histórico e assistidos',()=>navigate({name:'history'})));
+  tabs.append(button('Histórico e assistidos',()=>navigate({name:'history'})),button('Sincronização',()=>navigate({name:'sync'})));
   main.append(tabs, status, rows); draw(selectedType);
 }
 function showAddons(main) {
@@ -628,6 +682,7 @@ async function syncHistory(signal) {
   mergeHistory(state,snapshot,{profileId:access.id,sourcePreference:snapshot.sourcePreference});persist();return state.historySync;
 }
 async function signOutProfiles() {
+  stopSync();
   const signedOutUser = account.user?.id;
   request?.abort(); profileAccess = null;
   const revoked = await account.signOut();
@@ -636,13 +691,15 @@ async function signOutProfiles() {
   if (!revoked) toast('Login removido desta TV. Não foi possível confirmar a revogação no servidor; gerencie dispositivos na conta Nuvio.');
 }
 async function showProfiles(main, signal) {
+  stopSync();
   profileAccess = null; stack = []; metadataCache.clear();
   await profileScreen(main, signal, { account, el, button, poster, automatic: route.automatic,
     signOut: signOutProfiles,
     choose: async profile => {
       if (signal.aborted || !account.user) return;
       activateProfile(state, account.user.id, profile);
-      profileAccess = { ...profile, userId: account.user.id }; state.guestMode = false; persist();
+      profileAccess = { ...profile, userId: account.user.id }; state.guestMode = false;
+      initializeHistory(state);initializeOutbox(state);persist();
       const results = await Promise.allSettled([syncAccount(signal), syncLibrary(signal), syncHistory(signal)]);
       if (signal.aborted) return;
       if (!account.user) { profileAccess = null; leaveAccountProfiles(state); persist(); navigate({ name: 'welcome' }, true); return; }
@@ -754,7 +811,7 @@ function showSettings(main, signal) {
             }, { class: 'primary' });
             dialog.append(el('div', { class: 'toolbar' }, stay, leave)); main.append(dialog); stay.focus();
           });
-          content.append(row('Trocar perfil', profileAccess?.name || 'Selecionar perfil', () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); }), syncStatus, sync, row('Histórico e assistidos', historySummary(state), () => navigate({name:'history'})), logout);
+          content.append(row('Trocar perfil', profileAccess?.name || 'Selecionar perfil', () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); }), syncStatus, sync, row('Sincronização',outboundSummary(state),()=>navigate({name:'sync'})), row('Histórico e assistidos', historySummary(state), () => navigate({name:'history'})), logout);
         } else content.append(row('Entrar com Nuvio', 'Vincular a TV pelo celular e carregar seus addons', () => navigate({ name: 'account-login' })));
         break;
       case 'profiles':
@@ -801,7 +858,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.7.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio à nuvem, integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.8.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -831,7 +888,7 @@ function showPreferences(main) {
   }
   const max = el('input', { type: 'number', min: 0, max: 100, value: state.settings.preferences.maxResults ?? defaults.maxResults, 'aria-label': 'Máximo de fontes', onchange: e => { state.settings.preferences.maxResults = Math.max(0, Math.min(100, Math.floor(Number(e.target.value) || 0))); persist(); } });
   main.append(el('label', { class: 'setting' }, el('span', {}, 'Máximo de fontes filtradas (0 = sem limite)'), max), button('Restaurar preferências do fork', () => { state.settings.preferences = {}; persist(); render(); toast('Preferências originais restauradas.'); }));
-  main.append(el('h2', { class: 'section-title' }, 'Sobre esta prévia'), el('p', { class: 'notice' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984. Interface em 1080p; vídeo em resolução original. Downloads paralelos, debrid direto, torrents, envio de alterações à nuvem e áudio avançado ainda estão em adaptação.'));
+  main.append(el('h2', { class: 'section-title' }, 'Sobre esta prévia'), el('p', { class: 'notice' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984. Interface em 1080p; vídeo em resolução original. Downloads paralelos, debrid direto, torrents, integrações externas de histórico e áudio avançado ainda estão em adaptação.'));
 }
 function clock(value) { const s = Math.max(0, Math.floor(value || 0)); return `${Math.floor(s / 3600) ? Math.floor(s / 3600) + ':' : ''}${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
 function bytes(n) { return Number.isFinite(n) && n > 0 ? `${(n / 1024 ** 3).toFixed(2)} GB` : ''; }
@@ -852,7 +909,7 @@ function showPlayer(context) {
   const resume = state.progress[progressKey(context.type, context.id)];
   const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, persist, el, button,
     onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, onClose: reveal });
-  function save() { recordProgress(state, { ...context, time: video.currentTime, duration: video.duration }); persist(); }
+  function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
   function reveal() { if (tracks.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen()) hideTimer = setTimeout(() => { controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, 4500); }
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
   function seek(delta) { seekTo(video.currentTime + delta); }
@@ -933,8 +990,10 @@ function layoutKey(key, event) {
   return false;
 }
 installRemote({ root, back, playerKey: (key, event) => (player?.key(key, event) ?? false) || layoutKey(key, event), boundaryLeft: () => setDrawer(true) });
-window.addEventListener('pagehide', () => cleanupPlayer?.());
-document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(heroTimer); heroRequest?.abort(); } });
+window.addEventListener('online',()=>{syncDelay=3000;scheduleSync();});
+window.addEventListener('offline',stopSync);
+window.addEventListener('pagehide', () => {cleanupPlayer?.();stopSync();});
+document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(heroTimer); heroRequest?.abort();stopSync(); } else scheduleSync(); });
 async function boot() {
   if (account.hasSession) {
     const controller = new AbortController();

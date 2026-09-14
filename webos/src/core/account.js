@@ -39,7 +39,7 @@ export function createAccountClient({ storage, fetcher = globalThis.fetch, confi
       if (!r.ok) {
         // Never expose server bodies: they can contain tokens or configured URLs.
         const code = typeof data?.code === 'string' ? data.code : typeof data?.error_code === 'string' ? data.error_code : '';
-        const message = r.status === 429 ? 'Muitas tentativas. Aguarde um minuto e tente novamente.' : r.status >= 500 ? 'O serviço Nuvio está temporariamente indisponível. Tente novamente.' : [401, 403].includes(r.status) ? 'Sua sessão Nuvio precisa ser renovada. Entre novamente.' : 'Não foi possível concluir a operação na conta Nuvio. Tente gerar outro código.';
+        const message = r.status === 429 ? 'Muitas tentativas. Aguarde um minuto e tente novamente.' : r.status >= 500 ? 'O serviço Nuvio está temporariamente indisponível. Tente novamente.' : [401, 403].includes(r.status) ? 'Sua sessão Nuvio precisa ser renovada. Entre novamente.' : 'Não foi possível concluir a operação na conta Nuvio. Tente novamente.';
         throw new AccountError(message, r.status, code);
       }
       return data;
@@ -76,7 +76,10 @@ export function createAccountClient({ storage, fetcher = globalThis.fetch, confi
   }
   async function authorized(path, body, signal) {
     if (!session) throw new AccountError('Entre na sua conta Nuvio para sincronizar.');
+    const epoch=generation, userId=session.user.id;
+    const check=()=>{if(epoch!==generation || session?.user.id!==userId || signal?.aborted)throw cancelled();};
     if (session.expires_at <= now() + 60000) await refresh();
+    check();
     const observed = session?.access_token;
     if (!observed || signal?.aborted) throw cancelled();
     try { return await request(path, { body, token: observed, signal }); }
@@ -84,6 +87,7 @@ export function createAccountClient({ storage, fetcher = globalThis.fetch, confi
       if (error.status !== 401) throw error;
       if (session?.access_token === observed) await refresh();
       if (!session) throw error;
+      check();
       return request(path, { body, token: session.access_token, signal });
     }
   }
@@ -184,6 +188,26 @@ export function createAccountClient({ storage, fetcher = globalThis.fetch, confi
         if(rows.length<100) return {...parseHistory(progress,watched,profileId),sourcePreference};
       }
       throw new AccountError('Não foi possível concluir a importação do histórico.');
+    },
+    async mutate(profileId, op, clientId, signal, expectedUserId) {
+      if (!Number.isInteger(profileId) || profileId<1 || profileId>6 || session?.user.id!==expectedUserId) throw new AccountError('Perfil ou conta inválidos para envio.');
+      if (!/^[a-zA-Z0-9_-]{16,96}$/.test(clientId)) throw new AccountError('Identificador de sincronização inválido.');
+      const v=op.value, [type,id]=JSON.parse(op.key);
+      if(!['movie','series'].includes(type) || typeof id!=='string' || !id || id.length>512)throw new AccountError('Item inválido para sincronizar.');
+      const base={p_profile_id:profileId,p_origin_client_id:clientId};let rpc,body;
+      if(op.kind==='library') {
+        rpc=v?'sync_push_library_items':'sync_delete_library_items';
+        body=v?{p_items:[{content_id:id,content_type:type,name:v.name || id,poster:v.poster || null,poster_shape:'POSTER',background:v.background || null,description:v.description || null,release_info:v.releaseInfo || null,imdb_rating:null,genres:v.genres || [],addon_base_url:null,added_at:v.addedAt || 0}]}:{p_keys:[{content_id:id,content_type:type}]};
+      } else if(op.kind==='watched') {
+        const [, ,season=null,episode=null]=JSON.parse(op.key);
+        rpc=v?.value?'sync_push_watched_items':'sync_delete_watched_items';
+        body=v?.value?{p_items:[{content_id:id,content_type:type,title:v.name || id,season,episode,watched_at:v.updated}]}:{p_keys:[{content_id:id,...(season!==null?{season,episode}:{})}]};
+      } else if(op.kind==='progress') {
+        if(!v || !Number.isFinite(v.time) || v.time<0 || !Number.isFinite(v.duration) || v.duration<=0 || !Number.isSafeInteger(v.updated) || !v.meta?.id || (type==='series' && (!Number.isInteger(v.episode?.season) || !Number.isInteger(v.episode?.episode))))throw new AccountError('Progresso inválido para sincronizar.');
+        rpc='sync_push_watch_progress';
+        body={p_entries:[{content_id:v.meta.id,content_type:type,video_id:id,...(v.episode || {}),position:Math.round(v.time*1000),duration:Math.round(v.duration*1000),last_watched:v.updated,progress_key:v.episode?`${v.meta.id}_s${v.episode.season}e${v.episode.episode}`:v.meta.id}]};
+      } else throw new AccountError('Operação de sincronização inválida.');
+      return authorized(`/rest/v1/rpc/${rpc}`,{...base,...body},signal);
     },
     async signOut() {
       try { if (refreshFlight) await refreshFlight; } catch { /* Revoke whatever session remains. */ }

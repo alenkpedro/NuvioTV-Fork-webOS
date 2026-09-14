@@ -1,5 +1,9 @@
 # Perfis e biblioteca da conta — 0.6.0
 
+> Atualização 0.8: progresso, assistidos e favoritos agora têm envio ao Nuvio com fila
+> por perfil, conflitos e recuperação offline. Ver [SYNC.md](SYNC.md). As descrições
+> de leitura/local abaixo registram o escopo da entrega original.
+
 Esta etapa usa os contratos do **ysosrs123/NuvioTV-Fork@45e0984** preservado nesta
 árvore. Não usa o NuvioTVSmart. Não implementa sincronização bidirecional.
 

@@ -1,5 +1,9 @@
 # Conta Nuvio no webOS — login desde 0.3, perfis na 0.6
 
+> Atualização 0.8: progresso, assistidos e favoritos agora têm envio ao Nuvio com fila
+> por perfil, conflitos e recuperação offline. Ver [SYNC.md](SYNC.md). As descrições
+> de leitura/local abaixo registram o escopo da entrega original.
+
 A mensagem de conta indisponível das versões 0.1/0.2 foi substituída pelo fluxo
 de vinculação do próprio fork. Não se pede senha no app ou na conversa: o usuário
 entra no site Nuvio pelo celular e aprova o dispositivo indicado na TV.

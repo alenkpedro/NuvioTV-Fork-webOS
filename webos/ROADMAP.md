@@ -25,6 +25,7 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
 | 0.5 | Fontes com filtro/refresh/retorno, painéis de áudio, legendas externas SRT/WebVTT e ajustes | Pendente; troca de áudio testada com API simulada |
 | 0.6 | Perfis/PIN, addons próprios/herdados, biblioteca nativa da conta e isolamento dos dados locais | Pendente; usuário testará depois |
 | 0.7 | Histórico nativo Nuvio por perfil, retomada e resolução local de conflitos | Pendente; usuário testará depois |
+| 0.8 | Envio nativo Nuvio, fila por perfil, remoções por item e conflitos | Pendente; usuário testará depois |
 
 ## Sequência proposta
 
@@ -48,10 +49,11 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    **Histórico entregue na 0.7:** importação nativa Nuvio, assistidos por episódio,
    retomada e conflitos locais; fallback explícito enquanto Trakt/Simkl não estão
    autenticados nesta TV. Ver [HISTORY.md](HISTORY.md).
-   **Próxima etapa sugerida:** envio de progresso, assistidos e favoritos, com fila
-   por perfil, remoções e conflitos. Gestão de perfis/PIN, avatares de catálogo e
+   **Envio entregue na 0.8:** progresso, assistidos e favoritos com fila por perfil,
+   remoções por item, revisão de conflitos e retomada offline. Ver [SYNC.md](SYNC.md).
+   Deltas/realtime, remoção de progresso e listas externas ficam pendentes. Gestão de perfis/PIN, avatares de catálogo e
    histórico externo continuam pendentes. Não sobrescrever a nuvem com estado vazio.
-4. **Descoberta e metadados.** Busca/Descobrir, organização de todos os catálogos,
+4. **Descoberta e metadados — próxima etapa sugerida.** Busca/Descobrir, organização de todos os catálogos,
    TMDB/MDBList, elenco/filmografia, recomendações, coleções, trailers e ratings.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que

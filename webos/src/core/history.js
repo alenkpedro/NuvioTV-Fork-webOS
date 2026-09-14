@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // WatchProgressSyncService / WatchedItemsSyncService: milliseconds, explicit profile.
+import { enqueueKnown, observeSnapshot, resolveQueuedChoice } from './outbox.js';
 const keyFor = (type, id) => JSON.stringify([type, id]);
 export const watchedKey = (type, id, season = null, episode = null) => JSON.stringify([type, id, season, episode]);
 const validNumber = value => Number.isSafeInteger(value) && value >= 0;
@@ -59,6 +60,7 @@ const signature = row => JSON.stringify([row?.updated,row?.time,row?.duration,ro
 function conflictKey(kind,key) { return `${kind}:${key}`; }
 export function mergeHistory(state, snapshot, {sourcePreference = 'NUVIO_SYNC', profileId} = {}) {
   initializeHistory(state);
+  observeSnapshot(state,'progress',snapshot.progress); observeSnapshot(state,'watched',snapshot.watched);
   const progress = {}, conflicts = {}, localProgress = Object.fromEntries(Object.entries(state.progress).filter(([,p]) => p.origin !== 'nuvio'));
   for (const [key,remote] of Object.entries(snapshot.progress)) {
     const old = state.progress[key];
@@ -89,6 +91,7 @@ export function resolveHistoryConflict(state, id, useRemote) {
     state.historyChoices ||= {}; state.historyChoices[id] = signature(c.remote);
     const keys=Object.keys(state.historyChoices); if(keys.length>100) delete state.historyChoices[keys[0]];
   }
+  resolveQueuedChoice(state,c.kind,c.key,c.remote,useRemote);
   delete state.historyConflicts[id];
 }
 export function markWatched(state, record, value) {
@@ -96,6 +99,7 @@ export function markWatched(state, record, value) {
   const k = watchedKey(record.type,record.id,record.season ?? null,record.episode ?? null);
   if (!state.watchedOverrides[k] && Object.keys(state.watchedOverrides).length >= 2000) throw Error('Limite de 2.000 marcações locais atingido neste perfil.');
   const item = {type:record.type,id:record.id,name:record.name || record.id,season:record.season ?? null,episode:record.episode ?? null,value,updated:Date.now(),origin:'local'};
+  enqueueKnown(state,'watched',k,item);
   state.watchedOverrides[k] = item; state.watchedRecords[k] = item; rebuildWatched(state);
   delete state.historyConflicts?.[conflictKey('watched',k)];
 }
@@ -117,7 +121,7 @@ export function historySummary(state) {
   const s=state.historySync;
   if(!s) return 'Histórico da conta ainda não carregado.';
   const extra=['TRAKT','SIMKL'].includes(s.sourcePreference) ? ` ${s.sourcePreference === 'TRAKT' ? 'Trakt' : 'Simkl'} está selecionado no Android, mas ainda não está conectado nesta TV; usando Nuvio Sync.` : s.sourcePreference === 'MDBLIST' ? ' Apenas o histórico Nuvio foi importado; a parte MDBList ainda está pendente.' : '';
-  return `${s.progressCount} registro(s) de progresso e ${s.watchedCount} assistido(s) da conta.${extra} Alterações desta TV ainda são locais.`;
+  return `${s.progressCount} registro(s) de progresso e ${s.watchedCount} assistido(s) da conta.${extra} Alterações desta TV entram na fila de sincronização Nuvio.`;
 }
 
 export function continueHistory(state) {

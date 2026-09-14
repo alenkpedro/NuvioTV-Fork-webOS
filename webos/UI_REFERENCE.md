@@ -109,3 +109,10 @@ sem duplicar episódios da mesma série. A tela adicional Histórico e assistido
 é uma adaptação de gerenciamento para webOS, com paginação e escolha de conflitos;
 não é uma réplica de uma tela Android. O layout principal não foi redesenhado.
 Rastreabilidade e limites: [HISTORY.md](HISTORY.md).
+
+## Entrega 0.8 — estado do envio e conflitos
+
+Tela adicional Sincronização, acessível por Biblioteca, Histórico e Conta, mostra
+pendências e até 20 conflitos por vez. Usa os componentes existentes; é uma
+adaptação de gerenciamento webOS, sem redesenhar home, detalhes ou player.
+O fluxo completo de Descobrir/Busca do Android é a próxima etapa sugerida.

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 const user={id:'history-user',email:'history@example.test'};
 const meta={id:'ttmovie',type:'movie',name:'Filme retomado'};
 async function fixture(page,{local=false,source='NUVIO_SYNC'}={}){
- const calls=[];let fail=false,empty=false;
+ const calls=[];let fail=false,empty=false,watchedRemoved=false;
  await page.addInitScript(({user,local})=>{
   localStorage.setItem('nuvio-fork.webos.account.v1',JSON.stringify({access_token:'fixture-access',refresh_token:'fixture-refresh',expires_at:Date.now()+3600000,user}));
   if(local && !localStorage.getItem('nuvio-fork.webos.v1')) localStorage.setItem('nuvio-fork.webos.v1',JSON.stringify({addons:[],progress:{'["movie","ttmovie"]':{type:'movie',id:'ttmovie',meta:{id:'ttmovie',type:'movie',name:'Filme retomado'},time:10,duration:60,updated:1789390800000}},watched:{},accountSync:{userId:user.id,profileId:1}}));
@@ -18,7 +18,9 @@ async function fixture(page,{local=false,source='NUVIO_SYNC'}={}){
   if(path.endsWith('sync_pull_library'))return json([{profile_id:1,content_id:'ttmovie',content_type:'movie',name:'Filme retomado'}]);
   if(path.endsWith('sync_pull_profile_settings_blob'))return json([{profile_id:1,settings_json:{features:{trakt_settings:{watch_progress_source:{type:'string',value:source}}}}}]);
   if(path.endsWith('sync_pull_watch_progress'))return json(empty?[]:[{profile_id:1,content_id:'ttmovie',content_type:'movie',video_id:'ttmovie',position:25000,duration:60000,last_watched:1789394400000}]);
-  if(path.endsWith('sync_pull_watched_items'))return fail?r.fulfill({status:503,json:{}}):json(empty?[]:[{profile_id:1,content_id:'ttwatched',content_type:'movie',title:'Filme já visto',watched_at:1789398000000}]);
+  if(path.endsWith('sync_pull_watched_items'))return fail?r.fulfill({status:503,json:{}}):json(empty || watchedRemoved?[]:[{profile_id:1,content_id:'ttwatched',content_type:'movie',title:'Filme já visto',watched_at:1789398000000}]);
+  if(path.endsWith('sync_delete_watched_items')){watchedRemoved=true;return r.fulfill({status:204});}
+  if(path.endsWith('sync_push_watch_progress'))return r.fulfill({status:204});
   return r.abort();
  });
  await page.route('https://history.fixture/**',r=>{
@@ -34,12 +36,12 @@ async function history(page){await page.keyboard.press('Escape');await page.getB
 test('remote progress resumes native video at imported seconds and source fallback is explicit',async({page})=>{
  const {calls}=await fixture(page,{source:'TRAKT'});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await expect(page.getByRole('heading',{name:'Continuar assistindo'})).toBeVisible();await expect(page.locator('.continue-card')).toHaveCount(1);await expect(page.locator('.continue-card')).toContainText('00:25');
  await page.locator('.continue-card').click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThanOrEqual(24);await page.locator('video').evaluate(v=>v.pause());
- await page.keyboard.press('Escape');await page.keyboard.press('Escape');await history(page);await expect(page.locator('.history-summary')).toContainText('Trakt está selecionado no Android');await expect(page.locator('.history-summary')).toContainText('usando Nuvio Sync');expect(calls.some(c=>/sync_push|sync_delete|provider_credentials/.test(c.path))).toBe(false);expect(errors).toEqual([]);
+ await page.keyboard.press('Escape');await page.keyboard.press('Escape');await history(page);await expect(page.locator('.history-summary')).toContainText('Trakt está selecionado no Android');await expect(page.locator('.history-summary')).toContainText('usando Nuvio Sync');expect(calls.some(c=>/provider_credentials|trakt|simkl/.test(c.path))).toBe(false);expect(errors).toEqual([]);
 });
 test('newer remote conflict preserves local progress until explicit choice, including after reload',async({page})=>{
  const {calls}=await fixture(page,{local:true});await page.goto('/');await expect(page.getByRole('heading',{name:'Continuar assistindo'})).toBeVisible();await history(page);await expect(page.locator('.history-conflict')).toHaveCount(1);await expect(page.locator('.history-conflict')).toContainText('00:10');await expect(page.locator('.history-conflict')).toContainText('00:25');await page.screenshot({path:'test-results/history-conflict-1920.png'});
  await page.getByRole('button',{name:'Usar da conta',exact:true}).focus();await page.keyboard.press('Enter');await expect(page.locator('.history-conflict')).toHaveCount(0);expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).progress['["movie","ttmovie"]'].time)).toBe(25);
- await page.reload();await expect(page.getByRole('heading',{name:'Continuar assistindo'})).toBeVisible();await history(page);await expect(page.locator('.history-conflict')).toHaveCount(0);expect(calls.some(c=>/sync_push|sync_delete/.test(c.path))).toBe(false);
+ await page.reload();await expect(page.getByRole('heading',{name:'Continuar assistindo'})).toBeVisible();await history(page);await expect(page.locator('.history-conflict')).toHaveCount(0);expect(calls.some(c=>/provider_credentials|trakt|simkl/.test(c.path))).toBe(false);
 });
 test('local unwatch survives refresh and partial history failures preserve previous snapshot',async({page})=>{
  const state=await fixture(page);await page.goto('/');await expect(page.getByRole('heading',{name:'Continuar assistindo'})).toBeVisible();await history(page);await page.getByRole('button',{name:'Assistidos',exact:true}).click();await expect(page.locator('.history-row')).toContainText('Filme já visto');await page.screenshot({path:'test-results/history-watched-1920.png'});

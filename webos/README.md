@@ -33,11 +33,13 @@ Outras configurações do Android ainda não são sincronizadas.
 - Importação dos addons da conta, com opção de repetir a sincronização e erros parciais visíveis.
 - Instalação/remoção local de add-ons, catálogos, busca e detalhes com episódios.
 - Perfis da conta com PIN, addons próprios/herdados e biblioteca Nuvio importada.
-  Favoritos editados na LG continuam locais e separados por perfil.
+  Favoritos editados na LG são enviados ao Nuvio e separados por perfil.
   Veja [PROFILES.md](PROFILES.md).
 - Histórico Nuvio por perfil: progresso/assistidos importados, retomada e conflitos
-  com dados locais. Até 50 linhas por página; alterações da LG ainda não são enviadas
-  à nuvem. Trakt/Simkl/MDBList externos pendentes. Veja [HISTORY.md](HISTORY.md).
+  com dados locais. Até 50 linhas por página; alterações da LG entram na fila de envio
+  ao Nuvio. Trakt/Simkl/MDBList externos pendentes. Veja [HISTORY.md](HISTORY.md).
+- Fila persistente de progresso, assistidos e favoritos, confirmação por item,
+  recuperação de falhas e conflitos revisáveis. Veja [SYNC.md](SYNC.md).
 - Layout Modern do fork: tema Branco, fonte Inter, sidebar clássico/moderno/oculto,
   retrato/paisagem, fundo parcial/completo, rótulos e estilos de Continuar Assistindo.
   Ajustes em **Layout** são locais; o login não importa preferências visuais do Android.
@@ -87,7 +89,7 @@ separadamente. Não há alegação de otimização máxima medida no hardware.
 
 Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliação
 de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
-envio de favoritos/progresso/assistidos à nuvem e edição de perfis; decodificadores FFmpeg/MPV; conversão Dolby Vision;
+deltas/realtime, gestão de listas externas e edição de perfis; decodificadores FFmpeg/MPV; conversão Dolby Vision;
 passthrough lossless/MAT; legendas ASS/PGS/ZIP, preferências automáticas de idioma,
 ajuste de frequência e Up Next. A versão 0.5.0 acrescenta fontes, áudio e legendas; a
 0.4.0 ampliou as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers, coleções e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
@@ -119,7 +121,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.7.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.8.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em
