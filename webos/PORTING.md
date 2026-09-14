@@ -11,6 +11,7 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 | `src/core/ranking.js: filterAndSort` | Filtros, comparadores, prioridade de cache e limites de `DirectDebridStreamFilter.kt`. Nesta prévia a UI permite aplicá-los à lista de todos os add-ons; o original os aplica à lista Direct Debrid. |
 | `src/core/ranking.js: sizeBytes` | Port de `core/debrid/StreamTextSizeParser.kt`, incluindo unidades binárias e precedência de campos estruturados. |
 | `src/core/addons.js` | Contratos de `data/remote/api/AddonApi.kt` e comportamento de URLs de `data/repository/AddonRepositoryImpl.kt`; transporte substituído por fetch limitado/cancelável. |
+| `src/core/account.js`, `account-sync.js` | `core/auth/AuthManager.kt`, `ui/screens/account/AccountViewModel.kt`, `core/sync/AddonSyncService.kt`: vinculação, renovação, resolução de proprietário e leitura de addons do perfil principal. Ver [ACCOUNT.md](ACCOUNT.md). |
 | `src/core/storage.js` | Nova persistência webOS; não compartilha o formato Android DataStore nem implementa a sincronização original. |
 | `src/app.js`, `src/remote.js` | Nova implementação de plataforma para os fluxos do fork; Compose/Media3 não são carregados no webOS. |
 

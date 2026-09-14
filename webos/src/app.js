@@ -3,6 +3,9 @@ import { loadAddon, getJSON, resourceURL, supports, normalCatalogs, extraOptions
 import { defaults, enums, rankStreams, filterAndSort, factsFor, playbackIssue, sizeBytes } from './core/ranking.js';
 import { readState, saveState, progressKey, recordProgress } from './core/storage.js';
 import { installRemote } from './remote.js';
+import { createAccountClient } from './core/account.js';
+import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
+import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
 import libraryIcon from '../public/assets/icons/sidebar_library.svg';
 import settingsIcon from '../public/assets/icons/sidebar_settings.svg';
@@ -10,6 +13,10 @@ import './style.css';
 
 const root = document.querySelector('#app');
 const state = readState(localStorage);
+const account = createAccountClient({ storage: localStorage });
+// Do not display another account's imported add-ons after local session loss.
+state.addons = state.addons.filter(a => !a.accountOwner || a.accountOwner === account.user?.id);
+if (state.accountSync?.userId !== account.user?.id) delete state.accountSync;
 let route = { name: 'home' }, stack = [], request = null, player = null, cleanupPlayer = null;
 let toastTimer, persistWarning = false, heroTimer, drawerOpen = false, contentFocus = null;
 // Compose TV uses a 960 × 540 dp canvas. Preserve the fork's dp/sp geometry
@@ -75,6 +82,8 @@ function navigate(next, replace = false) {
   route = next; render();
 }
 function back() {
+  const dialog = root.querySelector('.account-confirm');
+  if (dialog) { dialog.querySelector('button')?.click(); return; }
   if (root.querySelector('.sidebar') && !stack.length) {
     if (!drawerOpen) { setDrawer(true); return; }
     if (window.webOSSystem?.platformBack) window.webOSSystem.platformBack();
@@ -123,7 +132,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams };
+    const screens = { home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal)) focusFirst();
   } catch (error) {
@@ -389,7 +398,82 @@ async function showStreams(main, signal) {
   const actions = el('div', { class: 'stream-actions' }, button('Reproduzir melhor fonte', () => ordered.length ? navigate({ ...context, name: 'player', stream: ordered[0] }) : toast('Não há fonte HTTP(S) elegível nesta prévia.')), toggle);
   main.append(chips, list, actions); display();
 }
-function showSettings(main) {
+function syncSummary(result) {
+  if (result.failed) return `${result.imported} addon(s) carregado(s); ${result.failed} não responderam. Tente sincronizar novamente.`;
+  return result.imported ? `${result.imported} addon(s) da conta carregado(s).` : 'Nenhum addon habilitado no perfil principal da conta.';
+}
+async function syncAccount(signal) {
+  const result = await importAccountAddons(account, state, { signal });
+  persist(); metadataCache.clear(); return result;
+}
+function authBrand() {
+  return el('div', { class: 'auth-brand-panel' }, el('img', { src: 'assets/wordmark.png', alt: 'Nuvio', class: 'auth-brand' }), el('h1', {}, 'Sua conta Nuvio.\nAgora na sua TV.'), el('p', {}, 'Conecte a conta que você já usa para carregar seus addons do perfil principal.'), el('small', {}, 'Você autoriza a vinculação no site do Nuvio, pelo celular.'));
+}
+function showWelcome(main) {
+  main.append(authBrand(), el('div', { class: 'auth-pane welcome-pane' }, el('h2', {}, 'Bem-vindo ao Nuvio'), el('p', { class: 'muted' }, 'Entre na sua conta para começar.'),
+    button('Entrar com Nuvio', () => navigate({ name: 'account-login', onboarding: true }), { class: 'primary', 'data-initial-focus': true }),
+    button('Continuar sem conta', () => { state.guestMode = true; persist(); stack = []; navigate({ name: 'home' }, true); })));
+}
+function showAccountLogin(main, signal) {
+  main.append(authBrand());
+  const pane = el('div', { class: 'auth-pane' }); main.append(pane);
+  const code = el('strong', { class: 'auth-code', 'aria-label': 'Código de vinculação' });
+  const qr = el('div', { class: 'auth-qr', 'aria-label': 'QR code para vincular a TV' });
+  const message = el('p', { class: 'auth-status', role: 'status' }, 'Gerando código seguro…');
+  const countdown = el('small', { class: 'muted auth-countdown' });
+  const regenerate = button('Gerar novo código', () => navigate({ name: 'account-login', onboarding: route.onboarding }, true), { hidden: true });
+  const cancel = button('Cancelar', back);
+  pane.append(el('h2', {}, 'Entrar com Nuvio'), el('p', { class: 'muted' }, 'Escaneie o QR code ou abra nuvio.tv/link no celular e informe o código.'), qr, code, message, countdown, el('div', { class: 'toolbar' }, regenerate, cancel));
+  let timer, ticker, pairing;
+  const stop = () => { clearTimeout(timer); clearInterval(ticker); };
+  signal.addEventListener('abort', stop, { once: true });
+  function expire(text) {
+    stop(); qr.replaceChildren(); code.textContent = ''; countdown.textContent = ''; message.textContent = text; regenerate.hidden = false; regenerate.focus();
+  }
+  async function poll() {
+    if (signal.aborted || document.hidden) { if (!signal.aborted) timer = setTimeout(poll, 3000); return; }
+    if (Date.now() >= pairing.expiresAt) { expire('O código expirou. Gere um novo código.'); return; }
+    try {
+      const result = await account.poll(pairing, signal);
+      if (signal.aborted) return;
+      if (result.status === 'approved') {
+        stop(); message.textContent = 'Conectando à sua conta…';
+        await account.exchange(pairing, signal);
+        if (signal.aborted) return;
+        qr.replaceChildren(); code.textContent = ''; countdown.textContent = ''; message.textContent = 'Conta conectada. Carregando seus addons…';
+        try {
+          const summary = await syncAccount(signal);
+          if (signal.aborted) return;
+          state.guestMode = false; persist(); stack = [];
+          navigate(summary.failed ? { name: 'settings', category: 'account' } : { name: 'home' }, true); toast(syncSummary(summary));
+        } catch (error) {
+          if (signal.aborted) return;
+          message.textContent = `Conta conectada. ${error.message}`;
+          cancel.remove();
+          const open = button('Abrir conta e tentar sincronizar', () => { stack = []; navigate({ name: 'settings', category: 'account' }, true); }, { class: 'primary' });
+          pane.append(open); open.focus();
+        }
+      } else if (['expired', 'used', 'cancelled', 'denied'].includes(result.status)) {
+        expire(result.status === 'expired' ? 'O código expirou. Gere um novo código.' : 'A vinculação foi encerrada. Gere um novo código para tentar novamente.');
+      } else if (result.status === 'pending') timer = setTimeout(poll, result.interval * 1000);
+      else expire('O serviço retornou um estado de vinculação inesperado. Gere outro código.');
+    } catch (error) { if (!signal.aborted) expire(error.message); }
+  }
+  (async () => {
+    try {
+      pairing = await account.start(signal); if (signal.aborted) return;
+      const matrix = qrcode(0, 'M'); matrix.addData(pairing.url); matrix.make();
+      const modules = matrix.getModuleCount(), quiet = 4, px = 4;
+      const canvas = el('canvas', { width: (modules + quiet * 2) * px, height: (modules + quiet * 2) * px, role: 'img', 'aria-label': 'QR code do Nuvio' });
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#000';
+      for (let row = 0; row < modules; row++) for (let col = 0; col < modules; col++) if (matrix.isDark(row, col)) ctx.fillRect((col + quiet) * px, (row + quiet) * px, px, px);
+      qr.replaceChildren(canvas); code.textContent = pairing.userCode; message.textContent = 'Aguardando sua autorização no Nuvio…';
+      const tick = () => { const left = Math.max(0, Math.ceil((pairing.expiresAt - Date.now()) / 1000)); countdown.textContent = `Código válido por ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; if (!left) expire('O código expirou. Gere um novo código.'); };
+      tick(); if (Date.now() < pairing.expiresAt) { ticker = setInterval(tick, 1000); timer = setTimeout(poll, pairing.interval * 1000); }
+    } catch (error) { if (!signal.aborted) expire(error.message); }
+  })();
+}
+function showSettings(main, signal) {
   const content = el('div', { class: 'settings-content' });
   const categories = [
     ['account', 'Conta', 'Conta e status de sincronização', 'profile'],
@@ -410,6 +494,31 @@ function showSettings(main) {
     if (category[2]) content.append(el('p', { class: 'muted settings-subtitle' }, category[2]));
     const row = (title, subtitle, action) => button([el('span', { class: 'grow' }, el('strong', {}, title), el('small', { class: 'muted' }, subtitle)), icon('next')], action, { class: 'settings-row' });
     switch (category[0]) {
+      case 'account':
+        if (account.user) {
+          content.append(el('p', { class: 'account-email' }, account.user.email), el('p', { class: 'muted' }, 'Conta conectada · Addons do perfil principal'));
+          const syncStatus = el('p', { class: 'account-sync-status', role: 'status' }, state.accountSync?.at ? syncSummary(state.accountSync) : 'Sincronize para carregar os addons da sua conta.');
+          const sync = row('Sincronizar addons', 'Carregar os addons da conta nesta TV', async () => {
+            if (sync.disabled) return; sync.disabled = true; syncStatus.textContent = 'Carregando addons da conta…';
+            try { const result = await syncAccount(signal); if (!signal.aborted) syncStatus.textContent = syncSummary(result); }
+            catch (error) { if (!signal.aborted) syncStatus.textContent = error.message; }
+            finally { sync.disabled = false; }
+          });
+          const logout = row('Sair da conta', 'Desconectar somente esta TV', () => {
+            const dialog = el('div', { class: 'account-confirm', role: 'dialog', 'aria-label': 'Sair da conta' }, el('h2', {}, 'Sair da conta?'), el('p', {}, 'Os addons importados da conta serão removidos desta TV. Seus outros dispositivos continuam conectados.'));
+            const stay = button('Cancelar', () => { dialog.remove(); logout.focus(); });
+            const leave = button('Sair desta TV', async () => {
+              leave.disabled = true;
+              const revoked = await account.signOut();
+              detachAccountAddons(state); state.guestMode = true; persist(); metadataCache.clear(); stack = [];
+              navigate({ name: 'settings', category: 'account' }, true);
+              if (!revoked) toast('Login removido desta TV. Não foi possível confirmar a revogação no servidor; gerencie dispositivos na conta Nuvio.');
+            }, { class: 'primary' });
+            dialog.append(el('div', { class: 'toolbar' }, stay, leave)); main.append(dialog); stay.focus();
+          });
+          content.append(syncStatus, sync, logout);
+        } else content.append(row('Entrar com Nuvio', 'Vincular a TV pelo celular e carregar seus addons', () => navigate({ name: 'account-login' })));
+        break;
       case 'discovery':
         content.append(row('Addons', 'Gerenciar add-ons, ordem dos catálogos e coleções', () => navigate({ name: 'addons' })));
         break;
@@ -426,7 +535,7 @@ function showSettings(main) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.2.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Integrações de conta, perfis, plugins Android e debrid direto ainda não estão disponíveis nesta versão.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.3.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio e importação de addons do perfil principal disponíveis. Outros perfis, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -549,4 +658,16 @@ function layoutKey(key, event) {
 }
 installRemote({ root, back, playerKey: (key, event) => (player?.key(key, event) ?? false) || layoutKey(key, event), boundaryLeft: () => setDrawer(true) });
 window.addEventListener('pagehide', () => cleanupPlayer?.());
-render();
+async function boot() {
+  if (account.hasSession) {
+    const controller = new AbortController();
+    try { await account.restore(controller.signal); }
+    catch (error) {
+      if (!account.hasSession) { detachAccountAddons(state); persist(); }
+      toast(error.message);
+    }
+  }
+  if (!account.hasSession && !state.guestMode && !state.addons.length) route = { name: 'welcome' };
+  await render();
+}
+boot();

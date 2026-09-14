@@ -9,7 +9,7 @@ export function installRemote({ root, back, playerKey, boundaryLeft }) {
     const active = document.activeElement;
     if (/INPUT|TEXTAREA|SELECT/.test(active?.tagName) && (active.tagName === 'SELECT' || ['ArrowLeft', 'ArrowRight'].includes(key))) return;
     e.preventDefault();
-    const all = [...root.querySelectorAll('button:not(:disabled), input, select, textarea, a[href]')].filter(x => x.getClientRects().length && !x.closest('[hidden]') && x.tabIndex >= 0);
+    const all = [...(root.querySelector('[role=dialog]') || root).querySelectorAll('button:not(:disabled), input, select, textarea, a[href]')].filter(x => x.getClientRects().length && !x.closest('[hidden]') && x.tabIndex >= 0);
     if (!all.length) return;
     if (!all.includes(active)) { all[0].focus(); return; }
     const a = active.getBoundingClientRect(), cx = a.x + a.width / 2, cy = a.y + a.height / 2;

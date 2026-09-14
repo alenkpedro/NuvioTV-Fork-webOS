@@ -6,6 +6,7 @@ const origin = 'https://fixture.example';
 const movie = { id: 'ttfixture', type: 'movie', name: 'Horizonte de teste', description: 'Catálogo local de validação. Nenhum serviço externo é consultado.', releaseInfo: '2026', genres: ['Teste'], poster: origin + '/poster.svg', background: origin + '/backdrop.svg' };
 const show = { id: 'ttshow', type: 'series', name: 'Série de teste', poster: origin + '/poster.svg', background: origin + '/backdrop.svg', description: 'Uma série do catálogo de validação.', videos: [{ id: 'ttshow:1:1', title: 'Primeiro episódio', season: 1, episode: 1 }] };
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { const key = 'nuvio-fork.webos.v1'; const state = JSON.parse(localStorage.getItem(key) || 'null') || { addons: [], progress: {}, settings: {} }; state.guestMode = true; localStorage.setItem(key, JSON.stringify(state)); });
   await page.route('https://fixture.example/**', async route => {
     const u = new URL(route.request().url()); const p = decodeURIComponent(u.pathname);
     const json = body => route.fulfill({ json: body, headers: { 'Access-Control-Allow-Origin': '*' } });

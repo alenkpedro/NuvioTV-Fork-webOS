@@ -1,6 +1,6 @@
 {
   "name": "nuvio-fork-webos",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-only",
@@ -16,5 +16,8 @@
     "@playwright/test": "1.63.0",
     "@webos-tools/cli": "3.2.6",
     "esbuild": "0.28.2"
+  },
+  "dependencies": {
+    "qrcode-generator": "2.0.4"
   }
 }

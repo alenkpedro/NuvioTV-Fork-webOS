@@ -1,0 +1,6 @@
+{
+  "backendUrl": "https://api.nuvio.tv",
+  "publishableKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI",
+  "linkUrl": "https://nuvio.tv/link",
+  "legacyLinkUrl": "https://nuvio.tv/tv-login"
+}

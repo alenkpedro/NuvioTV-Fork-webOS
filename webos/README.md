@@ -17,14 +17,20 @@ Atualize a lista e instale **Nuvio Fork**. O identificador `org.nuviofork.webos`
 permite coexistir com outras versões do Nuvio. O índice aponta para um IPK
 versionado e contém seu SHA-256 e tamanho. O aplicativo não exige root.
 
-Primeiro uso: pressione **Esquerda** ou **Voltar** para abrir o menu.
+Para entrar com uma conta existente, use **Ajustes → Conta → Entrar com Nuvio**
+e autorize pelo celular via QR code. Os addons habilitados do perfil principal
+são importados após a vinculação. Veja [ACCOUNT.md](ACCOUNT.md).
+
+Para instalar addons manualmente, pressione **Esquerda** ou **Voltar** para abrir o menu.
 Entre em **Ajustes → Conteúdo e Descoberta → Addons** e adicione a URL do `manifest.json` do seu add-on.
 Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
-Nenhum add-on, conta ou credencial vem instalado. Esta versão não importa a conta
-Nuvio nem sua configuração do Android automaticamente.
+Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil principal.
+Outras configurações do Android ainda não são sincronizadas.
 
 ## O que funciona nesta prévia
 
+- Login Nuvio por QR code, sessão persistente, renovação e logout somente desta TV.
+- Importação dos addons da conta, com opção de repetir a sincronização e erros parciais visíveis.
 - Instalação/remoção local de add-ons, catálogos, busca e detalhes com episódios.
 - Biblioteca local com favoritos persistentes.
 - Layout padrão do fork: tema Branco, fonte Inter, menu recolhido e destaque
@@ -69,7 +75,7 @@ separadamente. Não há alegação de otimização máxima medida no hardware.
 
 Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliação
 de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
-login e sincronização; decodificadores FFmpeg/MPV; conversão Dolby Vision;
+sincronização de biblioteca/histórico e perfis secundários; decodificadores FFmpeg/MPV; conversão Dolby Vision;
 passthrough lossless/MAT; troca de faixa de áudio e legendas ASS/SRT ou obtidas de
 add-ons de legenda; ajuste de frequência e Up Next. A versão 0.2.0 reconstrói a tela inicial Modern, o menu lateral clássico e as
 principais telas a partir do código de referência. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
@@ -101,7 +107,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.2.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.3.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

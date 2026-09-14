@@ -51,8 +51,8 @@ Ainda falta uma comparação com o Android usando os mesmos catálogos e
 preferências. A revisão 0.2.0 precisa de validação na TV; a foto do usuário
 confirma a instalação da 0.1.0.
 
-Persistem diferenças nas telas secundárias: integrações não portadas são
-identificadas como indisponíveis; busca usa o teclado da LG; episódios usam
+Persistem diferenças nas telas secundárias: a conta passou a funcionar na 0.3.0 via QR code e importação de addons;
+outras integrações não portadas são identificadas como indisponíveis; busca usa o teclado da LG; episódios usam
 lista simples; player usa controles web/nativos; filtros de fontes têm ações
 próprias do port. TMDB/MDBList, trailers do hero, variantes landscape/fullscreen,
 sidebar Modern alternativo, efeitos de profundidade e outras personalizações
