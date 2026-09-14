@@ -361,6 +361,7 @@ test('audio menu uses exposed track API, remote selection and modal focus; absen
   await expect(dialog.getByRole('button',{name:/Dublado/})).toHaveAttribute('aria-pressed','true');
   expect(await page.locator('video').evaluate(v=>v.audioTracks.map(t=>t.enabled))).toEqual([false,true]);
   expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);
+  await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');
   await page.screenshot({path:'test-results/player-audio-1920.png'});
   for(let i=0;i<5;i++) {await page.keyboard.press('Tab'); expect(await dialog.evaluate(d=>d.contains(document.activeElement))).toBe(true);}
   await page.keyboard.press('Escape');
