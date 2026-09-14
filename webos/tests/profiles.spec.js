@@ -11,6 +11,8 @@ async function setup(page,{locksFail=false}={}) {
     if(u.pathname.endsWith('verify_profile_pin'))return json([{unlocked:body.p_pin==='1234',retry_after_seconds:body.p_pin==='0000'?2:0}]);
     if(u.pathname.endsWith('get_sync_owner'))return json('fixture-owner');
     if(u.pathname==='/rest/v1/addons')return json([{url:'https://profiles-addon.fixture/manifest.json',enabled:true}]);
+    if(u.pathname.endsWith('sync_pull_profile_settings_blob'))return json([{profile_id:req.postDataJSON()?.p_profile_id,settings_json:{features:{trakt_settings:{watch_progress_source:{type:'string',value:'NUVIO_SYNC'}}}}}]);
+    if(u.pathname.endsWith('sync_pull_watch_progress') || u.pathname.endsWith('sync_pull_watched_items'))return json([]);
     if(u.pathname.endsWith('sync_pull_library'))return libraryFail?route.fulfill({status:503,json:{}}):json(remotePresent?[{content_id:`tt${body.p_profile_id}`,content_type:'movie',name:body.p_profile_id===1?'Filme principal':'Filme cinema',profile_id:body.p_profile_id}]:[]);
     if(u.pathname==='/auth/v1/logout')return route.fulfill({status:204});return route.abort();
   });

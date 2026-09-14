@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Protocol: fork AuthManager.kt / AccountViewModel.kt / AddonSyncService.kt.
+import { historySource, parseHistory } from './history.js';
 import { parseProfiles, parseLibrary } from './profiles.js';
 import publicConfig from './nuvio-config.json' with { type: 'json' };
 export const SESSION_KEY = 'nuvio-fork.webos.account.v1';
@@ -165,6 +166,24 @@ export function createAccountClient({ storage, fetcher = globalThis.fetch, confi
         if (page.length < 100) return parseLibrary(items, profileId);
       }
       throw new AccountError('Não foi possível concluir a leitura da biblioteca.');
+    },
+    async history(profileId, signal) {
+      if (!Number.isInteger(profileId) || profileId < 1 || profileId > 6) throw new AccountError('Perfil inválido.');
+      const settings = await authorized('/rest/v1/rpc/sync_pull_profile_settings_blob', { p_profile_id:profileId, p_platform:'tv' }, signal);
+      const sourcePreference = historySource(settings,profileId);
+      // Trakt/Simkl authentication is device-local in the fork and is not ported here.
+      // Therefore Nuvio is the same unauthenticated-provider fallback, never external history.
+      const progress = await authorized('/rest/v1/rpc/sync_pull_watch_progress', {p_profile_id:profileId,p_limit:1001}, signal);
+      if (!Array.isArray(progress) || progress.length > 1000) throw new AccountError('Histórico acima do limite de 1.000 registros por importação. A cópia anterior foi preservada.');
+      const watched=[];
+      for(let page=1;page<=21;page++) {
+        const rows=await authorized('/rest/v1/rpc/sync_pull_watched_items',{p_profile_id:profileId,p_page:page,p_page_size:100},signal);
+        if(!Array.isArray(rows) || rows.length>100) throw new AccountError('Página de assistidos inválida.');
+        watched.push(...rows);
+        if(watched.length>2000) throw new AccountError('Mais de 2.000 assistidos. A cópia anterior foi preservada.');
+        if(rows.length<100) return {...parseHistory(progress,watched,profileId),sourcePreference};
+      }
+      throw new AccountError('Não foi possível concluir a importação do histórico.');
     },
     async signOut() {
       try { if (refreshFlight) await refreshFlight; } catch { /* Revoke whatever session remains. */ }

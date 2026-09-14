@@ -68,6 +68,8 @@ logout, cancelamento e entrada `file://`. QR e tela conectada foram revisados em
 1920×1080. O usuário confirmou que conseguiu entrar na conta na LG 55UT8050 com a 0.3.0. Isso não valida todos os recursos de sincronização ou reprodução do aplicativo.
 
 A 0.6 acrescenta seleção de perfis, PIN e biblioteca da conta. Veja [PROFILES.md](PROFILES.md).
-Ainda não importa histórico remoto, credenciais de debrid, plugins ou preferências,
-nem envia favoritos editados na LG à nuvem. Addons precisam aceitar o app web;
+A 0.7 importa progresso e assistidos nativos Nuvio e lê a preferência de fonte de
+histórico da plataforma `tv`. Veja [HISTORY.md](HISTORY.md). Ainda não importa
+histórico externo Trakt/Simkl/MDBList, credenciais de debrid, plugins ou demais
+preferências, nem envia alterações feitas na LG à nuvem. Addons precisam aceitar o app web;
 autenticar no Nuvio não remove restrições CORS ou de formato dos servidores.

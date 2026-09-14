@@ -21,7 +21,7 @@ export function saveState(storage, state) {
 export const progressKey = (type, id) => JSON.stringify([type, id]);
 export function recordProgress(state, { type, id, meta, episode, time, duration }) {
   if (!Number.isFinite(time) || time < 1 || !Number.isFinite(duration) || duration <= 0) return;
-  state.progress[progressKey(type, id)] = { type, id, meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster, background: meta.background }, episode, time, duration, updated: Date.now(), complete: time / duration >= 0.95 };
+  state.progress[progressKey(type, id)] = { type, id, meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster, background: meta.background }, episode, time, duration, updated: Date.now(), complete: time / duration >= 0.90, origin: 'local' };
   // No stream URLs or credentials in history. Retain a bounded 100 titles/episodes.
   const keep = Object.entries(state.progress).sort((a, b) => b[1].updated - a[1].updated).slice(0, 100);
   state.progress = Object.fromEntries(keep);

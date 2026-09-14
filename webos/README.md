@@ -33,22 +33,25 @@ Outras configurações do Android ainda não são sincronizadas.
 - Importação dos addons da conta, com opção de repetir a sincronização e erros parciais visíveis.
 - Instalação/remoção local de add-ons, catálogos, busca e detalhes com episódios.
 - Perfis da conta com PIN, addons próprios/herdados e biblioteca Nuvio importada.
-  Favoritos editados na LG e histórico continuam locais e separados por perfil.
+  Favoritos editados na LG continuam locais e separados por perfil.
   Veja [PROFILES.md](PROFILES.md).
+- Histórico Nuvio por perfil: progresso/assistidos importados, retomada e conflitos
+  com dados locais. Até 50 linhas por página; alterações da LG ainda não são enviadas
+  à nuvem. Trakt/Simkl/MDBList externos pendentes. Veja [HISTORY.md](HISTORY.md).
 - Layout Modern do fork: tema Branco, fonte Inter, sidebar clássico/moderno/oculto,
   retrato/paisagem, fundo parcial/completo, rótulos e estilos de Continuar Assistindo.
   Ajustes em **Layout** são locais; o login não importa preferências visuais do Android.
 - Destaque atualizado após estabilizar o foco por 450 ms, com consulta cancelável
   de metadados aos addons (até três provedores elegíveis, um por vez).
 - Detalhes com sinopse completa, créditos/elenco dos addons, temporadas e cartões
-  horizontais de episódios. Assistir considera a retomada local e pula especiais
+  horizontais de episódios. Assistir considera a retomada local/importada e pula especiais
   na primeira reprodução quando há uma temporada regular disponível.
 - Controle por setas/OK/Voltar (incluindo código 461 da LG) e ponteiro.
 - Extração de resolução, qualidade, grupo, áudio, HDR, codec, idioma e tamanho.
 - Ranking determinístico do fork, listas de grupos e filtros estritos; o botão de
   melhor fonte mantém o fallback de exclusões do original entre fontes elegíveis.
 - Ajustes de grupos, exclusões de codecs/qualidades, limite de resultados e autoplay.
-- Reprodução HTTP(S) no player da plataforma, pausa, avanço/recuo, retomada local,
+- Reprodução HTTP(S) no player da plataforma, pausa, avanço/recuo, retomada local/importada,
   histórico limitado, painel de áudio quando a plataforma expõe faixas e legendas
   SRT/WebVTT da fonte e de addons, com tamanho, fundo e sincronização. Veja [PLAYER.md](PLAYER.md).
 - Diagnóstico de resolução decodificada, buffer temporal e frames perdidos,
@@ -84,7 +87,7 @@ separadamente. Não há alegação de otimização máxima medida no hardware.
 
 Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliação
 de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
-envio de favoritos à nuvem, histórico remoto e edição de perfis; decodificadores FFmpeg/MPV; conversão Dolby Vision;
+envio de favoritos/progresso/assistidos à nuvem e edição de perfis; decodificadores FFmpeg/MPV; conversão Dolby Vision;
 passthrough lossless/MAT; legendas ASS/PGS/ZIP, preferências automáticas de idioma,
 ajuste de frequência e Up Next. A versão 0.5.0 acrescenta fontes, áudio e legendas; a
 0.4.0 ampliou as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers, coleções e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
@@ -116,7 +119,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.6.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.7.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

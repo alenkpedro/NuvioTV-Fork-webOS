@@ -53,3 +53,11 @@ Referências de plataforma:
 - https://webostv.developer.lge.com/develop/specifications/video-audio-240
 - https://webostv.developer.lge.com/develop/guides/back-button
 - https://github.com/webosbrew/docs/blob/main/test/repo.json
+
+## Histórico — entrega 0.7
+
+`src/core/history.js` e `account.history` adaptam `WatchProgressSyncService`,
+`WatchedItemsSyncService`, `WatchProgressPreferences` e `ProfileSettingsSyncService`.
+Leitura nativa Nuvio, unidades em milissegundos convertidas para o player,
+conclusão a 90%, identidade de episódio e precedência de alterações locais sem
+escrita remota. Contratos, limites e fallback de provedores: [HISTORY.md](HISTORY.md).

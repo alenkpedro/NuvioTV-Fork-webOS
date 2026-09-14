@@ -15,6 +15,8 @@ async function mockAccount(page, { status = 'approved', startError = false, addo
     if (u.pathname === '/auth/v1/token') return json({ ...token, access_token: 'fixture-renewed-access', refresh_token: 'fixture-renewed-refresh' });
     if (u.pathname.endsWith('sync_pull_profiles')) return json([{profile_index:1,name:'Principal'}]);
     if (u.pathname.endsWith('sync_pull_profile_locks')) return json([{profile_index:1,pin_enabled:false}]);
+    if(u.pathname.endsWith('sync_pull_profile_settings_blob'))return json([{profile_id:req.postDataJSON()?.p_profile_id,settings_json:{features:{trakt_settings:{watch_progress_source:{type:'string',value:'NUVIO_SYNC'}}}}}]);
+    if(u.pathname.endsWith('sync_pull_watch_progress') || u.pathname.endsWith('sync_pull_watched_items'))return json([]);
     if (u.pathname.endsWith('sync_pull_library')) return json([]);
     if (u.pathname.endsWith('get_sync_owner')) return json('fixture-sync-owner');
     if (u.pathname === '/rest/v1/addons') return json([{ url: 'https://account-addon.fixture/configuration/manifest.json', name: 'Addon da conta', sort_order: 0, enabled: true, profile_id: 1 }, { url: 'https://disabled.fixture/manifest.json', enabled: false }]);

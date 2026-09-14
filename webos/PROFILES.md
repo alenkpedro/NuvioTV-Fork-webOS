@@ -71,13 +71,14 @@ Painel de PIN com teclado numérico é uma adaptação webOS; não replica ainda
 editor/teclado Android. Gestão de perfis (criar, renomear, excluir, alterar PIN),
 catálogo de avatares, fundos de perfil e gestão de acesso continuam pendentes.
 
-## Próxima etapa
+## Histórico e próxima etapa
 
-Importar progresso e assistidos da nuvem e resolver conflitos com o histórico
-local; depois adicionar envio das alterações. O fork dá precedência a Trakt/Simkl
-quando configurados: essa regra precisa ser portada antes de misturar histórico
-de provedores. Listas externas e o histórico remoto ainda não são importados na
-0.6.0. A biblioteca desta etapa é a biblioteca nativa Nuvio (`sync_pull_library`).
+A 0.7 acrescenta progresso e assistidos nativos Nuvio por perfil, mantendo o limite
+de 100 registros de progresso, e resolução de conflitos na TV. Fonte Trakt/Simkl
+sem autenticação nesta TV usa Nuvio Sync explicitamente; nenhum histórico externo
+é importado. Ver [HISTORY.md](HISTORY.md). A próxima etapa é enviar alterações
+locais de progresso, assistidos e favoritos à nuvem, com fila por perfil e conflitos.
+A biblioteca desta etapa é a biblioteca nativa Nuvio (`sync_pull_library`).
 
 Validação: testes de migração, isolamento entre contas/perfis, herança de addons,
 PIN inválido/cancelado, bloqueios indisponíveis, snapshots completos/parciais,

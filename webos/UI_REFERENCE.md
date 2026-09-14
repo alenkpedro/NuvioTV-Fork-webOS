@@ -101,3 +101,11 @@ PIN com teclado numérico é adaptação webOS. A biblioteca recebe dados da con
 status de importação e paginação de 100 cartões. Editor de perfis, fundos, avatares
 do catálogo e a organização avançada da biblioteca ainda divergem do Android.
 Ver [PROFILES.md](PROFILES.md).
+
+## Entrega 0.7 — histórico e retomada
+
+Continuar Assistindo usa os cartões existentes e recebe progresso nativo Nuvio,
+sem duplicar episódios da mesma série. A tela adicional Histórico e assistidos
+é uma adaptação de gerenciamento para webOS, com paginação e escolha de conflitos;
+não é uma réplica de uma tela Android. O layout principal não foi redesenhado.
+Rastreabilidade e limites: [HISTORY.md](HISTORY.md).

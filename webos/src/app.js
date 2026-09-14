@@ -8,6 +8,7 @@ import { importAccountAddons, detachAccountAddons } from './core/account-sync.js
 import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode, castMembers } from './core/presentation.js';
 import { installTrackControls } from './player-tracks.js';
 import { initializeProfiles, activateProfile, leaveAccountProfiles, mergeLibrary, setLibraryItem } from './core/profiles.js';
+import { initializeHistory, mergeHistory, markWatched, isWatched, continueHistory, progressWithWatched, historySummary, resolveHistoryConflict } from './core/history.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
@@ -175,7 +176,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') focusFirst();
   } catch (error) {
@@ -275,11 +276,11 @@ async function cachedMetaJSON(url, signal) {
   return value;
 }
 async function showHome(main, signal) {
-  if (!state.addons.length) {
+  const recent = layout.continueWatching ? continueHistory(state) : [];
+  if (!state.addons.length && !recent.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon instalado. Adicione um para começar.')); return;
   }
   const catalogs = state.addons.flatMap(addon => normalCatalogs(addon).map(catalog => ({ addon, catalog }))).slice(0, 6);
-  const recent = layout.continueWatching ? Object.values(state.progress).filter(x => !x.complete).sort((a, b) => b.updated - a.updated).slice(0, 12) : [];
   if (!catalogs.length && !recent.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon de catálogo instalado. Instale um para ver conteúdos.')); return;
   }
@@ -288,6 +289,7 @@ async function showHome(main, signal) {
   if (recent.length) {
     rows.append(el('section', { class: 'catalog-section continue-section' }, el('div', { class: 'section-head' }, el('h2', {}, 'Continuar assistindo')), el('div', { class: 'rail' }, recent.map(p => card(p.meta, null, p, 'continue')))));
     updateHomeHero(recent[0].meta);
+    enrichRecentCards(recent, main, signal);
   }
   const loading = el('p', { class: 'loading', role: 'status' }, 'Carregando…'); rows.append(loading);
   const results = await mapLimit(catalogs, async ({ addon, catalog }) => {
@@ -305,6 +307,65 @@ async function showHome(main, signal) {
   }
   if (first) updateHomeHero(first);
   else notice(rows, 'Nenhum conteúdo encontrado.');
+}
+function enrichRecentCards(recent, main, signal) {
+  // Metadata arrives after the usable home; retain the focused button and cancel on exit.
+  mapLimit(recent, async p => {
+    const saved = state.library[progressKey(p.type,p.meta.id)];
+    const result = await loadMeta({...p.meta,...saved}, null, signal);
+    if (signal.aborted || !result) return;
+    Object.assign(p.meta, {name:result.meta.name,poster:result.meta.poster,background:result.meta.background});
+    const node = [...main.querySelectorAll('.continue-card')].find(n => n.dataset.focus === `card-continue-${p.type}-${p.id}`);
+    if (node) {
+      node.setAttribute('aria-label',p.meta.name); node.querySelector('strong').textContent=p.meta.name;
+      const art = poster(layout.continueStyle !== 'poster' ? p.meta.background || p.meta.poster : p.meta.poster,p.meta.name);
+      art.append(el('progress',{max:p.duration,value:p.time,'aria-label':'Progresso assistido'})); node.querySelector('.art').replaceWith(art);
+      if(document.activeElement===node) updateHomeHero(result.meta);
+    }
+  },signal,2).then(() => { if(!signal.aborted) persist(); });
+}
+function showHistory(main,signal) {
+  initializeHistory(state);
+  heading(main,'','Histórico e assistidos');
+  const status=el('p',{class:'history-summary',role:'status'},profileAccess?historySummary(state):'Histórico salvo nesta TV.');
+  const refresh=button('Atualizar histórico',async () => {
+    if(refresh.disabled)return; refresh.disabled=true;status.textContent='Carregando histórico da conta…';
+    try {await syncHistory(signal);if(!signal.aborted){status.textContent=historySummary(state);draw();}}
+    catch(error){if(!signal.aborted)status.textContent=error.message;}
+    finally{refresh.disabled=false;}
+  },{disabled:!profileAccess,'data-focus':'history-refresh'});
+  const content=el('div',{class:'history-content'});main.append(status,el('div',{class:'toolbar'},refresh),content);
+  const stamp=value=>value?new Date(value).toLocaleString('pt-BR'):'Data não informada';
+  const episodeLabel=p=>{const e=p.kind==='progress'?p.episode:p.season!==null?{season:p.season,episode:p.episode}:null;return e?` · T${e.season}:E${e.episode}`:'';};
+  const label=p=>p.kind==='progress'?`${clock(p.time)} / ${clock(p.duration)}`:p.value?'Assistido':'Não assistido';
+  const action=(id,remote)=>{try{resolveHistoryConflict(state,id,remote);persist();draw();(content.querySelector('button')||refresh).focus();}catch(error){status.textContent=error.message;}};
+  function draw(){
+    content.replaceChildren();
+    const conflicts=Object.entries(state.historyConflicts || {});
+    if(conflicts.length){
+      content.append(el('h2',{},'Escolha qual versão manter'),el('p',{class:'muted'},'A versão desta TV foi preservada. A escolha abaixo altera somente esta TV.'));
+      for(const [id,c] of conflicts) content.append(el('section',{class:'history-conflict'},el('h3',{},(c.local.meta?.name || c.local.name || c.local.id)+episodeLabel({...c.local,kind:c.kind})),el('p',{},`Nesta TV: ${label({...c.local,kind:c.kind})} · ${stamp(c.local.updated)}`),el('p',{},`Na conta: ${label({...c.remote,kind:c.kind})} · ${stamp(c.remote.updated)}`),el('div',{class:'toolbar'},button('Manter desta TV',()=>action(id,false)),button('Usar da conta',()=>action(id,true)))));
+    }
+    const tabs=el('div',{class:'toolbar history-tabs'}),list=el('div',{class:'history-list'});content.append(tabs,list);
+    let page=route.historyPage || 0;
+    const show=tab=>{
+      route.historyTab=tab;
+      const progress=tab!=='watched';
+      const all=Object.values(progress?state.progress:state.watchedRecords || {}).filter(p=>progress || p.value).sort((a,b)=>b.updated-a.updated);
+      page=Math.min(page,Math.max(0,Math.ceil(all.length/50)-1));route.historyPage=page;
+      list.replaceChildren(); tabs.querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));
+      if(!all.length)notice(list,progress?'Nenhum progresso salvo.':'Nenhum assistido salvo.');
+      for(const p of all.slice(page*50,(page+1)*50)){
+        const meta=progress?p.meta:state.library[progressKey(p.type,p.id)] || {id:p.id,type:p.type,name:p.name};
+        const episode=progress?p.episode:p.season!==null?{season:p.season,episode:p.episode}:null;
+        list.append(el('div',{class:'history-row'},button([el('strong',{},meta.name),el('small',{class:'muted'},[episode?`T${episode.season}:E${episode.episode}`:'',progress?`${clock(p.time)} / ${clock(p.duration)}`:'Assistido',stamp(p.updated),p.origin==='nuvio'?'Conta Nuvio':'Nesta TV'].filter(Boolean).join(' · '))],()=>navigate({name:'detail',meta}),{'data-focus':`history-${progress?'progress':'watched'}-${p.type}-${p.id}-${episode?.season}-${episode?.episode}`}),!progress?button('Marcar como não assistido',()=>{try{markWatched(state,p,false);persist();draw();(content.querySelector('button')||refresh).focus();}catch(error){toast(error.message);}}):null));
+      }
+      if(all.length>50) list.append(el('div',{class:'toolbar'},button('Página anterior',()=>{page--;show(tab);list.querySelector('button')?.focus();},{disabled:page===0}),el('span',{},`${page+1} / ${Math.ceil(all.length/50)}`),button('Próxima página',()=>{page++;show(tab);list.querySelector('button')?.focus();},{disabled:(page+1)*50>=all.length})));
+    };
+    for(const [tab,name]of [['progress','Progresso'],['watched','Assistidos']])tabs.append(button(name,()=>{page=0;show(tab);},{'data-tab':tab}));
+    show(route.historyTab || 'progress');
+  }
+  draw();
 }
 function showLibrary(main, signal) {
   heading(main, '', 'Biblioteca');
@@ -326,6 +387,7 @@ function showLibrary(main, signal) {
     catch (error) { if (!signal.aborted) status.textContent = error.message; }
     finally { target.disabled = false; }
   }));
+  tabs.append(button('Histórico e assistidos',()=>navigate({name:'history'})));
   main.append(tabs, status, rows); draw(selectedType);
 }
 function showAddons(main) {
@@ -418,7 +480,7 @@ async function showDetail(main, signal) {
     persist(); toggleLibrary.replaceChildren(icon(state.library[key] ? 'check' : 'add'));
     toggleLibrary.setAttribute('aria-label', state.library[key] ? 'Remover da biblioteca' : 'Adicionar à biblioteca');
   }, { class: 'round-button', 'aria-label': state.library[key] ? 'Remover da biblioteca' : 'Adicionar à biblioteca' });
-  const next = meta.type === 'series' ? nextEpisode(meta, state.progress) : null;
+  const next = meta.type === 'series' ? nextEpisode(meta, progressWithWatched(state,meta)) : null;
   const resume = meta.type === 'movie' && state.progress[key] && !state.progress[key].complete;
   const watchText = next ? `${next.resume ? 'Retomar' : 'Assistir'}: T${next.video.season}:E${next.video.episode}` : resume ? 'Retomar' : 'Assistir';
   const watch = button([icon('play'), watchText], () => {
@@ -426,7 +488,7 @@ async function showDetail(main, signal) {
     else if (meta.type === 'movie') go();
   }, { class: 'primary play-button', disabled: meta.type === 'series' && !next, 'data-initial-focus': meta.type !== 'series' || Boolean(next), 'data-focus': 'detail-play' });
   const watched = button(icon(state.watched[key] ? 'eye' : 'eye-off'), () => {
-    state.watched[key] = !state.watched[key]; persist();
+    try {markWatched(state,meta,!state.watched[key]);persist();} catch(error){toast(error.message);return;}
     watched.replaceChildren(icon(state.watched[key] ? 'eye' : 'eye-off'));
     watched.setAttribute('aria-label', state.watched[key] ? 'Marcar como não assistido' : 'Marcar como assistido');
   }, { class: 'round-button', 'aria-label': state.watched[key] ? 'Marcar como não assistido' : 'Marcar como assistido' });
@@ -453,7 +515,7 @@ async function showDetail(main, signal) {
       list.replaceChildren(...videos.filter(v => v.season === season).slice(0, 150).map(v => {
         const p = state.progress[progressKey(meta.type, v.id)];
         const future = Number.isFinite(Date.parse(v.released)) && Date.parse(v.released) > Date.now();
-        const status = future ? 'Ainda não lançado' : p?.complete ? 'Assistido' : p ? `Retomar em ${clock(p.time)}` : '';
+        const status = future ? 'Ainda não lançado' : p?.complete || isWatched(state,{...p,type:meta.type,meta,episode:{season:v.season,episode:v.episode}}) ? 'Assistido' : p ? `Retomar em ${clock(p.time)}` : '';
         const card = button([poster(v.thumbnail || meta.background || meta.poster, v.title, 'episode-art'), el('span', { class: 'episode-fade' }),
           el('span', { class: 'episode-copy' }, el('span', { class: 'episode-code' }, `T${v.season}:E${v.episode}`), el('strong', {}, v.title || `Episódio ${v.episode}`), el('p', {}, v.overview || v.description || ''),
             el('small', { class: 'muted' }, [runtimeText(v.runtime), v.released ? releaseText({ type: 'movie', released: v.released }) : ''].filter(Boolean).join(' • '))),
@@ -558,6 +620,13 @@ async function syncLibrary(signal) {
   if (signal.aborted || access !== profileAccess || account.user?.id !== access.userId) throw new DOMException('Cancelado', 'AbortError');
   mergeLibrary(state, library, access.id); persist(); return state.librarySync;
 }
+async function syncHistory(signal) {
+  const access=profileAccess;
+  if(!access)throw Error('Selecione um perfil para carregar o histórico.');
+  const snapshot=await account.history(access.id,signal);
+  if(signal.aborted || access!==profileAccess || account.user?.id!==access.userId)throw new DOMException('Cancelado','AbortError');
+  mergeHistory(state,snapshot,{profileId:access.id,sourcePreference:snapshot.sourcePreference});persist();return state.historySync;
+}
 async function signOutProfiles() {
   const signedOutUser = account.user?.id;
   request?.abort(); profileAccess = null;
@@ -574,13 +643,14 @@ async function showProfiles(main, signal) {
       if (signal.aborted || !account.user) return;
       activateProfile(state, account.user.id, profile);
       profileAccess = { ...profile, userId: account.user.id }; state.guestMode = false; persist();
-      const results = await Promise.allSettled([syncAccount(signal), syncLibrary(signal)]);
+      const results = await Promise.allSettled([syncAccount(signal), syncLibrary(signal), syncHistory(signal)]);
       if (signal.aborted) return;
       if (!account.user) { profileAccess = null; leaveAccountProfiles(state); persist(); navigate({ name: 'welcome' }, true); return; }
       const addonResult = results[0], libraryResult = results[1];
       const messages = [];
       if (addonResult.status === 'rejected') messages.push(addonResult.reason.message);
       if (libraryResult.status === 'rejected') messages.push(`Biblioteca: ${libraryResult.reason.message}`);
+      if (results[2].status === 'rejected') messages.push(`Histórico: ${results[2].reason.message}`);
       const failedAddons = addonResult.status === 'rejected' || addonResult.value.failed;
       stack = []; navigate(failedAddons ? { name: 'settings', category: 'account' } : { name: 'home' }, true);
       if (messages.length) toast(messages.join(' '));
@@ -684,7 +754,7 @@ function showSettings(main, signal) {
             }, { class: 'primary' });
             dialog.append(el('div', { class: 'toolbar' }, stay, leave)); main.append(dialog); stay.focus();
           });
-          content.append(row('Trocar perfil', profileAccess?.name || 'Selecionar perfil', () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); }), syncStatus, sync, logout);
+          content.append(row('Trocar perfil', profileAccess?.name || 'Selecionar perfil', () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); }), syncStatus, sync, row('Histórico e assistidos', historySummary(state), () => navigate({name:'history'})), logout);
         } else content.append(row('Entrar com Nuvio', 'Vincular a TV pelo celular e carregar seus addons', () => navigate({ name: 'account-login' })));
         break;
       case 'profiles':
@@ -731,7 +801,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.6.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, addons do perfil principal e opções de layout disponíveis. Outros perfis, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.7.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio à nuvem, integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -761,7 +831,7 @@ function showPreferences(main) {
   }
   const max = el('input', { type: 'number', min: 0, max: 100, value: state.settings.preferences.maxResults ?? defaults.maxResults, 'aria-label': 'Máximo de fontes', onchange: e => { state.settings.preferences.maxResults = Math.max(0, Math.min(100, Math.floor(Number(e.target.value) || 0))); persist(); } });
   main.append(el('label', { class: 'setting' }, el('span', {}, 'Máximo de fontes filtradas (0 = sem limite)'), max), button('Restaurar preferências do fork', () => { state.settings.preferences = {}; persist(); render(); toast('Preferências originais restauradas.'); }));
-  main.append(el('h2', { class: 'section-title' }, 'Sobre esta prévia'), el('p', { class: 'notice' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984. Interface em 1080p; vídeo em resolução original. Downloads paralelos, debrid direto, torrents, sincronização de contas e áudio avançado ainda estão em adaptação.'));
+  main.append(el('h2', { class: 'section-title' }, 'Sobre esta prévia'), el('p', { class: 'notice' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984. Interface em 1080p; vídeo em resolução original. Downloads paralelos, debrid direto, torrents, envio de alterações à nuvem e áudio avançado ainda estão em adaptação.'));
 }
 function clock(value) { const s = Math.max(0, Math.floor(value || 0)); return `${Math.floor(s / 3600) ? Math.floor(s / 3600) + ':' : ''}${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
 function bytes(n) { return Number.isFinite(n) && n > 0 ? `${(n / 1024 ** 3).toFixed(2)} GB` : ''; }
