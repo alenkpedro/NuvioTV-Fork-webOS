@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.19.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.20.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.19.0",
+        "version": "0.20.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Pular abertura e créditos, miniaturas locais e aparência de legendas com fonte fixa.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.19.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.19.0",
+        "appDescription": "Ajustes alinhados ao fork, temas de cores, AMOLED e aparência de legendas.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.20.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.20.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.19.0/org.nuviofork.webos_0.19.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.20.0/org.nuviofork.webos_0.20.0_all.ipk",
         "ipkHash": {
-          "sha256": "dd6d5aca0e8f8d0d3caaa59efad2b814718a7f8575a7e3f18e5b4e6c8f4e1a4d"
+          "sha256": "2f65bd05b4e2fd72973f4e3d528ba623de3cbb807932296d60ddf92f7772660f"
         },
-        "ipkSize": 815038
+        "ipkSize": 823684
       },
       "pool": "main",
-      "shortDescription": "Player do fork com trechos e personalização de legendas para LG webOS 24."
+      "shortDescription": "Player do fork com ajustes, temas e legendas para LG webOS 24."
     }
   ]
 }
