@@ -83,6 +83,8 @@ property of their owners. The MDBList integration reads aggregate ratings only.
 
 Subtitle font: Netflix Sans Medium, supplied by the project owner in
 Netflix Sans-fontiko.zip; bundled unchanged at assets/fonts/NetflixSans-Medium.otf.
+The lighter state falls back to the bundled Inter variable font because the Regular face
+did not arrive in a usable transfer; adding assets/fonts/NetflixSans-Regular.otf switches it.
 Embedded copyright: Copyright (c) 2018. Netflix, Inc. and its affiliates. All rights reserved.
 Embedded license URL: http://www.daltonmaag.com/eula
 No license text accompanied the supplied archive. This font is not covered by

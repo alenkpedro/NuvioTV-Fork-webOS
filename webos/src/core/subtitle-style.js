@@ -14,12 +14,12 @@ export function readSubtitleStyle(value={}) {
 }
 // Bold is the packaged Netflix Sans Medium. Without bold the port asks for a thinner face:
 // NetflixSans-Regular.otf when that file is added to public/assets/fonts, and the bundled
-// Inter otherwise, so the toggle always changes what is on screen.
+// Inter variable font at 350 otherwise, so the toggle always changes what is on screen.
 export const subtitleFamilyBold = "'Netflix Sans', Inter, Arial, sans-serif";
 export const subtitleFamilyLight = "'Netflix Sans Regular', Inter, Arial, sans-serif";
 export function applySubtitleStyle(screen,value) {
  const s=readSubtitleStyle(value),rgb=[1,3,5].map(i=>parseInt(s.outlineColor.slice(i,i+2),16));
  const shadow=(alpha)=>`rgba(${rgb.join(',')},${alpha})`;
- const vars={size:`${19.44*s.size/100}px`,weight:s.bold?'500':'400',family:s.bold?subtitleFamilyBold:subtitleFamilyLight,color:`rgba(${[1,3,5].map(i=>parseInt(s.color.slice(i,i+2),16)).join(',')},${s.opacity/100})`,bottom:`${6.5+s.offset-5}%`,shadow:s.outline?`0 .5px 1px ${shadow(1)},.5px 0 .5px ${shadow(.9)},-.5px 0 .5px ${shadow(.9)},0 -.5px .5px ${shadow(.75)}`:'none'};
+ const vars={size:`${19.44*s.size/100}px`,weight:s.bold?'500':'350',family:s.bold?subtitleFamilyBold:subtitleFamilyLight,color:`rgba(${[1,3,5].map(i=>parseInt(s.color.slice(i,i+2),16)).join(',')},${s.opacity/100})`,bottom:`${6.5+s.offset-5}%`,shadow:s.outline?`0 .5px 1px ${shadow(1)},.5px 0 .5px ${shadow(.9)},-.5px 0 .5px ${shadow(.9)},0 -.5px .5px ${shadow(.75)}`:'none'};
  for(const [key,val]of Object.entries(vars))screen.style.setProperty(`--sub-${key}`,val);
 }

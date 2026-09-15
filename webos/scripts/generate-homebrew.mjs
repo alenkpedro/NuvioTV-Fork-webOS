@@ -7,7 +7,7 @@ if (tag !== `webos-v${app.version}`) throw Error('Tag must match package version
 const filename = `${app.id}_${app.version}_all.ipk`, file = `packages/${filename}`;
 const manifest = {
   id: app.id, version: app.version, type: app.type, title: app.title,
-  appDescription: 'Legendas com dois pesos, painéis no padrão do app e Voltar pelo controle.',
+  appDescription: 'Legendas com dois pesos no padrão do app e Voltar pelo controle.',
   iconUri: `https://raw.githubusercontent.com/${repo}/${tag}/webos/public/assets/icon.png`,
   sourceUrl: `https://github.com/${repo}/tree/${tag}`,
   rootRequired: false,

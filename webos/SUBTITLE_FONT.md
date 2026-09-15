@@ -44,11 +44,11 @@ não houve acesso ao aparelho para identificar a faixa exata ou medir a saída.
 
 ## Peso do texto: negrito e face fina
 
-O port traz duas faces: **Netflix Sans Medium** (o visual que sempre existiu) é o estado
-**com negrito**, e o estado **sem negrito** pede uma face mais fina. Enquanto o arquivo
-`NetflixSans-Regular.otf` não estiver em `webos/public/assets/fonts/`, o navegador da TV cai
-para a **Inter** embutida, que já é mais fina que o Medium — o ajuste muda o que está na tela
-em qualquer caso.
+O port usa duas faces: **Netflix Sans Medium** (o visual que sempre existiu) é o estado
+**com negrito**, e o estado **sem negrito** pede uma face mais fina. Como o arquivo Regular
+do Netflix Sans não chegou em uma transferência utilizável, hoje o estado sem negrito usa a
+**Inter** que já vem no pacote, em peso **350** (a Inter é variável, então 350 é visivelmente
+mais fino que o Medium) — o ajuste muda o que está na tela em qualquer caso.
 
 Para usar a Netflix Sans fina exata:
 
