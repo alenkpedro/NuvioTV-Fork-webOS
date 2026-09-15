@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.26.1/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.27.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.26.1",
+        "version": "0.27.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Legendas com dois pesos no padrão do app e Voltar pelo controle.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.26.1/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.26.1",
+        "appDescription": "Legenda fina de verdade, miniaturas até 4K e add-ons em ordem.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.27.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.27.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.26.1/org.nuviofork.webos_0.26.1_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.27.0/org.nuviofork.webos_0.27.0_all.ipk",
         "ipkHash": {
-          "sha256": "0634d69192b53ea716cce7452639513ba26d41a23c380036584175ecedd98527"
+          "sha256": "278daa0e1daf3e73c2389a49533d5aa7cf684e5bc51f36565e1435567e14e6dd"
         },
-        "ipkSize": 845592
+        "ipkSize": 929882
       },
       "pool": "main",
-      "shortDescription": "Player do fork com coleções sincronizadas, ajustes corrigidos e legendas prontas antes do vídeo."
+      "shortDescription": "Player do fork com miniaturas até 4K, legenda em dois pesos e add-ons reordenáveis."
     }
   ]
 }
