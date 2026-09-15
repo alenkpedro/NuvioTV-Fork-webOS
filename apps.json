@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.11.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.12.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.11.0",
+        "version": "0.12.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Coleções de filmes do TMDB e avaliações de múltiplas fontes via MDBList, com seleção de provedores.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.11.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.11.0",
+        "appDescription": "Idiomas de áudio e legendas, próximo episódio com contagem cancelável e fontes por grupo de reprodução.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.12.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.12.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.11.0/org.nuviofork.webos_0.11.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.12.0/org.nuviofork.webos_0.12.0_all.ipk",
         "ipkHash": {
-          "sha256": "98fb3a9a80204128647b3e27972147c91b7b0a090f61c144da9caddcdcabfeb5"
+          "sha256": "9053b578b3f1ff770007f06731cdab08b93961e4763a19bc5524f3bba6d5db20"
         },
-        "ipkSize": 703062
+        "ipkSize": 706270
       },
       "pool": "main",
-      "shortDescription": "Coleções e avaliações para LG webOS 24."
+      "shortDescription": "Idiomas e próximo episódio para LG webOS 24."
     }
   ]
 }
