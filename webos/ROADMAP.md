@@ -79,6 +79,7 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    [PLAYBACK_TIMING.md](PLAYBACK_TIMING.md), com Netflix Sans nas legendas externas.
    **Episódios e proporção entregues na 0.15:** ver [EPISODES_ASPECT.md](EPISODES_ASPECT.md).
    **Correção 0.15.1:** Netflix Sans nas internas com texto acessível, prévia e estado da fonte; ver [SUBTITLE_FONT.md](SUBTITLE_FONT.md).
+   **Estilo 0.15.2:** Netflix Sans Medium como preset fixo, sem prévia/diagnóstico de fonte no menu.
    **Próxima etapa sugerida:** painel de fontes do vídeo atual e ocultação de spoilers.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que

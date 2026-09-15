@@ -15,12 +15,19 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.15.1
+## Estado: prévia 0.15.2
+
+A 0.15.2 define o **estilo padrão de legendas solicitado**: Netflix Sans Medium
+(500), branco, sombras curtas, sem caixa de fundo, tamanho proporcional e
+posição a 6,5% da borda inferior com controles recolhidos. As configurações
+antigas de aparência deixam de interferir. Prévia, nome da fonte, informações
+técnicas e controles de aparência foram retirados do menu.
+[Preset e limites](webos/SUBTITLE_FONT.md).
 
 A 0.15.1 corrige **Netflix Sans nas legendas internas de texto acessível**.
 O app desenha o texto e evita a fonte do player nativo. Legendas externas
-continuam com a fonte fornecida. O menu mostra a fonte em uso e uma prévia;
-faixas não personalizáveis permanecem com o player da TV e recebem um aviso.
+continuam com a fonte fornecida. Na 0.15.1 havia prévia e aviso da fonte; a 0.15.2 os remove a pedido do usuário.
+Faixas não personalizáveis permanecem com o player da TV.
 [Correção e limites](webos/SUBTITLE_FONT.md).
 
 A 0.15.0 acrescenta **episódios e fontes dentro do player**, navegação por

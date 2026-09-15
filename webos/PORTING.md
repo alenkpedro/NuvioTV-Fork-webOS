@@ -135,3 +135,12 @@ usa a camada do app com Netflix Sans, após verificar carregamento e modo hidden
 Faixas opacas/imagens e plataformas que recusam hidden continuam nativas,
 com aviso. Prévia e estado real do carregamento disponíveis no painel.
 Validação física da fonte na LG permanece pendente.
+
+## Estilo 0.15.2 — preset de legenda solicitado pelo usuário
+
+[SUBTITLE_FONT.md](SUBTITLE_FONT.md): Medium 500 real fornecida no ZIP, branco,
+sombra curta, 3,6% da altura, entrelinha 1,16, largura máxima 78% e margem
+inferior 6,5% com controles recolhidos. Preset fixo substitui tamanho/fundo
+antigos e remove prévia, informações da fonte e controles de aparência.
+É uma personalização explícita solicitada pelo usuário, aplicada sobre o port.
+Seleção de faixa, SDH e atraso continuam; limites das faixas opacas permanecem.

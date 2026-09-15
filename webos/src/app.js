@@ -840,7 +840,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.15.1'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.15.2'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));

@@ -1,4 +1,38 @@
-# Correção da fonte — 0.15.1
+# Estilo padrão de legenda — 0.15.2
+
+Preset solicitado pelo usuário com duas referências visuais e valores CSS.
+Usa o arquivo **NetflixSans-Medium.otf**, peso real **500**, fornecido no ZIP,
+incluído sem alteração (212.020 bytes). Substitui o arquivo Regular; a interface
+continua com Inter. Fonte local, sem consultas externas.
+
+- Branco #fff, sem caixa de fundo e sem stroke.
+- Tamanho: 3,6% da altura do canvas; entrelinha 1,16; espaçamento −0,015 em.
+- Centralizado; largura máxima 78%; margem inferior 6,5% com controles ocultos.
+- Quatro sombras pretas curtas; equivalem a 0 1px 2px, 1px 0 1px,
+  −1px 0 1px e 0 −1px 1px em 1080p, com opacidades 1 / 0,9 / 0,9 / 0,75.
+- O canvas do app é 960×540 e recebe uma escala. Por isso o tamanho base é
+  19,44 px lógicos, resultando em 38,88 px no 1080p, 51,84 px no 1440p e
+  77,76 px no 4K. Usar 3.6vh diretamente duplicaria a escala na TV 1080p.
+- Com os controles abertos, a legenda sobe para a área acima deles, como já
+  fazia o player, evitando sobreposição. Ao recolher, volta para 6,5%.
+- O preset é fixo. Preferências antigas de tamanho/fundo são ignoradas e os
+  controles de aparência são removidos. Prévia, nome, status e avisos técnicos
+  da fonte não aparecem no fluxo do usuário. Permanecem idioma/faixa,
+  sincronização e limpeza SDH. A verificação de fonte continua interna.
+
+A camada externa SRT/VTT e o texto interno acessível usam o mesmo preset.
+Faixas opacas/PGS continuam dependendo do compositor nativo; não há promessa
+de forçar sua aparência. Não há transcodificação nem alteração do vídeo.
+
+Validação: carregamento da face Medium, ausência dos controles/informações,
+preferências antigas ignoradas, medidas reais em 1080p/1440p/4K, legenda externa
+legível no fallback de fonte e regressão das seleções/sincronismo. Imagem e
+texto de teste sintéticos no navegador; validação física permanece pendente.
+
+## Histórico técnico da 0.15.1
+
+A descrição abaixo registra a correção original. Prévia, informações de fonte
+e controles de tamanho/fundo citados foram removidos pela 0.15.2, acima.
 
 A 0.14/0.15 aplicava Netflix Sans à camada SRT/VTT externa e solicitava a fonte
 por CSS `video::cue` às legendas nativas. Isso não garantia a fonte nas faixas

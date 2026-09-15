@@ -328,8 +328,8 @@ test('external subtitles render safely, survive errors, seek, adjust and close w
   await expect(dialog.getByRole('alert')).toContainText('HTTP 403');
   await expect(page.locator('.subtitle-overlay')).toHaveText('Olá mundo <img src=x>');
   await dialog.getByRole('button',{name:/Ajustes de legenda/}).click();
-  await dialog.getByRole('button',{name:/Tamanho/}).click();
-  await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-size','30px');
+  await expect(dialog.getByRole('button',{name:/Tamanho|Fundo da legenda/})).toHaveCount(0);
+  await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-size','19.44px');
   await dialog.getByRole('button',{name:'Atrasar 0,5 s',exact:true}).click();
   await expect(dialog).toContainText('Atraso: +0.5 s');
   await page.locator('video').evaluate(v=>v.currentTime=30.2);
@@ -348,7 +348,7 @@ test('external subtitles render safely, survive errors, seek, adjust and close w
   await page.getByRole('slider',{name:'Posição do vídeo'}).focus();
   await page.keyboard.press('ArrowLeft');
   await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeLessThan(21);
-  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).settings.subtitleStyle.size)).toBe(30);
+  await expect(page.locator('.subtitle-overlay')).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
   expect(errors).toEqual([]);
 });
 test('audio menu uses exposed track API, remote selection and modal focus; absent API is explicit', async ({ page }) => {
@@ -607,8 +607,8 @@ test('Netflix Sans loads locally, subtitle delay survives reopening and reset re
   await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Português',lang:'por',url:origin+'/font.srt'}]}]}}));
   await page.route('**/font.srt',r=>r.fulfill({body:'1\n00:00:20,000 --> 00:00:30,000\nA próxima história começa aqui.\nVocê ainda está assistindo?'}));
   await startFixtureVideo(page);await expect(page.locator('.subtitle-overlay')).toContainText('A próxima história');
-  expect(await page.evaluate(async()=>{const fonts=await document.fonts.load('24px "Netflix Sans"');return fonts.length===1 && fonts[0].status==='loaded';})).toBe(true);
-  await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", sans-serif');
+  expect(await page.evaluate(async()=>{const fonts=await document.fonts.load('500 19.44px "Netflix Sans"');return fonts.length===1 && fonts[0].status==='loaded';})).toBe(true);
+  await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
   await page.screenshot({animations:'disabled',path:'test-results/player-netflix-sans-1920.png'});
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,5 s',exact:true}).click();
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
@@ -725,7 +725,7 @@ test('all seven aspect modes affect only video, persist across playback and adap
   for(const mode of modes){await option.click();await expect(page.locator('video')).toHaveAttribute('data-aspect-mode',mode);expect(await page.locator('video').evaluate(v=>v.fixtureOriginal)).toBe(true);}
   await option.click();await expect(page.locator('video')).toHaveCSS('transform','matrix(1.33333, 0, 0, 1.33333, 0, 0)');
   await page.locator('video').evaluate(v=>{Object.defineProperty(v,'videoWidth',{configurable:true,get:()=>1920});Object.defineProperty(v,'videoHeight',{configurable:true,get:()=>1080});v.dispatchEvent(new Event('resize'));});await expect(page.locator('video')).toHaveCSS('transform','matrix(1, 0, 0, 1, 0, 0)');
-  await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", sans-serif');
+  await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
   await page.screenshot({animations:'disabled',path:'test-results/player-aspect-1920.png'});
   await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Mais',exact:true})).toBeFocused();await page.keyboard.press('Escape');await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveAttribute('data-aspect-mode','FULL_SCREEN');
 });
@@ -749,26 +749,57 @@ test('Netflix Sans renders internal text cues, retains selected menu and follows
   await page.locator('video').evaluate(v=>{const t=v.addTextTrack('subtitles','Português interno','por');t.addCue(new VTTCue(20,30,'<b>A próxima história começa aqui.</b>'));t.addCue(new VTTCue(35,40,'Você ainda está assistindo?'));});
   const overlay=page.locator('.subtitle-overlay');await expect(overlay).toHaveText('A próxima história começa aqui.');
   await expect(overlay).toHaveAttribute('data-renderer','native-text');await expect(overlay).toHaveAttribute('data-font-status','loaded');
-  expect(await page.locator('video').evaluate(v=>v.textTracks[0].mode)).toBe('hidden');await expect(overlay).toHaveCSS('font-family','"Netflix Sans", sans-serif');
+  expect(await page.locator('video').evaluate(v=>v.textTracks[0].mode)).toBe('hidden');await expect(overlay).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
   await page.screenshot({animations:'disabled',path:'test-results/internal-netflix-sans-1920.png'});
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await expect(page.locator('[data-track-key="native-0"]')).toHaveAttribute('aria-pressed','true');
-  await expect(page.locator('.subtitle-font-status')).toHaveText('Fonte em uso: Netflix Sans');await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.locator('.subtitle-font-preview')).toBeVisible();
+  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).not.toContainText('Netflix Sans');
+  await expect(page.locator('.subtitle-font-preview,.subtitle-font-status')).toHaveCount(0);
   await page.screenshot({animations:'disabled',path:'test-results/subtitle-font-settings-1920.png'});
   await page.keyboard.press('Escape');await page.locator('video').evaluate(v=>{v.currentTime=32;});await expect(overlay).toBeHidden();
   await page.locator('video').evaluate(v=>{v.currentTime=36;});await expect(overlay).toHaveText('Você ainda está assistindo?');
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await expect(overlay).toBeHidden();
   expect(await page.locator('video').evaluate(v=>v.textTracks[0].mode)).toBe('disabled');
 });
-test('native opaque track reports TV rendering and external selection uses Netflix Sans instead',async({page})=>{
+test('native opaque track remains usable without technical information and external selection uses Netflix Sans',async({page})=>{
   await playbackPrefs(page,{subtitles:'pt'});await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p',url:origin+'/clip.mp4',subtitles:[{name:'Externa',lang:'por',url:origin+'/native-fallback.srt'}]}]}}));
   await page.route('**/native-fallback.srt',r=>r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nTexto externo'}));
   await startFixtureVideo(page);await page.locator('video').evaluate(v=>v.addTextTrack('subtitles','Interna sem texto','por'));
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.locator('[data-track-key="native-0"]').click();
-  await expect(page.locator('.subtitle-font-status')).toContainText('Legenda pelo player da TV');await expect(page.locator('.subtitle-overlay')).toBeHidden();
+  await expect(page.getByRole('dialog')).not.toContainText('player da TV');await expect(page.locator('.subtitle-overlay')).toBeHidden();
   await page.getByRole('button',{name:/^Externa/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Texto externo');
-  await expect(page.locator('.subtitle-font-status')).toHaveText('Fonte em uso: Netflix Sans');expect(await page.locator('video').evaluate(v=>v.textTracks[0].mode)).toBe('disabled');
+  await expect(page.locator('.subtitle-overlay')).toHaveAttribute('data-font-status','loaded');expect(await page.locator('video').evaluate(v=>v.textTracks[0].mode)).toBe('disabled');
 });
-test('font decoding failure is reported instead of claiming Netflix Sans is in use',async({page})=>{
-  await page.route('**/NetflixSans-Regular.otf',r=>r.fulfill({status:404,body:'missing'}));await startFixtureVideo(page);
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await expect(page.locator('.subtitle-font-status')).toContainText('Netflix Sans não carregou');
+test('font decoding failure keeps fallback text visible without exposing font diagnostics',async({page})=>{
+  await page.route('**/NetflixSans-Medium.otf',r=>r.fulfill({status:404,body:'missing'}));
+  await playbackPrefs(page,{subtitles:'pt'});
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p',url:origin+'/clip.mp4',subtitles:[{lang:'por',url:origin+'/fallback-font.srt'}]}]}}));
+  await page.route('**/fallback-font.srt',r=>r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nTexto ainda legível'}));
+  await startFixtureVideo(page);await expect(page.locator('.subtitle-overlay')).toHaveAttribute('data-font-status','error');
+  await expect(page.locator('.subtitle-overlay')).toHaveText('Texto ainda legível');await expect(page.locator('.subtitle-overlay')).toBeVisible();
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await expect(page.getByRole('dialog')).not.toContainText('Netflix');
+});
+
+
+test('fixed subtitle preset survives old preferences and scales correctly at 1080p, 1440p and 4K',async({page})=>{
+  await page.clock.install();
+  await page.addInitScript(()=>{const key='nuvio-fork.webos.v1',state=JSON.parse(localStorage.getItem(key)||'{}');state.settings={...state.settings,subtitleStyle:{size:30,background:true}};localStorage.setItem(key,JSON.stringify(state));});
+  await playbackPrefs(page,{subtitles:'pt'});
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p',url:origin+'/clip.mp4',subtitles:[{lang:'por',url:origin+'/preset.srt'}]}]}}));
+  await page.route('**/preset.srt',r=>r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nAlguém deve ter dito alguma coisa\nsobre o garoto morto.'}));
+  await startFixtureVideo(page);const overlay=page.locator('.subtitle-overlay');await expect(overlay).toHaveAttribute('data-font-status','loaded');
+  // Hide controls through the actual player timer during playback.
+  await page.locator('video').evaluate(v=>v.play());await page.clock.runFor(5000);
+  await expect(page.locator('.player-screen')).not.toHaveClass(/controls-visible/);
+  for (const [width,height] of [[1920,1080],[2560,1440],[3840,2160]]) {
+    await page.setViewportSize({width,height});
+    await expect.poll(async()=>{await page.clock.runFor(50);return page.locator('#app').evaluate(n=>Math.round(n.getBoundingClientRect().height));}).toBe(height);
+    const metrics=await overlay.evaluate(node=>{const s=getComputedStyle(node),r=node.getBoundingClientRect(),canvas=document.querySelector('#app').getBoundingClientRect();return {family:s.fontFamily,weight:s.fontWeight,bg:s.backgroundColor,size:parseFloat(s.fontSize)*canvas.height/540,line:parseFloat(s.lineHeight)/parseFloat(s.fontSize),spacing:parseFloat(s.letterSpacing)/parseFloat(s.fontSize),bottom:(canvas.bottom-r.bottom)/canvas.height,center:r.x+r.width/2,width:r.width,canvasWidth:canvas.width,shadow:s.textShadow};});
+    expect(metrics.family).toBe('"Netflix Sans", Inter, Arial, sans-serif');expect(metrics.weight).toBe('500');expect(metrics.bg).toBe('rgba(0, 0, 0, 0)');
+    expect(metrics.size).toBeCloseTo(height*.036,1);expect(metrics.line).toBeCloseTo(1.16,2);expect(metrics.spacing).toBeCloseTo(-.015,3);
+    expect(metrics.bottom).toBeCloseTo(.065,3);expect(metrics.center).toBeCloseTo(width/2,1);expect(metrics.width).toBeLessThanOrEqual(metrics.canvasWidth*.78+1);expect(metrics.shadow).not.toBe('none');
+    if(width===1920)await page.screenshot({animations:'disabled',path:'test-results/subtitle-medium-preset-1920.png'});
+  }
+  await page.setViewportSize({width:1920,height:1080});await page.mouse.move(400,300);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();
+  await expect(page.getByRole('dialog')).not.toContainText('Netflix');await expect(page.getByRole('button',{name:/^Tamanho|^Fundo da legenda/})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Atrasar 0,5 s',exact:true})).toBeVisible();
 });

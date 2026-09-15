@@ -35,25 +35,17 @@ export function installTrackControls({ screen, video, context, addons, settings,
   let audioLanguages = remembered.audio ? [remembered.audio.language,...baseAudioLanguages.filter(l=>l!==remembered.audio.language)] : baseAudioLanguages;
   let manualAudio = false, manualSubtitles = false, autoBusy = false, autoQueued = false, audioScore = Infinity, subtitleScore = Infinity, metadataReady = false, autoDirty = false, autoDiscoveryAttempted = false;
   const attemptedAudio = new Set(), attemptedText = new Set(), attemptedExternal = new Set();
-  const storedStyle = settings.subtitleStyle || {};
-  const style = settings.subtitleStyle = { size: [18, 24, 30].includes(storedStyle.size) ? storedStyle.size : 24, background: storedStyle.background !== false };
+  // Subtitle appearance is a fixed app preset; ignore legacy size/background overrides.
   const overlay = el('div', { class: 'subtitle-overlay', hidden: true, 'aria-label': 'Legenda' }); screen.append(overlay);
   const native = nativeSubtitles(video, renderCue);
-  let fontStatus = 'loading', lastCaptionStatus = '';
+  let fontStatus = 'loading';
   // Check the actual bundled face, not just the CSS family (which can fall back).
-  Promise.resolve().then(()=>document.fonts.load('24px "Netflix Sans"')).then(faces=>{
+  Promise.resolve().then(()=>document.fonts.load('500 19.44px "Netflix Sans"')).then(faces=>{
     if (disposed) return;
     fontStatus = faces.some(face=>face.status==='loaded') ? 'loaded' : 'error';
-    native.setFontReady(fontStatus === 'loaded'); renderCue(); draw();
-  }).catch(()=>{ if (!disposed) { fontStatus='error'; renderCue(); draw(); } });
+    native.setFontReady(fontStatus === 'loaded'); renderCue();
+  }).catch(()=>{ if (!disposed) { fontStatus='error'; renderCue(); } });
   function textTracks() { const active=native.selected(); return mediaTracks(video,'text').map(row=>({...row,selected:row.selected || row.track===active})); }
-  function captionStatus() {
-    if (fontStatus === 'error') return 'Netflix Sans não carregou. Feche e reabra o app; se persistir, reinstale a versão atual.';
-    if (fontStatus === 'loading') return 'Carregando Netflix Sans…';
-    if (selected || native.custom) return 'Fonte em uso: Netflix Sans';
-    if (textTracks().some(row=>row.selected)) return 'Legenda pelo player da TV. Se a fonte não mudar, escolha uma legenda externa de um addon: esta faixa ainda não disponibilizou texto personalizável.';
-    return 'Netflix Sans pronta. Selecione uma legenda para assistir.';
-  }
   function renderCue() {
     clearTimeout(timer);
     if (disposed) return;
@@ -66,9 +58,6 @@ export function installTrackControls({ screen, video, context, addons, settings,
     overlay.hidden = !text;
     overlay.dataset.renderer = selected ? 'external' : native.custom ? 'native-text' : 'tv';
     overlay.dataset.fontStatus = fontStatus;
-    const status = captionStatus();
-    if (status !== lastCaptionStatus) { lastCaptionStatus = status; draw(); }
-    overlay.style.fontSize = `${style.size}px`; overlay.classList.toggle('subtitle-background', style.background);
     if (!video.paused && !video.seeking && Number.isFinite(frame.next)) {
       timer = setTimeout(renderCue, Math.max(20, Math.min(10000, ((frame.next + delay - video.currentTime) / (video.playbackRate || 1)) * 1000 + 12)));
     }
@@ -153,16 +142,12 @@ export function installTrackControls({ screen, video, context, addons, settings,
       for (const speed of playbackSpeeds) list.append(row(`${speed}×`, speed===1 ? 'Normal' : '',()=>chooseSpeed(speed),`speed-${speed}`,Math.abs(video.playbackRate-speed)<0.001));
       list.append(el('p',{class:'track-notice'},'Velocidade lembrada para este título neste perfil. A disponibilidade depende da fonte e do player da TV.'));
     } else {
-      panel.append(el('p',{class:'track-notice subtitle-font-status',role:'status'},captionStatus()));
-      panel.append(row('Ajustes de legenda', editor ? 'Voltar à lista' : 'Tamanho, fundo e sincronização', () => { editor = !editor; draw(); }, 'style'));
+      panel.append(row('Ajustes de legenda', editor ? 'Voltar à lista' : 'Sincronização e descrições SDH', () => { editor = !editor; draw(); }, 'style'));
       if (editor) {
-        list.append(el('p',{class:'subtitle-font-preview'},'Netflix Sans · A próxima história começa aqui.'));
-        list.append(row('Tamanho', { 18: 'Pequeno', 24: 'Médio', 30: 'Grande' }[style.size], () => { const sizes = [18, 24, 30]; style.size = sizes[(sizes.indexOf(style.size) + 1) % 3]; persist(); renderCue(); draw(); }, 'size'));
-        list.append(row('Remover descrições SDH', 'Legendas desenhadas pelo app', () => { setPreference('stripSdh',!preferences.stripSdh); renderCue(); draw(); }, 'sdh-cleanup', preferences.stripSdh));
-        list.append(row('Fundo da legenda', style.background ? 'Ativado' : 'Desativado', () => { style.background = !style.background; persist(); renderCue(); draw(); }, 'background', style.background));
+        list.append(row('Remover descrições SDH', 'Ocultar descrições de sons e identificação de falantes', () => { setPreference('stripSdh',!preferences.stripSdh); renderCue(); draw(); }, 'sdh-cleanup', preferences.stripSdh));
+        list.append(el('p', { class: 'track-notice' }, 'O atraso se aplica às legendas externas e fica salvo para este filme ou episódio.'));
         list.append(el('p', { class: 'track-notice' }, `Atraso: ${delay > 0 ? '+' : ''}${delay.toFixed(1)} s. Valores positivos atrasam a legenda.`));
         for (const [key, title, change] of [['earlier', 'Adiantar 0,5 s', -.5], ['later', 'Atrasar 0,5 s', .5], ['reset', 'Zerar atraso', 0]]) list.append(row(title, '', () => { delay = change ? Math.max(-10, Math.min(10, delay + change)) : 0; if (profileKey === memoryState.profileStore?.activeKey) { saveDelay(memoryState,context,delay); persist(); } renderCue(); draw(); }, key));
-        list.append(el('p', { class: 'track-notice' }, 'Tamanho, fundo e SDH: legendas desenhadas pelo app. Atraso: apenas externas, salvo para este filme ou episódio neste perfil.'));
       } else {
         const native = textTracks();
         const entries = [
