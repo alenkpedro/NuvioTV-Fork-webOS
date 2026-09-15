@@ -6,7 +6,7 @@ Base: `ysosrs123/NuvioTV-Fork@45e0984`, especialmente `TrackPreferenceDataStore`
 
 ## Uso
 
-- **Player → Velocidade:** 0,25× / 0,5× / 0,75× / 1× / 1,25× / 1,5× / 1,75× / 2×.
+- **Player → Mais → Velocidade (desde a 0.15):** 0,25× / 0,5× / 0,75× / 1× / 1,25× / 1,5× / 1,75× / 2×.
   A escolha confirmada é lembrada para o filme ou série, no perfil atual.
   Voltar restaura o foco ao botão. 1× remove a preferência daquele título.
   Usa `HTMLMediaElement.playbackRate` e verifica o valor retornado. Uma rejeição
@@ -70,5 +70,5 @@ plataforma, sequência automática/manual, confirmação, foco, tecla LG Voltar,
 expiração, suspensão e ausência de loop. Mídia sintética; validação física na
 LG 55UT8050 continua pendente.
 
-Próxima etapa sugerida: painel de episódios dentro do player e ajuste de
-proporção da imagem, seguindo os controles do fork.
+Painel de episódios e proporção da imagem entregues na
+[0.15](EPISODES_ASPECT.md).

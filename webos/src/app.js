@@ -9,6 +9,8 @@ import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episo
 import { nextSource } from './core/playback.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { installNextEpisode } from './next-episode.js';
+import { installAspect } from './core/aspect.js';
+import { installEpisodePanel } from './player-episodes.js';
 import { installTrackControls } from './player-tracks.js';
 import { initializeProfiles, activateProfile, leaveAccountProfiles, mergeLibrary, setLibraryItem } from './core/profiles.js';
 import { initializeHistory, mergeHistory, markWatched, isWatched, continueHistory, progressWithWatched, historySummary, resolveHistoryConflict } from './core/history.js';
@@ -614,14 +616,7 @@ async function showStreams(main, signal) {
     count.textContent = `${Math.min(100, visible.length)} de ${rows.length} fonte(s)${view.failed ? ` · ${view.failed} addon(s) não responderam` : ''}`;
     if (!visible.length) notice(list, !providers.length ? 'Nenhum add-on instalado fornece fontes para este título.' : !rows.length ? 'Nenhuma fonte encontrada. Tente atualizar ou escolher outro addon.' : 'Nenhuma fonte passou pelos filtros. Use “Mostrar todas” para revisar.');
     for (const s of visible.slice(0, 100)) {
-      const f = factsFor(s, state.settings.preferences), issue = playbackIssue(s, state.settings.avoidDvOnly);
-      const badges = [labels[f.resolution], labels[f.quality], labels[f.encode], ...(f.visualTags || []).map(v => labels[v]), ...(f.audioTags || []).map(v => labels[v]), ...(f.audioChannels || []).map(v => labels[v]), f.releaseGroup, bytes(sizeBytes(s))].filter(v => v && !/unknown|desconhecid|not available/i.test(v));
-      const sourceIcon = providers[s.sourceProvider]?.manifest.logo;
-      list.append(button([el('div', { class: 'source-heading' }, el('div', { class: 'grow' }, el('strong', {}, s.name || s.title || 'Fonte'), el('span', { class: 'source-addon' }, s.addonName)), sourceIcon ? poster(sourceIcon, s.addonName, 'source-icon') : null),
-        el('p', {}, s.description || s.title || ''), el('div', { class: 'source-badges' }, [...new Set(badges)].map(value => el('span', {}, value))),
-        issue ? el('small', { class: 'warning' }, issue) : null],
-      () => issue ? toast(issue) : navigate({ ...context, name: 'player', stream: s }),
-      { class: `source ${issue ? 'unavailable' : ''}`, 'aria-disabled': issue ? 'true' : null, 'data-focus': s.sourceKey, 'data-initial-focus': !list.childElementCount }));
+      list.append(sourceCard(s,providers,()=>navigate({ ...context, name: 'player', stream: s }),!list.childElementCount));
     }
   };
   const toggle = button(view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas', () => { view.showAll = !view.showAll; toggle.textContent = view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas'; display(); }, { 'data-focus': 'source-filters' });
@@ -633,6 +628,12 @@ async function showStreams(main, signal) {
     const best = chooseBest(subset()); best ? navigate({ ...context, name: 'player', stream: best }) : toast('Não há fonte HTTP(S) elegível nesta seleção.');
   }, { 'data-focus': 'source-best' }), toggle);
   main.append(chips, count, list, actions); display();
+}
+function sourceCard(s,providers,choose,initial=false) {
+  const f=factsFor(s,state.settings.preferences),issue=playbackIssue(s,state.settings.avoidDvOnly);
+  const badges=[labels[f.resolution],labels[f.quality],labels[f.encode],...(f.visualTags || []).map(v=>labels[v]),...(f.audioTags || []).map(v=>labels[v]),...(f.audioChannels || []).map(v=>labels[v]),f.releaseGroup,bytes(sizeBytes(s))].filter(v=>v && !/unknown|desconhecid|not available/i.test(v));
+  const logo=providers[s.sourceProvider]?.manifest.logo;
+  return button([el('div',{class:'source-heading'},el('div',{class:'grow'},el('strong',{},s.name || s.title || 'Fonte'),el('span',{class:'source-addon'},s.addonName)),logo?poster(logo,s.addonName,'source-icon'):null),el('p',{},s.description || s.title || ''),el('div',{class:'source-badges'},[...new Set(badges)].map(value=>el('span',{},value))),issue?el('small',{class:'warning'},issue):null],()=>issue?toast(issue):choose(),{class:`source ${issue?'unavailable':''}`,'aria-disabled':issue?'true':null,'data-focus':s.sourceKey,'data-initial-focus':initial});
 }
 function syncSummary(result) {
   if (result.failed) return `${result.imported} addon(s) carregado(s); ${result.failed} não responderam. Tente sincronizar novamente.`;
@@ -839,7 +840,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.14.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.15.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -882,17 +883,18 @@ function showPlayer(context) {
   const time = el('span', { class: 'player-time' }, '00:00');
   const stats = el('pre', { class: 'stats', hidden: true });
   const pause = button('Pausar', toggle);
-  const controls = el('div', { class: 'player-controls' }, el('div', { class: 'section-head' }, el('h1', {}, title), time), timeline, el('div', { class: 'toolbar' }, button('Voltar às fontes', back), button('−30 s', () => seek(-30)), pause, button('+30 s', () => seek(30)), button('Áudio', () => tracks.openAudio()), button('Legendas', () => tracks.openSubtitles()), button('Velocidade', () => tracks.openSpeed()), button('Diagnóstico', () => { stats.hidden = !stats.hidden; updateStats(); })));
+  const controls = el('div', { class: 'player-controls' }, el('div', { class: 'section-head' }, el('h1', {}, title), time), timeline, el('div', { class: 'toolbar' }, button('Voltar às fontes', back), button('−30 s', () => seek(-30)), pause, button('+30 s', () => seek(30)), button('Áudio', () => tracks.openAudio()), button('Legendas', () => tracks.openSubtitles()), context.type==='series' ? button('Episódios',()=>episodes.open()) : null, button('Mais',()=>tracks.openMore())));
   const screen = el('div', { class: 'player-screen controls-visible' }, video, status, stats, controls); root.append(screen);
-  let disposed = false, hideTimer, savedAt = 0, resumeApplied = false;
+  let disposed = false, hideTimer, savedAt = 0, resumeApplied = false, episodes;
+  const aspect=installAspect({video,settings:state.settings,persist,notify:toast});
   const listeners = [];
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
   const resume = state.progress[progressKey(context.type, context.id)];
-  const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, memoryState:state, persist, el, button,
+  const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, memoryState:state, persist, el, button, extraActions:{aspectLabel:aspect.label,cycleAspect:aspect.cycle,diagnostics:()=>{stats.hidden=!stats.hidden;updateStats();}},
     onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); upNext.refresh(); }, onClose: ()=>{reveal();upNext.refresh();} });
   const upNext = installNextEpisode({screen,video,context,settings:state.settings,el,button,
     loadMeta:async()=> (await loadMeta(context.meta,context.addon,request.signal)).meta,
-    modalOpen:()=>tracks.isOpen(), restoreFocus:()=>{reveal();pause.focus();},
+    modalOpen:()=>tracks.isOpen() || Boolean(episodes?.isOpen()), restoreFocus:()=>{reveal();pause.focus();},
     stopPlayback:()=>back(),
     advance:(episode,auto,count)=>{
       // Drop earlier episode routes so binge playback cannot grow navigation indefinitely.
@@ -901,8 +903,17 @@ function showPlayer(context) {
         episode:{title:episode.title,season:episode.season,episode:episode.episode},
         nextPlayback:{auto,count,bingeGroup:context.stream.behaviorHints?.bingeGroup || null}},true);
     }});
+  episodes=installEpisodePanel({screen,context,state,el,button,poster,sourceCard,
+    loadMeta:async signal=>(await loadMeta(context.meta,context.addon,signal))?.meta,
+    onOpen:()=>{clearTimeout(hideTimer);controls.classList.add('faded');screen.classList.remove('controls-visible');upNext.refresh();},
+    onClose:()=>{reveal();upNext.refresh();},
+    play:(episode,stream,meta)=>{
+      while(['player','streams'].includes(stack.at(-1)?.route.name))stack.pop();
+      const target={name:'streams',meta,addon:context.addon,id:episode.id,type:context.type,episode:{title:episode.title,season:episode.season,episode:episode.episode},nextPlayback:{auto:false,count:0}};
+      stack.push({route:target,focus:stream.sourceKey});navigate({...target,name:'player',stream},true);
+    }});
   function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
-  function reveal() { if (tracks.isOpen() || upNext.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen()) hideTimer = setTimeout(() => { controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, 4500); }
+  function reveal() { if (tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen()) hideTimer = setTimeout(() => { controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, 4500); }
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
   function seek(delta) { seekTo(video.currentTime + delta); }
   async function play() { try { await video.play(); } catch { if (!disposed) { status.hidden = false; status.textContent = 'Pressione Reproduzir para iniciar.'; pause.textContent = 'Reproduzir'; } } }
@@ -929,6 +940,7 @@ function showPlayer(context) {
   else { video.src = context.stream.url; play(); }
   player = { key(key, e) {
     if (upNext.isOpen()) { if (['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)) { e.preventDefault(); return true; } return false; }
+    if (episodes.isOpen()) { if(episodes.key(key,e))return true; if(['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)){e.preventDefault();return true;}return false; }
     if (tracks.isOpen()) return false;
     if (['MediaPlay', 'MediaPause', 'MediaStop', 'MediaRewind', 'MediaFastForward', ' '].includes(key)) {
       e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') video.pause(); else if (key === 'MediaStop') back(); else if (key === 'MediaRewind') seek(-30); else if (key === 'MediaFastForward') seek(30); else toggle(); return true;
@@ -937,7 +949,7 @@ function showPlayer(context) {
     if (document.activeElement === timeline && ['ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); seek(key === 'ArrowLeft' ? -10 : 10); return true; }
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; save(); upNext.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; save(); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   pause.focus();
 }
 function layoutKey(key, event) {

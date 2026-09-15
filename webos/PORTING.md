@@ -119,3 +119,11 @@ usa geometria do PostPlayOverlay, com foco modal adaptado ao webOS. Netflix Sans
 Regular fornecida pelo usuário é aplicada às externas e solicitada por CSS nas
 nativas; o motor da LG pode ignorar estilos de texto nativo. Velocidade verifica
 aceitação da API, não o decoder. Validação física permanece pendente.
+
+## Entrega 0.15 — painel de episódios e modos de imagem
+
+[EPISODES_ASPECT.md](EPISODES_ASPECT.md) descreve o painel de 520 dp derivado de
+EpisodesSidePanel, navegação/consulta de fontes sem sair do player e seleção
+manual com retomada e retorno para o episódio correto. As sete fórmulas de
+PlayerAspectScaleUtils foram transpostas para CSS sobre o vídeo. Paginação de
+50 cartões adapta a lista lazy; geometria do compositor LG ainda não validada.

@@ -77,7 +77,8 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    **Legendas e memória entregues na 0.13:** ver [SUBTITLE_PREFERENCES.md](SUBTITLE_PREFERENCES.md).
    **Velocidade, sincronização e continuidade entregues na 0.14:** ver
    [PLAYBACK_TIMING.md](PLAYBACK_TIMING.md), com Netflix Sans nas legendas externas.
-   **Próxima etapa sugerida:** painel de episódios no player e proporção da imagem.
+   **Episódios e proporção entregues na 0.15:** ver [EPISODES_ASPECT.md](EPISODES_ASPECT.md).
+   **Próxima etapa sugerida:** painel de fontes do vídeo atual e ocultação de spoilers.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

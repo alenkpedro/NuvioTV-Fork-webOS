@@ -27,9 +27,15 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Episódios e imagem (0.15)
+
+O player de séries inclui Episódios, com temporadas, assistidos e fontes dentro
+do painel lateral. Mais reúne Velocidade, Proporção da imagem (sete modos do
+fork) e Diagnóstico. [Uso, geometria e limites](EPISODES_ASPECT.md).
+
 ## Velocidade, legenda e continuidade (0.14)
 
-Player → Velocidade, de 0,25× a 2×, lembrada por título/perfil. Atraso de legenda
+Player → Mais → Velocidade, de 0,25× a 2×, lembrada por título/perfil. Atraso de legenda
 externa salvo por filme/episódio/perfil e Netflix Sans incluída no pacote.
 “Ainda assistindo?” configurável em Reprodução → Idiomas e próximo episódio;
 desativado por padrão, limiar de três avanços automáticos e confirmação de 60 s.
@@ -161,7 +167,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.14.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.15.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

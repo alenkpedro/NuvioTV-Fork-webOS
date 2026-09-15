@@ -395,7 +395,7 @@ test('source refresh, addon filter, best-source scope and Back selection are pre
   await page.getByRole('button',{name:'Segunda fonte',exact:true}).click();
   await expect(page.locator('.source')).toHaveCount(1);
   await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
-  await page.getByRole('button',{name:'Diagnóstico',exact:true}).click();await expect(page.locator('.stats')).toContainText('Fonte: Segunda fonte');
+  await page.getByRole('button',{name:'Mais',exact:true}).click();await page.getByRole('button',{name:'Diagnóstico',exact:true}).click();await expect(page.locator('.stats')).toContainText('Fonte: Segunda fonte');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button',{name:'Segunda fonte',exact:true})).toHaveClass(/selected/);
   await page.locator('.source').click();await page.keyboard.press('Escape');
@@ -443,10 +443,10 @@ test('manual subtitle selection cancels a pending automatic response and addon d
   await page.getByRole('button',{name:'Desativadas',exact:true}).click();release();
   await page.keyboard.press('Escape');await expect(page.locator('.subtitle-overlay')).toBeHidden();
 });
-async function startSeriesForNext(page,prefs={},nextVideo={}) {
+async function startSeriesForNext(page,prefs={},nextVideo={},videos) {
   await page.clock.install();
   await playbackPrefs(page,prefs);
-  await page.route('**/meta/series/**',r=>r.fulfill({json:{meta:{...show,videos:[...show.videos,{id:'ttshow:2:1',title:'Nova temporada',season:2,episode:1,thumbnail:origin+'/backdrop.svg',...nextVideo}]}}}));
+  await page.route('**/meta/series/**',r=>r.fulfill({json:{meta:{...show,videos:videos || [...show.videos,{id:'ttshow:2:1',title:'Nova temporada',season:2,episode:1,thumbnail:origin+'/backdrop.svg',...nextVideo}]}}}));
   await install(page);await navigation(page,'Início');await page.getByRole('button',{name:'Série de teste',exact:true}).click();await page.getByRole('button',{name:/Primeiro episódio/}).click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
   await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);
   await page.locator('video').evaluate(v=>{v.pause();v.currentTime=v.duration*.995;});
@@ -557,7 +557,7 @@ test('manual audio and external subtitle choices survive next episode with reord
   await page.route('**/stream/series/**',r=>{const next=decodeURIComponent(r.request().url()).includes('ttshow:2:1');return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{lang:'por',name:'Português manual',url:origin+`/episode-${next?2:1}.srt`}]}]}});});
   await page.route('**/episode-*.srt',r=>{downloads.push(r.request().url());return r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nPortuguês lembrado'});});
   await startSeriesForNext(page,{audio:'en',subtitles:'en'});
-  await page.getByRole('button',{name:'Velocidade',exact:true}).click();await page.getByRole('button',{name:'1.5×',exact:true}).click();await page.keyboard.press('Escape');
+  await openPlayerSpeed(page);await page.getByRole('button',{name:'1.5×',exact:true}).click();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.getByRole('button',{name:/Dublado/}).click();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Português manual/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Português lembrado');
   await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,5 s',exact:true}).click();await page.keyboard.press('Escape');
@@ -619,15 +619,15 @@ test('Netflix Sans loads locally, subtitle delay survives reopening and reset re
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).subtitleDelays)).toEqual({});
 });
 test('speed menu uses actual rate, remembers title on reopen and preserves the prior rate on platform rejection',async({page})=>{
-  await startFixtureVideo(page);await page.getByRole('button',{name:'Velocidade',exact:true}).click();
+  await startFixtureVideo(page);await openPlayerSpeed(page);
   const dialog=page.getByRole('dialog',{name:'Velocidade'});await dialog.getByRole('button',{name:'1.25×',exact:true}).click();
   await expect.poll(()=>page.locator('video').evaluate(v=>v.playbackRate)).toBe(1.25);
   await expect(dialog.getByRole('button',{name:'1.25×',exact:true})).toHaveAttribute('aria-pressed','true');
   await page.screenshot({animations:'disabled',path:'test-results/player-speed-1920.png'});
-  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Velocidade',exact:true})).toBeFocused();await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Mais',exact:true})).toBeFocused();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.playbackRate)).toBe(1.25);
   await page.locator('video').evaluate(v=>{v.pause();const descriptor=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,'playbackRate');Object.defineProperty(v,'playbackRate',{configurable:true,get(){return descriptor.get.call(this);},set(value){if(value===2)return;descriptor.set.call(this,value);}});});
-  await page.getByRole('button',{name:'Velocidade',exact:true}).click();await dialog.getByRole('button',{name:'2×',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('não aceitou');
+  await openPlayerSpeed(page);await dialog.getByRole('button',{name:'2×',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('não aceitou');
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).playbackSpeeds[JSON.stringify(['movie','ttfixture'])])).toBe(1.25);
   await dialog.getByRole('button',{name:'1× Normal',exact:true}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.playbackRate)).toBe(1);
 });
@@ -675,4 +675,71 @@ test('manual next episode resets the binge count even when automatic source sele
   await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E4');
   await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E5');await expect(page.getByRole('dialog',{name:'Ainda assistindo?'})).toHaveCount(0);
   await endBingeEpisode(page);await expect(page.getByRole('dialog',{name:'Ainda assistindo?'})).toBeVisible();
+});
+
+async function openPlayerSpeed(page) { await page.getByRole('button',{name:'Mais',exact:true}).click();await page.getByRole('button',{name:'Velocidade',exact:true}).click(); }
+
+test('in-player episodes retain current video, navigate seasons by remote, show watched and return from sources with focus',async({page})=>{
+  const ids=[];await page.route('**/stream/series/**',r=>{ids.push(decodeURIComponent(r.request().url()));return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4'}]}});});
+  await page.addInitScript(()=>{const key='nuvio-fork.webos.v1',s=JSON.parse(localStorage.getItem(key));s.progress={'["series","ttshow:2:1"]':{type:'series',id:'ttshow:2:1',meta:{id:'ttshow',type:'series',name:'Série de teste'},episode:{season:2,episode:1},complete:true,time:60,duration:60,updated:1}};localStorage.setItem(key,JSON.stringify(s));});
+  await startSeriesForNext(page,{autoNext:true});
+  await page.locator('video').evaluate(v=>v.fixtureOriginal=true);
+  await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});
+  await expect(dialog.locator('[data-episode-id="ttshow:1:1"]')).toHaveAttribute('aria-current','true');await expect(dialog.locator('[data-episode-id="ttshow:1:1"]')).toBeFocused();
+  await page.keyboard.press('ArrowRight');const next=dialog.locator('[data-episode-id="ttshow:2:1"]');await expect(next).toBeFocused();await expect(next).toContainText('Assistido');
+  await page.screenshot({animations:'disabled',path:'test-results/player-episodes-1920.png'});
+  await page.keyboard.press('Enter');await expect(dialog.locator('.source')).toHaveCount(1);expect(ids.at(-1)).toContain('ttshow:2:1');expect(await page.locator('video').evaluate(v=>v.fixtureOriginal)).toBe(true);
+  await page.locator('video').evaluate(v=>{Object.defineProperty(v,'ended',{configurable:true,get:()=>true});v.dispatchEvent(new Event('ended'));});await page.clock.runFor(7000);expect(await page.locator('video').evaluate(v=>v.fixtureOriginal)).toBe(true);
+  await expect(dialog.getByRole('button',{name:'Fechar',exact:true})).toBeInViewport();
+  expect(await dialog.getByRole('button',{name:'Fechar',exact:true}).evaluate(b=>{const r=b.getBoundingClientRect();const top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return b===top || b.contains(top);})).toBe(true);
+  await page.screenshot({animations:'disabled',path:'test-results/player-episode-sources-1920.png'});
+  await page.keyboard.press('Escape');await expect(next).toBeFocused();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(page.getByRole('button',{name:'Episódios',exact:true})).toBeFocused();
+});
+test('selecting an episode source replaces video only on selection, preserves old progress and Back shows selected episode sources',async({page})=>{
+  await startSeriesForNext(page);await page.locator('video').evaluate(v=>{v.currentTime=25;v.fixtureOld=true;});
+  await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect(dialog.locator('.source').first()).toBeVisible();
+  await dialog.locator('.source:not([aria-disabled="true"])').first().click();await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T2 E1');expect(await page.locator('video').evaluate(v=>Boolean(v.fixtureOld))).toBe(false);
+  const previous=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).progress['["series","ttshow:1:1"]']);expect(previous.time).toBeCloseTo(25,0);
+  await page.keyboard.press('Escape');await expect(page.locator('video')).toHaveCount(0);await expect(page.getByRole('button',{name:'Reproduzir melhor fonte'})).toBeVisible();await page.clock.runFor(7000);await expect(page.locator('video')).toHaveCount(0);
+});
+test('episode source requests cancel on LG Back, late results never navigate and reopening can retry',async({page})=>{
+  let release,started=false;const gate=new Promise(r=>release=r);
+  await page.route('**/stream/series/**',async r=>{if(decodeURIComponent(r.request().url()).includes('ttshow:2:1')){started=true;await gate;}await r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4'}]}}).catch(()=>{});});
+  await startSeriesForNext(page);await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect.poll(()=>started).toBe(true);
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:461,bubbles:true})));await expect(dialog.locator('[data-episode-id="ttshow:2:1"]')).toBeFocused();await page.keyboard.press('Escape');release();await page.clock.runFor(1000);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E1');
+  await page.getByRole('button',{name:'Episódios',exact:true}).click();await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect(dialog.locator('.source')).toHaveCount(1);
+});
+test('episode source failures can refresh without replacing the active video',async({page})=>{
+  let requests=0;await page.route('**/stream/series/**',r=>{if(decodeURIComponent(r.request().url()).includes('ttshow:2:1') && ++requests===1)return r.fulfill({status:503,body:'down'});return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4'}]}});});
+  await startSeriesForNext(page);await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect(dialog).toContainText('1 addon(s) não responderam');await dialog.getByRole('button',{name:'Atualizar fontes do episódio'}).click();await expect(dialog.locator('.source')).toHaveCount(1);
+});
+test('future episodes remain visible but cannot query or select sources from the player panel',async({page})=>{
+  let futureRequests=0;await page.route('**/stream/series/**',r=>{if(decodeURIComponent(r.request().url()).includes('ttshow:2:1'))futureRequests++;return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4'}]}});});
+  await startSeriesForNext(page,{}, {released:'2999-01-01'});await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();const item=dialog.locator('[data-episode-id="ttshow:2:1"]');await expect(item).toContainText('Ainda não lançado');await item.focus();await page.keyboard.press('Enter');expect(futureRequests).toBe(0);await expect(dialog.getByRole('heading',{name:'Episódios'})).toBeVisible();
+});
+test('all seven aspect modes affect only video, persist across playback and adapt to a new video size',async({page})=>{
+  await startFixtureVideo(page);await expect(page.getByRole('button',{name:'Episódios',exact:true})).toHaveCount(0);
+  await page.locator('video').evaluate(v=>{Object.defineProperty(v,'videoWidth',{configurable:true,get:()=>400});Object.defineProperty(v,'videoHeight',{configurable:true,get:()=>300});v.fixtureOriginal=true;v.dispatchEvent(new Event('resize'));});
+  await page.getByRole('button',{name:'Mais',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Mais opções'});const option=dialog.getByRole('button',{name:/Proporção da imagem/});
+  const modes=['FULL_SCREEN','STRETCH','SLIGHT_ZOOM','CINEMA_ZOOM','VERTICAL_STRETCH','HORIZONTAL_STRETCH','ORIGINAL'];
+  for(const mode of modes){await option.click();await expect(page.locator('video')).toHaveAttribute('data-aspect-mode',mode);expect(await page.locator('video').evaluate(v=>v.fixtureOriginal)).toBe(true);}
+  await option.click();await expect(page.locator('video')).toHaveCSS('transform','matrix(1.33333, 0, 0, 1.33333, 0, 0)');
+  await page.locator('video').evaluate(v=>{Object.defineProperty(v,'videoWidth',{configurable:true,get:()=>1920});Object.defineProperty(v,'videoHeight',{configurable:true,get:()=>1080});v.dispatchEvent(new Event('resize'));});await expect(page.locator('video')).toHaveCSS('transform','matrix(1, 0, 0, 1, 0, 0)');
+  await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", sans-serif');
+  await page.screenshot({animations:'disabled',path:'test-results/player-aspect-1920.png'});
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Mais',exact:true})).toBeFocused();await page.keyboard.press('Escape');await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveAttribute('data-aspect-mode','FULL_SCREEN');
+});
+
+test('episode panel pages long seasons without dropping late episodes or growing the rendered list',async({page})=>{
+  const videos=Array.from({length:125},(_,i)=>({id:`ttshow:1:${i+1}`,season:1,episode:i+1,title:i===0?'Primeiro episódio':`Episódio ${i+1}`}));
+  await startSeriesForNext(page,{}, {},videos);await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});
+  await expect(dialog.locator('.episode-panel-item')).toHaveCount(50);await dialog.getByRole('button',{name:'Próxima página',exact:true}).click();await expect(dialog.locator('[data-episode-id="ttshow:1:51"]')).toBeFocused();await expect(dialog.locator('.episode-panel-item')).toHaveCount(50);
+  await dialog.getByRole('button',{name:'Próxima página',exact:true}).click();await expect(dialog.locator('.episode-panel-item')).toHaveCount(25);await expect(dialog.locator('[data-episode-id="ttshow:1:125"]')).toHaveCount(1);await dialog.getByRole('button',{name:'Anterior',exact:true}).click();await expect(dialog.locator('[data-episode-id="ttshow:1:51"]')).toBeFocused();
+});
+test('episode source addon filter and best source use only the chosen addon',async({page})=>{
+  await page.addInitScript(()=>{const key='nuvio-fork.webos.v1',s=JSON.parse(localStorage.getItem(key));s.addons=[{url:'https://fixture.example/second/manifest.json',manifest:{id:'second.test',name:'Segundo addon',resources:['stream'],types:['series'],catalogs:[]}}];localStorage.setItem(key,JSON.stringify(s));});
+  await page.route('**/stream/series/**',r=>r.fulfill({json:{streams:[{name:r.request().url().includes('/second/')?'Segunda opção 1080p WEB-DL':'Primeira opção 1080p WEB-DL',url:origin+'/clip.mp4'}]}}));
+  await startSeriesForNext(page);await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect(dialog.locator('.source')).toHaveCount(2);
+  await dialog.getByRole('button',{name:'Segundo addon',exact:true}).click();await expect(dialog.locator('.source')).toHaveCount(1);await expect(dialog.locator('.source')).toContainText('Segunda opção');await dialog.getByRole('button',{name:'Reproduzir melhor fonte',exact:true}).click();
+  await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T2 E1');await page.getByRole('button',{name:'Mais',exact:true}).click();await page.getByRole('button',{name:'Diagnóstico',exact:true}).click();await expect(page.locator('.stats')).toContainText('Fonte: Segundo addon');
 });

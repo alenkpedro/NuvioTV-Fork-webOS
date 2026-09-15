@@ -15,9 +15,14 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.14.0
+## Estado: prévia 0.15.0
 
-A 0.14.0 acrescenta **velocidade de reprodução**, **atraso de legenda salvo por
+A 0.15.0 acrescenta **episódios e fontes dentro do player**, navegação por
+temporada e **sete modos de proporção/zoom da imagem**. Abra Episódios durante
+uma série; velocidade, proporção e diagnóstico ficam em Mais.
+[Uso e limites](webos/EPISODES_ASPECT.md).
+
+A 0.14.0 acrescentou **velocidade de reprodução**, **atraso de legenda salvo por
 filme/episódio e perfil**, **Netflix Sans nas legendas externas** e confirmação
 **“Ainda assistindo?”** configurável. A fonte está incluída no pacote.
 [Uso, comportamento e limites na LG](webos/PLAYBACK_TIMING.md).
