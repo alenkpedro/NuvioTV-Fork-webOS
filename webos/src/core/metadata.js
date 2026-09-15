@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Contracts: MetaMapper, TmdbMetadataService and CastDetailScreen in the reference fork.
+import {localizedLogo} from './player-artwork.js';
 import {getJSON} from './addons.js';
 const list=value=>Array.isArray(value)?value:[];
 const str=(value,max=300)=>typeof value==='string'?value.trim().slice(0,max):'';
@@ -67,14 +68,14 @@ export function createMetadataClient({settings,request=getJSON}={}) {
   }
   async function detail(meta,signal) {
     const id=await resolve(meta,signal);if(!id)return null;const type=meta.type==='series'?'tv':'movie';
-    const data=await api(`${type}/${id}`,signal,{append_to_response:`${type==='tv'?'aggregate_credits':'credits'},videos,recommendations,external_ids`});
+    const data=await api(`${type}/${id}`,signal,{append_to_response:`${type==='tv'?'aggregate_credits':'credits'},videos,recommendations,external_ids,images`,include_image_language:`${settings().language.split('-')[0]},en,null`});
     if(positive(data.id)!==id)throw Error('O TMDB retornou um título diferente do solicitado.');
     const credits=data.aggregate_credits || data.credits || {},crew=list(credits.crew).filter(x=>['Director','Writer','Screenplay','Creator'].includes(x?.job));
     const cast=[...list(data.created_by).map(x=>({...x,character:'Creator'})),...crew.map(x=>({...x,character:x.job==='Screenplay'?'Writer':x.job})),...list(credits.cast)];
     const members=cast.filter(x=>str(x?.name)).map(x=>({name:x.name,tmdbId:positive(x.id),character:x.character || list(x.roles).slice(0,3).map(r=>r.character).filter(Boolean).join(', '),photo:imageURL(x.profile_path,'w185')}));
     const videos=list(data.videos?.results).filter(x=>x?.site==='YouTube').sort((a,b)=>Number(b.official===true)-Number(a.official===true));
     const seen=new Set();const recommendations=list(data.recommendations?.results).map(x=>preview(x,meta.type)).filter(x=>x && x.tmdbId!==id && !seen.has(x.id) && seen.add(x.id)).slice(0,20);
-    return {meta:{...preview(data,meta.type),id:/^tt\d+$/.test(data.imdb_id || data.external_ids?.imdb_id || '')?(data.imdb_id || data.external_ids.imdb_id):meta.id,tmdbId:id,runtime:data.runtime || list(data.episode_run_time)[0],genres:list(data.genres).map(x=>x.name).filter(Boolean),castMembers:people({castMembers:members}),trailers:trailers({trailers:videos.map(x=>({ytId:x.key,name:x.name,type:x.type,lang:x.iso_639_1}))})},recommendations,collection:meta.type==='movie' && positive(data.belongs_to_collection?.id)?{id:positive(data.belongs_to_collection.id),name:str(data.belongs_to_collection.name) || 'Coleção'}:null,rating:typeof data.vote_average==='number' && data.vote_average>=0 && data.vote_average<=10 && Number(data.vote_count)>0?data.vote_average:null};
+    return {meta:{...preview(data,meta.type),logo:imageURL(localizedLogo(data.images?.logos,settings().language),'w500'),id:/^tt\d+$/.test(data.imdb_id || data.external_ids?.imdb_id || '')?(data.imdb_id || data.external_ids.imdb_id):meta.id,tmdbId:id,runtime:data.runtime || list(data.episode_run_time)[0],genres:list(data.genres).map(x=>x.name).filter(Boolean),castMembers:people({castMembers:members}),trailers:trailers({trailers:videos.map(x=>({ytId:x.key,name:x.name,type:x.type,lang:x.iso_639_1}))})},recommendations,collection:meta.type==='movie' && positive(data.belongs_to_collection?.id)?{id:positive(data.belongs_to_collection.id),name:str(data.belongs_to_collection.name) || 'Coleção'}:null,rating:typeof data.vote_average==='number' && data.vote_average>=0 && data.vote_average<=10 && Number(data.vote_count)>0?data.vote_average:null};
   }
   async function person(member,signal) {
     if(!positive(member.tmdbId))throw Error('Este addon não informou a identificação da pessoa. Configure o TMDB e reabra os detalhes do título para completar o elenco.');

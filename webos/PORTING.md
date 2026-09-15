@@ -161,3 +161,12 @@ SubtitleSelectionOverlay, PanelComponents e PlayerOverlayScaffold.
 (±180 s, até 90), compensação de 300 ms de PlayerRuntimeControllerSubtitleTiming
 e limites/passos de SubtitleDelayConfig. Legendas já carregadas são reutilizadas.
 Ajustes DSP/atraso de áudio e temporização nativa continuam pendentes.
+
+## Entrega 0.18 — tela de pausa e logos
+
+Transposição de `PauseOverlay.kt` e da regra de pausa manual do runtime: opção
+inicialmente desativada, abertura após 5 segundos, sinopse, episódio, oito pessoas
+e ficha foto/personagem. Logos de catálogos não são apagadas por metadados sem
+imagem. Enriquecimento TMDB usa `images` na chamada de detalhe e seleção de
+idioma/região baseada em `TmdbMetadataService`; atualiza o player sem reiniciá-lo.
+Ver [PLAYER_PAUSE_ARTWORK.md](PLAYER_PAUSE_ARTWORK.md) para diferenças e validação.

@@ -922,3 +922,79 @@ test('track panels follow fork dimensions and focus colors; native subtitles can
   await dialog.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await expect(dialog.getByRole('button',{name:'Sincronizar por fala',exact:true})).toBeDisabled();await expect(dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true})).toBeDisabled();
   await expect(dialog).not.toContainText('Netflix Sans');await expect(page.locator('.subtitle-overlay')).toContainText('Legenda interna');
 });
+
+async function pauseFixture(page,{enabled=true,logo=true}={}) {
+  await page.addInitScript(enabled=>{if(sessionStorage.getItem('pause-fixture-seeded'))return;const key='nuvio-fork.webos.v1',state=JSON.parse(localStorage.getItem(key)||'{}');state.settings={...state.settings,playback:{...state.settings?.playback,pauseOverlay:enabled}};localStorage.setItem(key,JSON.stringify(state));sessionStorage.setItem('pause-fixture-seeded','1');},enabled);
+  const meta={...movie,tmdbId:100,logo:logo?origin+'/title-logo.svg':null,description:'Uma história de amizade e reencontros.',castMembers:Array.from({length:12},(_,i)=>({name:`Pessoa ${i+1}`,character:`Personagem ${i+1}`,photo:origin+'/poster.svg'}))};
+  await page.route('**/meta/movie/**',r=>r.fulfill({json:{meta}}));
+  await page.route('**/title-logo.svg',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="600" height="140"><text x="0" y="110" font-family="serif" font-size="96" fill="white">HORIZONTE</text></svg>'}));
+  await startFixtureVideo(page);await page.locator('#toast').evaluate(e=>e.hidden=true);await page.clock.install();
+}
+test('manual pause opens fork metadata after 5 seconds, browses cast and resumes the same video',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));await pauseFixture(page);
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:19,bubbles:true})));await page.clock.runFor(4900);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);await page.clock.runFor(200);
+  const dialog=page.getByRole('dialog',{name:'Tela de pausa'});await expect(dialog).toBeVisible();await expect(dialog.locator('.pause-title-logo')).toBeVisible();await expect(dialog.locator('.pause-artwork h2')).toBeHidden();await expect(dialog).toContainText('Uma história de amizade');await expect(dialog.locator('.pause-cast-chip')).toHaveCount(8);
+  const geometry=await dialog.locator('.pause-content').evaluate(e=>({left:e.getBoundingClientRect().left/2,bottom:(innerHeight-e.getBoundingClientRect().bottom)/2}));expect(geometry).toEqual({left:56,bottom:120});
+  await page.clock.runFor(300);await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await expect(page.locator('.player-top')).toHaveCSS('opacity','0');
+  await page.screenshot({animations:'disabled',path:'test-results/player-pause-1920.png'});
+  await page.keyboard.press('ArrowDown');await expect(dialog.locator('.pause-cast-chip').first()).toBeFocused();await page.keyboard.press('Enter');await expect(dialog.locator('.pause-cast-detail')).toContainText('Como Personagem 1');await expect(dialog.locator('.pause-cast-photo')).toBeVisible();
+  await page.screenshot({path:'test-results/player-pause-cast-1920.png'});
+  await page.keyboard.press('Escape');await expect(dialog.locator('.pause-cast-chip').first()).toBeFocused();await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await expect(dialog).toHaveCount(0);await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(false);await expect(page.locator('video')).toHaveCount(1);expect(errors).toEqual([]);
+});
+test('pause overlay requires manual intent, waits around track panels and cancels on Back and suspension',async({page})=>{
+  await pauseFixture(page,{logo:false});await page.clock.runFor(7000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0); // Fixture pause is programmatic.
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:19,bubbles:true})));await page.clock.runFor(3000);await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.clock.runFor(7000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);
+  await page.keyboard.press('Escape');await page.clock.runFor(5100);await expect(page.locator('.player-pause-overlay')).toBeVisible();await expect(page.locator('.pause-artwork h2')).toHaveText(movie.name);
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:461,bubbles:true})));await expect(page.locator('.player-pause-overlay')).toHaveCount(0);expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);await page.clock.runFor(8000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:19,bubbles:true})));await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});await page.clock.runFor(8000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});await page.clock.runFor(7000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);
+});
+test('pause timer resets with interaction and playing or leaving cancels it; default is disabled',async({page})=>{
+  await pauseFixture(page,{enabled:false});await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:19,bubbles:true})));await page.clock.runFor(8000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);
+  await leavePlayer(page);await navigation(page,'Ajustes');await page.getByRole('button',{name:'Reprodução',exact:true}).click();await page.getByRole('switch',{name:'Tela de pausa',exact:true}).click();
+  await page.reload();await navigation(page,'Ajustes');await page.getByRole('button',{name:'Reprodução',exact:true}).click();await expect(page.getByRole('switch',{name:'Tela de pausa',exact:true})).toHaveAttribute('aria-checked','true');
+  await navigation(page,'Início');await page.locator('.card:not(.continue-card)').filter({hasText:'Horizonte de teste'}).click();await page.getByRole('button',{name:'Retomar',exact:true}).click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:19,bubbles:true})));await page.clock.runFor(4000);await page.keyboard.press('ArrowUp');await page.clock.runFor(4000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:415,bubbles:true})));await page.clock.runFor(6000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:19,bubbles:true})));await leavePlayer(page);await page.clock.runFor(6000);await expect(page.locator('.player-pause-overlay')).toHaveCount(0);
+});
+test('player preserves catalog logo when detail returns null artwork',async({page})=>{
+  await page.route('**/catalog/**',r=>r.fulfill({json:{metas:[{...movie,logo:origin+'/catalog-logo.svg'}]}}));
+  await page.route('**/meta/movie/**',r=>r.fulfill({json:{meta:{...movie,logo:null}}}));
+  await page.route('**/catalog-logo.svg',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="80"><rect width="300" height="80" fill="white"/></svg>'}));
+  await startFixtureVideo(page);await expect(page.locator('.player-title-logo')).toBeVisible();await expect(page.locator('.player-controls h1')).toBeHidden();await expect(page.locator('.player-title-logo')).toHaveAttribute('src',origin+'/catalog-logo.svg');
+});
+test('late localized TMDB logo reaches the active player and failed image falls back to addon artwork',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('nuvio-fork.webos.metadata.v1',JSON.stringify({key:'a'.repeat(32),language:'pt-BR'})));
+  let release;const gate=new Promise(r=>release=r);let requests=0;
+  await page.route('https://api.themoviedb.org/**',async r=>{requests++;await gate;await r.fulfill({json:{id:100,title:'Title',images:{logos:[{file_path:'/en.png',iso_639_1:'en'},{file_path:'/br.png',iso_639_1:'pt',iso_3166_1:'BR'}]}}}).catch(()=>{});});
+  await page.route('**/meta/movie/**',r=>r.fulfill({json:{meta:{...movie,tmdbId:100,logo:origin+'/fallback.svg'}}}));
+  await page.route('**/fallback.svg',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="80"><rect width="300" height="80" fill="white"/></svg>'}));
+  const images=[];await page.route('https://image.tmdb.org/**',r=>{images.push(r.request().url());return r.fulfill({status:404,body:''});});
+  await startFixtureVideo(page);await expect.poll(()=>requests).toBeGreaterThanOrEqual(2);release();await expect.poll(()=>images).toContain('https://image.tmdb.org/t/p/w500/br.png');
+  await expect.poll(()=>page.locator('.player-title-logo').evaluate(i=>i.complete && i.naturalWidth>0)).toBe(true);await expect(page.locator('.player-title-logo')).toHaveAttribute('src',origin+'/fallback.svg');await expect(page.locator('.player-controls h1')).toBeHidden();
+  expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);await expect(page.locator('video')).toHaveCount(1);
+});
+
+for(const exitEarly of [false,true])test(`localized logo ${exitEarly?'ignores late response after leaving':'updates pause artwork without moving focus'}`,async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('nuvio-fork.webos.metadata.v1',JSON.stringify({key:'a'.repeat(32),language:'pt-BR'})));
+  let release;const gate=new Promise(r=>release=r);let requests=0;const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('https://api.themoviedb.org/**',async r=>{requests++;await gate;await r.fulfill({json:{id:100,title:'Title',images:{logos:[{file_path:'/localized.svg',iso_639_1:'pt',iso_3166_1:'BR'}]}}}).catch(()=>{});});
+  await page.route('https://image.tmdb.org/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="600" height="100"><text y="75" fill="white" font-size="70">HORIZONTE</text></svg>'}));
+  await pauseFixture(page,{logo:false});await expect.poll(()=>requests).toBeGreaterThanOrEqual(1);
+  if(exitEarly){await leavePlayer(page);release();await page.clock.runFor(6000);await expect(page.locator('video,.player-pause-overlay,.player-title-logo')).toHaveCount(0);}
+  else {
+    await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:19,bubbles:true})));await page.clock.runFor(5300);await expect(page.locator('.pause-content')).toBeFocused();release();
+    await expect(page.locator('.pause-title-logo')).toHaveAttribute('src','https://image.tmdb.org/t/p/w500/localized.svg');await expect(page.locator('.pause-content')).toBeFocused();await expect(page.locator('.pause-artwork h2')).toBeHidden();
+    await page.keyboard.press('Escape');await expect(page.locator('.player-title-logo')).toHaveAttribute('src','https://image.tmdb.org/t/p/w500/localized.svg');await expect(page.locator('.player-controls h1')).toBeHidden();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(25);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('pause series metadata fits the logical canvas with long episode title and synopsis',async({page})=>{
+  await playbackPrefs(page,{pauseOverlay:true});const title='Um episódio com um título bastante longo para verificar a quebra em duas linhas na tela de pausa';
+  await page.route('**/meta/series/**',r=>r.fulfill({json:{meta:{...show,logo:origin+'/poster.svg',releaseInfo:'2026',videos:[{...show.videos[0],title,overview:'Uma sinopse extensa que explica a história do episódio e apresenta seus personagens. '.repeat(10)}],cast:['Pessoa 1','Pessoa 2']}}}));
+  await install(page);await navigation(page,'Início');await page.getByRole('button',{name:'Série de teste',exact:true}).click();await page.locator('.episode').first().click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);
+  await page.clock.install();await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:19,bubbles:true})));await page.clock.runFor(5500);await expect(page.locator('.pause-episode')).toHaveText(title);await expect(page.locator('.pause-year')).toContainText('T1 E1');
+  for(const width of [1280,1920,3840]){
+    await page.setViewportSize({width,height:width*9/16});await page.clock.runFor(100);await expect.poll(()=>page.locator('#app').evaluate(e=>new DOMMatrix(getComputedStyle(e).transform).a)).toBeCloseTo(width/960,3);const bounds=await page.locator('.pause-metadata').evaluate(e=>{const p=e.getBoundingClientRect(),i=e.querySelector('.pause-title-logo').getBoundingClientRect(),a=e.querySelector('.pause-artwork').getBoundingClientRect();return {top:p.top/(innerWidth/960),bottom:p.bottom/(innerWidth/960),logoBottom:i.bottom,boxBottom:a.bottom};});expect(bounds.top).toBeGreaterThanOrEqual(39);expect(bounds.bottom).toBeLessThanOrEqual(421);expect(bounds.logoBottom).toBeLessThanOrEqual(bounds.boxBottom+1);
+  }
+});

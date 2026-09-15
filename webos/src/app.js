@@ -6,11 +6,14 @@ import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
 import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
 import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode } from './core/presentation.js';
-import { nextSource } from './core/playback.js';
+import { nextSource, readPlayback } from './core/playback.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { installNextEpisode } from './next-episode.js';
 import { installAspect } from './core/aspect.js';
 import { installEpisodePanel } from './player-episodes.js';
+import { installPauseOverlay } from './player-pause.js';
+import { artworkURL, enrichPlayerMetadata } from './core/player-artwork.js';
+import { people } from './core/metadata.js';
 import { playerUI } from './player-ui.js';
 import { installSeek } from './core/player-seek.js';
 import { installTrackControls } from './player-tracks.js';
@@ -292,7 +295,7 @@ async function loadMeta(meta, addon, signal) {
     try {
       const result = await cachedMetaJSON(resourceURL(a, 'meta', meta.type, meta.id), signal);
       if (signal.aborted) return null;
-      if (result.meta?.id === meta.id) return { meta: { ...meta, ...result.meta, type: meta.type }, addon: a };
+      if (result.meta?.id === meta.id) return { meta: { ...meta, ...result.meta, logo:artworkURL(result.meta.logo) || artworkURL(meta.logo), type: meta.type }, addon: a };
     } catch (error) { if (signal.aborted) return null; }
   }
   return { meta, addon };
@@ -806,6 +809,10 @@ function showSettings(main, signal) {
         content.append(row('TMDB',metadata.configured()?'Biografias, filmografia e coleções':'Configurar metadados complementares',()=>navigate({name:'metadata-settings'})),row('Avaliações MDBList',ratings.configured()?'Escolher fontes de avaliações':'Configurar notas de IMDb, Letterboxd e outras fontes',()=>navigate({name:'ratings-settings'})));
         break;
       case 'playback':
+        {
+          const toggle=button([el('span',{class:'grow'},el('strong',{},'Tela de pausa'),el('small',{class:'muted'},'Mostrar título, sinopse e elenco após 5 segundos de pausa manual.')),el('span',{class:'switch-track','aria-hidden':true})],()=>{const prefs=readPlayback(state.settings.playback);state.settings.playback={...prefs,pauseOverlay:!prefs.pauseOverlay};persist();toggle.setAttribute('aria-checked',String(!prefs.pauseOverlay));},{class:'settings-row',role:'switch','aria-label':'Tela de pausa','aria-checked':String(readPlayback(state.settings.playback).pauseOverlay)});
+          content.append(toggle);
+        }
         content.append(row('Idiomas e próximo episódio', 'Áudio, legendas e continuidade de séries', () => navigate({name:'playback-settings'})));
         content.append(row('Preferências de fontes', 'Filtros, grupos de release e reprodução automática', () => navigate({ name: 'preferences' })));
         break;
@@ -843,7 +850,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.17.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.18.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -885,7 +892,7 @@ function showPlayer(context) {
   const chrome=playerUI({el,button,context,video,toggle,restart:()=>{seekTo(0);play();},audio:()=>tracks.openAudio(),subtitles:()=>tracks.openSubtitles(),sources:()=>episodes.openCurrent(),episodes:()=>episodes.open(),speed:()=>tracks.openSpeed(),aspect:()=>aspect.cycle(),stats:()=>{stats.hidden=!stats.hidden;screen.classList.toggle('stats-visible',!stats.hidden);chrome.info.setAttribute('aria-pressed',String(!stats.hidden));updateStats();}});
   const {controls,timeline,pause}=chrome;
   const screen = el('div', { class: 'player-screen controls-visible' }, video, chrome.top, status, stats, controls); root.append(screen);
-  let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview;
+  let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview, pauseOverlay;
   const aspect=installAspect({video,settings:state.settings,persist,notify:toast});
   const listeners = [];
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
@@ -894,7 +901,7 @@ function showPlayer(context) {
     onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); upNext.refresh(); }, onClose: ()=>{reveal();upNext.refresh();} });
   const upNext = installNextEpisode({screen,video,context,settings:state.settings,el,button,
     loadMeta:async()=> (await loadMeta(context.meta,context.addon,request.signal)).meta,
-    modalOpen:()=>tracks.isOpen() || Boolean(episodes?.isOpen()) || Boolean(seekPreview?.active()), restoreFocus:()=>{reveal();pause.focus();},
+    modalOpen:()=>tracks.isOpen() || Boolean(episodes?.isOpen()) || Boolean(seekPreview?.active()) || Boolean(pauseOverlay?.isOpen()), restoreFocus:()=>{reveal();pause.focus();},
     stopPlayback:()=>back(true),
     advance:(episode,auto,count)=>{
       // Drop earlier episode routes so binge playback cannot grow navigation indefinitely.
@@ -915,13 +922,14 @@ function showPlayer(context) {
     }});
   function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
   function hideControls(){manuallyHidden=true;clearTimeout(hideTimer);controls.classList.add('faded');controls.inert=true;screen.classList.remove('controls-visible');}
-  function reveal() { manuallyHidden=false; if (tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); controls.inert=false; screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen() && !seekPreview.active()) hideTimer = setTimeout(() => { controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); }, 4500); }
+  function reveal() { manuallyHidden=false; pauseOverlay?.interaction(); if (pauseOverlay?.isOpen() || tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); controls.inert=false; screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen() && !seekPreview.active()) hideTimer = setTimeout(() => { controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); }, 4500); }
   seekPreview=installSeek({video,timeline,update:updateTimeline,reveal});
+  pauseOverlay=installPauseOverlay({screen,video,context,settings:state.settings,el,button,blocked:()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || seekPreview.active() || !stats.hidden || chrome.more.getAttribute('aria-expanded')==='true',onOpen:()=>{hideControls();upNext.refresh();},onClose:()=>{reveal();pause.focus();upNext.refresh();},resume:play});
   const clockTimer=setInterval(()=>{if(!document.hidden && screen.classList.contains('controls-visible'))chrome.updateClock();},1000);
   chrome.updateClock();
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
   async function play() { try { await video.play(); } catch { if (!disposed) { status.hidden = false; status.textContent = 'Pressione Reproduzir para iniciar.'; chrome.setPlaying(false); } } }
-  function toggle() { video.paused ? play() : video.pause(); reveal(); }
+  function toggle() { video.paused ? play() : pauseOverlay.manualPause(); reveal(); }
   function updateStats() {
     if (stats.hidden) return;
     let buffered = 0;
@@ -957,11 +965,13 @@ function showPlayer(context) {
     if(chrome.more.getAttribute('aria-expanded')==='true'){chrome.setMore(false);reveal();chrome.more.focus();return true;}
     if(screen.classList.contains('controls-visible')){hideControls();return true;}return false;
   },key(key, e) {
+    if(pauseOverlay.isOpen())return pauseOverlay.key(key,e);
+    pauseOverlay.interaction();
     if (upNext.isOpen()) { if (['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)) { e.preventDefault(); return true; } return false; }
     if (episodes.isOpen()) { if(episodes.key(key,e))return true; if(['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)){e.preventDefault();return true;}return false; }
     if (tracks.isOpen()) return tracks.key(key,e);
     if (['MediaPlay', 'MediaPause', 'MediaStop', 'MediaRewind', 'MediaFastForward', ' '].includes(key)) {
-      e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') video.pause(); else if (key === 'MediaStop') back(true); else if (key === 'MediaRewind' || key === 'MediaFastForward') seekPreview.key(key==='MediaRewind'?'ArrowLeft':'ArrowRight',e); else toggle(); return true;
+      e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') pauseOverlay.manualPause(); else if (key === 'MediaStop') back(true); else if (key === 'MediaRewind' || key === 'MediaFastForward') seekPreview.key(key==='MediaRewind'?'ArrowLeft':'ArrowRight',e); else toggle(); return true;
     }
     if(!upNext.focused() && controls.classList.contains('faded') && ['ArrowLeft','ArrowRight'].includes(key)){reveal();timeline.focus();return seekPreview.key(key,e);}
     if (!upNext.focused() && controls.classList.contains('faded') && ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) { e.preventDefault(); reveal(); pause.focus(); return true; }
@@ -969,9 +979,25 @@ function showPlayer(context) {
     if(chrome.key(key,hideControls)){e.preventDefault();return true;}
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; pauseOverlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   const controlSize=new ResizeObserver(()=>screen.style.setProperty('--subtitle-control-clearance',`${controls.offsetHeight+8}px`));controlSize.observe(controls);
   const disposeBase=cleanupPlayer;cleanupPlayer=()=>{controlSize.disconnect();disposeBase();};
+  const artworkSignal=request.signal;
+  async function completeArtwork(){
+    if(disposed || artworkSignal.aborted || document.hidden)return;
+    const update=extra=>{if(disposed || artworkSignal.aborted || document.hidden)return;enrichPlayerMetadata(context.meta,extra);if(!people(context.meta).length && people(extra).length)context.meta.castMembers=people(extra);chrome.updateIdentity();pauseOverlay.update();};
+    if(metadata.configured()){
+      try {const data=await metadata.detail(context.meta,artworkSignal);if(data)update(data.meta);}catch {}
+    }
+    if(disposed || artworkSignal.aborted || document.hidden || artworkURL(context.meta.logo))return;
+    const seen=new Set();
+    const providers=[context.addon,...state.addons].filter(a=>a && !seen.has(a.url) && seen.add(a.url) && supports(a,'meta',context.meta.type,context.meta.id)).slice(0,3);
+    for(const addon of providers){
+      try{const data=await cachedMetaJSON(resourceURL(addon,'meta',context.meta.type,context.meta.id),artworkSignal);if(disposed || artworkSignal.aborted || document.hidden)return;if(data.meta?.id===context.meta.id){update(data.meta);if(artworkURL(context.meta.logo))break;}}catch {if(artworkSignal.aborted)return;}
+    }
+  }
+  video.addEventListener('loadeddata',completeArtwork,{once:true});
+  const priorCleanup=cleanupPlayer;cleanupPlayer=()=>{video.removeEventListener('loadeddata',completeArtwork);priorCleanup();};
   pause.focus();
 }
 function layoutKey(key, event) {

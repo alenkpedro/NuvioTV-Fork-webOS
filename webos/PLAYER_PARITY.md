@@ -1,4 +1,4 @@
-# Fidelidade do player ao fork — 0.17.0
+# Fidelidade do player ao fork — 0.18.0
 
 Referência usada: `ysosrs123/NuvioTV-Fork@45e0984`, preservada nesta árvore.
 A barra anterior era uma adaptação com uma única fileira de botões de texto.
@@ -48,6 +48,13 @@ substitui a coluna de idiomas antiga. Sincronização por fala e ajuste fino de
 100 ms até ±180 s seguem SubtitleTimingDialog e SubtitleDelayConfig.
 [Comportamento, limites e testes](PLAYER_TRACKS_SYNC.md).
 
+## Pausa e logos — 0.18
+
+Tela de pausa opcional após 5 segundos de pausa manual; logo, sinopse, episódio,
+até oito pessoas do elenco e ficha com foto/personagem. Logos preservadas dos
+catálogos e enriquecidas pelo TMDB configurado, com preferência por idioma/região.
+[Comportamento, dimensões e limites](PLAYER_PAUSE_ARTWORK.md).
+
 ## Diferenças que permanecem
 
 Não se declara o player integralmente idêntico ou todos os recursos concluídos.
@@ -63,7 +70,8 @@ mesmos títulos, faixas e preferências do Android.
 | Áudio e legendas sem faixas expostas | Acesso preservado para consulta/diagnóstico e addons; presença dos ícones ainda difere do gate estrito Android |
 | Sincronização por fala e atraso fino | Implementados para externas SRT/VTT; atraso de faixas nativas e de áudio continuam pendentes |
 | Busca manual de legendas, ASS/PGS/libass | Ainda pendentes ou limitados pelo compositor nativo |
-| Tela de pausa com elenco, prévia de busca, intro/outro e guia parental | Ainda pendentes, incluindo origem/contratos dos dados |
+| Tela de pausa com elenco e logos | Implementada; ficha limitada aos dados do título, validar na LG |
+| Prévia de busca, intro/outro e guia parental | Ainda pendentes, incluindo origem/contratos dos dados |
 | Recomendações pós-reprodução e detalhes avançados de Up Next | Parcial; próximo episódio/contagem/“Ainda assistindo?” existentes |
 | Trocar ExoPlayer/MPV e abrir player Android externo | Não executáveis neste app webOS; botões sem implementação não foram adicionados |
 | AFR/display modes, tunneling, passthrough, downmix, decoder/FFmpeg | Dependem de alternativa específica LG; sem alegação de suporte |
@@ -71,8 +79,7 @@ mesmos títulos, faixas e preferências do Android.
 
 ## Próxima etapa do player
 
-Implementar a tela de pausa com elenco da referência; depois investigar os
-contratos dos dados de intro/outro e miniaturas de busca. Manter as diferenças acima rastreáveis até serem verificadas.
+Investigar os contratos dos dados de intro/outro e miniaturas de busca. Manter as diferenças acima rastreáveis até serem verificadas.
 Não avançar para outras áreas enquanto esta revisão prioritária estiver ativa.
 
 ## Testes

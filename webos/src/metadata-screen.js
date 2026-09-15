@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+import {enrichPlayerMetadata} from './core/player-artwork.js';
 import {people,trailers,readMetadataSettings,saveMetadataSettings,youtubeId} from './core/metadata.js';
 import {installRatings,collectionSection} from './ratings-screen.js';
 const roles={Creator:'Criação',Director:'Direção',Writer:'Roteiro',Acting:'Atuação',Directing:'Direção',Writing:'Roteiro'};
@@ -64,7 +65,7 @@ export function detailExtras(ctx,meta,addon) {
     if(!metadata.configured() || running)return;running=true;loading=true;error='';draw(true);
     try {
       const data=await metadata.detail(meta,signal);if(signal.aborted)return;
-      if(data){members=people({castMembers:[...people(data.meta),...people(meta)]});videos=trailers({trailers:[...trailers(meta),...trailers(data.meta)]});recommendations=data.recommendations;scoreRow.update(data.meta,data.rating);draw(true);await collection.load(data.collection);}
+      if(data){enrichPlayerMetadata(meta,data.meta);if(!people(meta).length)meta.castMembers=people(data.meta);members=people({castMembers:[...people(data.meta),...people(meta)]});videos=trailers({trailers:[...trailers(meta),...trailers(data.meta)]});recommendations=data.recommendations;scoreRow.update(data.meta,data.rating);draw(true);await collection.load(data.collection);}
     }catch(e){if(!signal.aborted)error=e.message;}
     finally{running=false;loading=false;if(!signal.aborted)draw(true);}
   }

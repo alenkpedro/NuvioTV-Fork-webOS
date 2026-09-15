@@ -15,7 +15,14 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.17.0
+## Estado: prévia 0.18.0
+
+A 0.18.0 acrescenta a tela de pausa com logo, sinopse, episódio e elenco do
+fork. Ative **Ajustes → Reprodução → Tela de pausa**; ela aparece após 5 segundos
+de pausa manual. Logos dos catálogos são preservadas e podem ser complementadas
+por imagens localizadas do TMDB quando configurado. A barra e a pausa compartilham
+a imagem; sem logo válida, usam o título. O preset das legendas permanece fixo.
+[Uso, origem e limites](webos/PLAYER_PAUSE_ARTWORK.md).
 
 A 0.17.0 adapta os painéis compactos de áudio/legendas, com lista única e foco
 branco, e acrescenta sincronização por fala para legendas externas SRT/WebVTT.
@@ -100,7 +107,7 @@ Validação: testes de regras, conta e navegação com dados sintéticos; instal
 
 ## Próxima etapa
 
-**Player:** continuar a revisão dos painéis de áudio/legendas e implementar sincronização por fala, depois tela de pausa e recursos de intro/miniaturas. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Player:** investigar e implementar os dados e controles de intro/outro e miniaturas de busca. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 

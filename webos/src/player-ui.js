@@ -1,14 +1,13 @@
+import {playerArtwork} from './player-artwork.js';
 // SPDX-License-Identifier: GPL-3.0-only
 // PlayerScreen.kt: PlayerControlsOverlay, ControlButton, PillControlButton and ProgressBar.
 export function playerUI({el,button,context,video,toggle,restart,audio,subtitles,sources,episodes,speed,aspect,stats}) {
   const icon=name=>el('span',{class:`player-icon player-icon-${name}`,'aria-hidden':'true'});
   const pill=(label,name,action)=>button([icon(name),el('span',{},label)],action,{class:'player-pill','aria-label':label});
   const control=(label,name,action)=>button(icon(name),action,{class:'player-icon-button','aria-label':label,title:label});
-  const title=el('h1',{},context.meta.name || '');
-  let logo;
-  try { const u=new URL(context.meta.logo);if(['https:','http:'].includes(u.protocol)) {logo=el('img',{class:'player-title-logo',src:u.href,alt:context.meta.name,onload:()=>{title.hidden=true;},onerror:()=>{logo.remove();title.hidden=false;}});} } catch {}
+  let artwork=playerArtwork(el,context.meta);
   const episode=context.episode ? el('p',{class:'player-episode-title'},`T${context.episode.season} E${context.episode.episode}${context.episode.title ? ` • ${context.episode.title}` : ''}`) : null;
-  const identity=el('div',{class:'player-identity'},title,logo,episode);
+  const identity=el('div',{class:'player-identity'},artwork,episode);
   const pause=pill('Pausar','pause',toggle);
   const moreActions=el('div',{class:'player-more-actions',hidden:true},control('Velocidade','speed',speed),control('Proporção da imagem','aspect_ratio',aspect));
   const more=control('Mais','more',()=>setMore(moreActions.hidden));more.setAttribute('aria-expanded','false');
@@ -29,7 +28,8 @@ export function playerUI({el,button,context,video,toggle,restart,audio,subtitles
     const duration=video.duration,left=(duration-video.currentTime)/Math.max(.25,video.playbackRate || 1);
     const end=Number.isFinite(left)?`Termina às ${format.format(date+Math.max(0,left)*1000)}`:'';if(ends.textContent!==end)ends.textContent=end;
   }
-  return {controls,top,timeline,elapsed,remaining,pause,info,actions,pills,meta,setPlaying,updateClock,setMore,more,
+  function updateIdentity(){const next=playerArtwork(el,context.meta);artwork.replaceWith(next);artwork=next;}
+  return {updateIdentity,controls,top,timeline,elapsed,remaining,pause,info,actions,pills,meta,setPlaying,updateClock,setMore,more,
     key(key,hide) {
       const focused=document.activeElement;
       if(key==='ArrowDown' && focused?.closest('.player-icon-actions')) {timeline.focus();return true;}

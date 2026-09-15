@@ -27,6 +27,18 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Tela de pausa e logos (0.18)
+
+Ative **Ajustes → Reprodução → Tela de pausa**. Depois de pausar manualmente,
+aguarde 5 segundos sem interação. A tela mostra logo/título, ano, episódio,
+sinopse, elenco e relógio. OK no painel retoma; baixo acessa o elenco, OK abre
+foto/personagem e Voltar retorna. Voltar no painel fecha a tela sem reproduzir.
+O padrão é desativado, como na referência Android.
+
+O player preserva logos dos catálogos e consulta imagens localizadas pela
+integração TMDB já configurada. A reprodução começa sem esperar essa consulta.
+Sem imagem válida, o título é a alternativa. [Detalhes e limites](PLAYER_PAUSE_ARTWORK.md).
+
 ## Áudio, legendas e sincronização por fala (0.17)
 
 Painéis de 320 dp no canto inferior direito, lista única e foco branco como no
