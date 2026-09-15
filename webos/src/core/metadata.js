@@ -29,6 +29,11 @@ export function preview(item,type) {
   const released=str(item.release_date || item.first_air_date,30);
   return {id:`tmdb:${id}`,tmdbId:id,type:kind,name,poster:imageURL(item.poster_path),background:imageURL(item.backdrop_path,'w780'),description:str(item.overview,3000),releaseInfo:released.slice(0,4),released};
 }
+export function collectionItems(data) {
+  if(!Array.isArray(data?.parts))throw Error('O TMDB não retornou uma coleção válida.');
+  if(data.parts.length>500)throw Error('Coleção grande demais para carregar na TV.');
+  const seen=new Set();return data.parts.map(x=>preview(x,'movie')).filter(x=>x && !seen.has(x.id) && seen.add(x.id)).sort((a,b)=>(/^\d{4}-\d{2}-\d{2}$/.test(a.released) && Number.isFinite(Date.parse(a.released))?a.released:'9999').localeCompare(/^\d{4}-\d{2}-\d{2}$/.test(b.released) && Number.isFinite(Date.parse(b.released))?b.released:'9999'));
+}
 export function creditItems(data,preferCrew=false) {
   const cast=list(data?.cast),crew=list(data?.crew),out=[];
   for(const type of ['movie','tv']) {
@@ -42,12 +47,12 @@ export function saveMetadataSettings(storage,value) {if(value.key && !/^[a-f\d]{
 export function createMetadataClient({settings,request=getJSON}={}) {
   const cache=new Map();let configuration='';
   const configured=()=>Boolean(settings().key);
-  async function api(path,signal,params={}) {
+  async function api(path,signal,params={},refresh=false) {
     if(signal?.aborted)throw new DOMException('Cancelado','AbortError');
     const config=settings();if(!config.key)throw Error('Configure o TMDB em Ajustes → Integrações para carregar estes dados.');
     const revision=JSON.stringify(config);if(configuration!==revision){cache.clear();configuration=revision;}
     const u=new URL(`https://api.themoviedb.org/3/${path}`);u.searchParams.set('api_key',config.key);u.searchParams.set('language',config.language);for(const [k,v]of Object.entries(params))u.searchParams.set(k,v);
-    const key=path+JSON.stringify(params),hit=cache.get(key);if(hit && Date.now()-hit.at<300000)return JSON.parse(hit.json);
+    const key=path+JSON.stringify(params),hit=cache.get(key);if(!refresh && hit && Date.now()-hit.at<300000)return JSON.parse(hit.json);
     let data;try{data=await request(u.href,{signal,timeout:8000});}catch(error){if(signal?.aborted)throw error;throw Error('Não foi possível carregar o TMDB. Verifique a chave e a conexão em Ajustes → Integrações.');}
     if(signal?.aborted)throw new DOMException('Cancelado','AbortError');
     const json=JSON.stringify(data);if(json.length>1048576)throw Error('Metadados grandes demais para a TV.');
@@ -69,7 +74,7 @@ export function createMetadataClient({settings,request=getJSON}={}) {
     const members=cast.filter(x=>str(x?.name)).map(x=>({name:x.name,tmdbId:positive(x.id),character:x.character || list(x.roles).slice(0,3).map(r=>r.character).filter(Boolean).join(', '),photo:imageURL(x.profile_path,'w185')}));
     const videos=list(data.videos?.results).filter(x=>x?.site==='YouTube').sort((a,b)=>Number(b.official===true)-Number(a.official===true));
     const seen=new Set();const recommendations=list(data.recommendations?.results).map(x=>preview(x,meta.type)).filter(x=>x && x.tmdbId!==id && !seen.has(x.id) && seen.add(x.id)).slice(0,20);
-    return {meta:{...preview(data,meta.type),id:/^tt\d+$/.test(data.imdb_id || data.external_ids?.imdb_id || '')?(data.imdb_id || data.external_ids.imdb_id):meta.id,tmdbId:id,runtime:data.runtime || list(data.episode_run_time)[0],genres:list(data.genres).map(x=>x.name).filter(Boolean),castMembers:people({castMembers:members}),trailers:trailers({trailers:videos.map(x=>({ytId:x.key,name:x.name,type:x.type,lang:x.iso_639_1}))})},recommendations};
+    return {meta:{...preview(data,meta.type),id:/^tt\d+$/.test(data.imdb_id || data.external_ids?.imdb_id || '')?(data.imdb_id || data.external_ids.imdb_id):meta.id,tmdbId:id,runtime:data.runtime || list(data.episode_run_time)[0],genres:list(data.genres).map(x=>x.name).filter(Boolean),castMembers:people({castMembers:members}),trailers:trailers({trailers:videos.map(x=>({ytId:x.key,name:x.name,type:x.type,lang:x.iso_639_1}))})},recommendations,collection:meta.type==='movie' && positive(data.belongs_to_collection?.id)?{id:positive(data.belongs_to_collection.id),name:str(data.belongs_to_collection.name) || 'Coleção'}:null,rating:typeof data.vote_average==='number' && data.vote_average>=0 && data.vote_average<=10 && Number(data.vote_count)>0?data.vote_average:null};
   }
   async function person(member,signal) {
     if(!positive(member.tmdbId))throw Error('Este addon não informou a identificação da pessoa. Configure o TMDB e reabra os detalhes do título para completar o elenco.');
@@ -77,5 +82,10 @@ export function createMetadataClient({settings,request=getJSON}={}) {
     let biography=str(data.biography,16000);if(!biography && settings().language!=='en-US'){try{biography=str((await api(`person/${member.tmdbId}`,signal,{language:'en-US'})).biography,16000);}catch(error){if(signal?.aborted)throw error;}}
     return {name:str(data.name) || member.name,photo:imageURL(data.profile_path),biography,birthday:str(data.birthday,20),deathday:str(data.deathday,20),placeOfBirth:str(data.place_of_birth),knownFor:str(data.known_for_department),items:creditItems(data.combined_credits,['Creator','Director','Writer'].includes(member.character))};
   }
-  return {configured,detail,person,clear:()=>cache.clear(),validate:signal=>api('configuration',signal)};
+  async function collection(reference,signal,{refresh=false}={}) {
+    const id=positive(reference?.id);if(!id)throw Error('Identificação da coleção inválida.');
+    const data=await api(`collection/${id}`,signal,{},refresh);if(positive(data?.id)!==id)throw Error('O TMDB retornou uma coleção diferente da solicitada.');
+    return {id,name:str(data.name) || reference.name || 'Coleção',items:collectionItems(data)};
+  }
+  return {configured,detail,person,collection,clear:()=>cache.clear(),validate:signal=>api('configuration',signal)};
 }

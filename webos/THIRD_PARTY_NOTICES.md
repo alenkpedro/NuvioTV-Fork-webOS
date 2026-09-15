@@ -73,3 +73,10 @@ from the selected Android fork. The original SVG Repo attribution is retained.
 TMDB and YouTube names/logos remain the property of their respective owners.
 This product uses the TMDB API but is not endorsed or certified by TMDB.
 No private Android build credentials or YouTube resolver service are included.
+
+## Ratings artwork (0.11)
+
+Files in `assets/ratings/` are unmodified copies of the selected fork's
+`res/raw/mdblist_{trakt,tmdb,letterboxd,mal,tomatoes}.svg`, `imdb_logo_2016.svg`,
+and `res/drawable/mdblist_{audience,metacritic}.png`. Provider logos remain the
+property of their owners. The MDBList integration reads aggregate ratings only.

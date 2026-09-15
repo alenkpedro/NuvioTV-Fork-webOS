@@ -22,14 +22,14 @@ export function supports(addon, name, type, id) {
     return d.name === name && (!d.types?.length || d.types.includes(type)) && (!d.idPrefixes?.length || d.idPrefixes.some(p => id.startsWith(p)));
   });
 }
-export async function getJSON(url, { signal, timeout = 15000 } = {}) {
+export async function getJSON(url, { signal, timeout = 15000, method = 'GET', body } = {}) {
   const controller = new AbortController();
   const abort = () => controller.abort();
   if (signal?.aborted) controller.abort();
   signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(abort, timeout);
   try {
-    const r = await fetch(url, { signal: controller.signal, credentials: 'omit' });
+    const r = await fetch(url, { signal: controller.signal, credentials: 'omit', method, ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) });
     if (!r.ok) throw Error(`O servidor respondeu HTTP ${r.status}.`);
     const max = 6 * 1024 * 1024;
     if (Number(r.headers.get('content-length')) > max) throw Error('Resposta muito grande para carregar na TV.');

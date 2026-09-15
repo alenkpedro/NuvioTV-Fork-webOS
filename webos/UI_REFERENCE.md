@@ -140,3 +140,12 @@ separadores mudam ao receber foco. Ícone de trailer e logo TMDB vêm dos SVGs
 originais. Trailers abrem externamente no YouTube/navegador, com QR alternativo;
 o overlay de reprodução Android ainda não foi portado. Testes da ponte nativa
 são simulados e não substituem validação na LG.
+
+## Entrega 0.11 — coleções e avaliações
+
+[COLLECTIONS_RATINGS.md](COLLECTIONS_RATINGS.md) registra os contratos TMDB/MDBList,
+origem dos ícones e diferenças restantes. Coleções: cards 260×146, gap 12,
+margens 48, ordem de lançamento e 30 itens por página. Avaliações: logos 24,
+gaps 14/6 na faixa reservada do hero; consultas de leitura com três fontes em
+paralelo. As chaves são locais à TV e independentes do login Nuvio. Testes usam
+fixtures, sem validação física na LG ou chave real do usuário.

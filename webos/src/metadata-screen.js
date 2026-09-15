@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import {people,trailers,readMetadataSettings,saveMetadataSettings,youtubeId} from './core/metadata.js';
+import {installRatings,collectionSection} from './ratings-screen.js';
 const roles={Creator:'Criação',Director:'Direção',Writer:'Roteiro',Acting:'Atuação',Directing:'Direção',Writing:'Roteiro'};
 export function launchTrailer(ytId,{signal,Bridge=globalThis.PalmServiceBridge,timeout=8000,browser=false}={}) {
   if(!youtubeId(ytId))return Promise.reject(Error('Trailer inválido.'));
@@ -27,6 +28,7 @@ export function detailExtras(ctx,meta,addon) {
   const {main,el,button,card,poster,navigate,signal,route,metadata}=ctx;
   const section=el('section',{class:'detail-extras'}),tabs=el('div',{class:'detail-tabs',role:'tablist','aria-label':'Mais sobre o título'}),panel=el('div',{class:'detail-extra-panel',role:'tabpanel','aria-label':'Conteúdo do título'}),source=el('p',{class:'metadata-source muted'});
   section.append(tabs,panel,source);main.append(section);
+  const scoreRow=installRatings(ctx,meta),collection=collectionSection(ctx);
   section.addEventListener('focusin',()=>{main.scrollTop=Math.max(0,section.offsetTop-24);},{signal});
   let members=people(meta),videos=trailers(meta),recommendations=[],loading=metadata.configured(),error='';
   route.extraTab ||= members.length?'cast':videos.length?'trailers':'related';
@@ -62,7 +64,7 @@ export function detailExtras(ctx,meta,addon) {
     if(!metadata.configured() || running)return;running=true;loading=true;error='';draw(true);
     try {
       const data=await metadata.detail(meta,signal);if(signal.aborted)return;
-      if(data){members=people({castMembers:[...people(data.meta),...people(meta)]});videos=trailers({trailers:[...trailers(meta),...trailers(data.meta)]});recommendations=data.recommendations;}
+      if(data){members=people({castMembers:[...people(data.meta),...people(meta)]});videos=trailers({trailers:[...trailers(meta),...trailers(data.meta)]});recommendations=data.recommendations;scoreRow.update(data.meta,data.rating);draw(true);await collection.load(data.collection);}
     }catch(e){if(!signal.aborted)error=e.message;}
     finally{running=false;loading=false;if(!signal.aborted)draw(true);}
   }

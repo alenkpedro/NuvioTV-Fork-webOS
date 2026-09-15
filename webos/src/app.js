@@ -13,6 +13,8 @@ import { initializeOutbox, flushOutbox, syncSummary as outboundSummary, resolveO
 import { discoverScreen, searchScreen, catalogManager } from './discovery-screen.js';
 import { homeCatalogEntries } from './core/discovery.js';
 import {createMetadataClient,readMetadataSettings} from './core/metadata.js';
+import {createRatingsClient,readRatingsSettings} from './core/ratings.js';
+import {ratingsSettingsScreen} from './ratings-screen.js';
 import {detailExtras,personScreen,metadataSettingsScreen} from './metadata-screen.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
@@ -26,6 +28,7 @@ const state = readState(localStorage);
 state.settings.layout = readLayout(state.settings.layout);
 const layout = state.settings.layout;
 const account = createAccountClient({ storage: localStorage });
+const ratings=createRatingsClient({settings:()=>readRatingsSettings(localStorage)});
 const metadata=createMetadataClient({settings:()=>readMetadataSettings(localStorage)});
 initializeProfiles(state);
 let profileAccess = null;
@@ -216,7 +219,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
@@ -482,7 +485,7 @@ function textDialog(title, body) {
   const close = button('Fechar', () => { dialog.remove(); previous?.focus({ preventScroll: true }); }, { 'data-dismiss': true });
   dialog.firstChild.append(close); root.append(dialog); close.focus();
 }
-function metadataContext(main,signal) {return {main,signal,el,button,card,poster,route,root,navigate,textDialog,metadata,qr:url=>{
+function metadataContext(main,signal) {return {main,signal,el,button,card,poster,route,root,navigate,textDialog,metadata,ratings,qr:url=>{
   const matrix=qrcode(0,'M');matrix.addData(url);matrix.make();const count=matrix.getModuleCount(),canvas=el('canvas',{width:(count+8)*4,height:(count+8)*4,'aria-label':'QR code do trailer',role:'img'}),ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#000';for(let r=0;r<count;r++)for(let c=0;c<count;c++)if(matrix.isDark(r,c))ctx.fillRect((c+4)*4,(r+4)*4,4,4);return canvas;
 }};}
 async function showDetail(main, signal) {
@@ -791,7 +794,7 @@ function showSettings(main, signal) {
         content.append(row('Addons', 'Gerenciar add-ons instalados', () => navigate({ name: 'addons' })),row('Catálogos do início','Ordem e visibilidade neste perfil',()=>navigate({name:'catalog-manager'})),row('Descobrir','Explorar por tipo, catálogo e gênero',()=>navigate({name:'discover'})));
         break;
       case 'integration':
-        content.append(row('TMDB',metadata.configured()?'Biografias, filmografia e recomendações':'Configurar metadados complementares',()=>navigate({name:'metadata-settings'})));
+        content.append(row('TMDB',metadata.configured()?'Biografias, filmografia e coleções':'Configurar metadados complementares',()=>navigate({name:'metadata-settings'})),row('Avaliações MDBList',ratings.configured()?'Escolher fontes de avaliações':'Configurar notas de IMDb, Letterboxd e outras fontes',()=>navigate({name:'ratings-settings'})));
         break;
       case 'playback':
         content.append(row('Preferências de fontes', 'Filtros, grupos de release e reprodução automática', () => navigate({ name: 'preferences' })));
@@ -830,7 +833,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.10.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.11.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));

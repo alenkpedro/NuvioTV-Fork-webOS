@@ -85,8 +85,8 @@ Retorno positivo confirma abertura solicitada, não reprodução efetiva do víd
 - A biografia usa diálogo rolável para leitura completa; o Android expande o hero.
   TMDB complementa as seções nesta etapa; não substitui automaticamente toda a
   sinopse, logo e arte principal dos títulos já fornecidos por addons.
-- Recomendações exibem a primeira página (até 20). Coleções, créditos adicionais,
-  avaliações MDBList, preferência de fonte Trakt e tradução avançada de nomes
+- Recomendações exibem a primeira página (até 20). Créditos adicionais,
+  preferência de fonte Trakt e tradução avançada de nomes
   ainda não estão portados. Datas de pessoa são exibidas como recebidas (ISO).
 - Playback de trailers **externo**, via YouTube/navegador, difere do overlay interno
   Android. Resolver privado de trailers, NewPipe/Media3, áudio/vídeo separados e
@@ -99,5 +99,6 @@ Validação automatizada cobre mapeamento, identidade, cache, cancelamento,
 configuração, navegação, retorno com foco, geometria, falhas e abertura nativa
 simulada. Nenhuma conta, chave ou histórico pessoal é usado nos testes.
 
-Próxima etapa sugerida: coleções/franquias e avaliações adicionais na tela de
-detalhes, mantendo a rastreabilidade e os limites de plataforma.
+Coleções/franquias e avaliações foram acrescentadas na 0.11; veja
+[COLLECTIONS_RATINGS.md](COLLECTIONS_RATINGS.md). Próxima etapa sugerida: seleção
+automática de idiomas e próximo episódio no player.

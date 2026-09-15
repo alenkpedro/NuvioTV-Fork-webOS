@@ -35,6 +35,13 @@ Dados de elenco/trailers enviados pelo addon funcionam sem a chave. Trailers
 abrem no YouTube ou navegador da TV; a reprodução interna ainda está pendente.
 Veja [METADATA.md](METADATA.md) para uso, fonte e limites.
 
+## Coleções e avaliações (0.11)
+
+Coleções/franquias usam a integração TMDB. Avaliações adicionais exigem sua chave
+MDBList em Ajustes → Integrações → Avaliações MDBList, com escolha de fontes.
+As consultas são somente de leitura; listas e rastreamento continuam pendentes.
+Veja [COLLECTIONS_RATINGS.md](COLLECTIONS_RATINGS.md).
+
 ## O que funciona nesta prévia
 
 - Login Nuvio por QR code, sessão persistente, renovação e logout somente desta TV.
@@ -99,11 +106,11 @@ separadamente. Não há alegação de otimização máxima medida no hardware.
 ## Ainda não portado
 
 Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliação
-de dispositivo; Direct Debrid e torrents; plugins Android; MDBList/Trakt/Simkl;
+de dispositivo; Direct Debrid e torrents; plugins Android; listas e rastreamento MDBList/Trakt/Simkl;
 deltas/realtime, gestão de listas externas e edição de perfis; decodificadores FFmpeg/MPV; conversão Dolby Vision;
 passthrough lossless/MAT; legendas ASS/PGS/ZIP, preferências automáticas de idioma,
 ajuste de frequência e Up Next. A versão 0.5.0 acrescenta fontes, áudio e legendas; a
-0.4.0 ampliou as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers, coleções e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
+0.4.0 ampliou as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers internos, coleções pessoais e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
 para medidas, origem e limitações; ainda não há comparação pixel a pixel com
 uma captura da mesma configuração executada no Android.
 
@@ -132,7 +139,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.10.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.11.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

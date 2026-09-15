@@ -30,6 +30,8 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
 
 | 0.10 | Elenco enriquecido, pessoa/filmografia, recomendações TMDB e trailers externos | Pendente; chave TMDB e ponte nativa testadas com simulação |
 
+| 0.11 | Coleções/franquias TMDB e avaliações MDBList com escolha de fontes | Pendente; contratos e navegação testados com simulação |
+
 ## Sequência proposta
 
 1. **Aparência e navegação — primeira entrega 0.4.** Menu clássico/moderno, menu
@@ -37,7 +39,7 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    informações dos catálogos, estilos de Continuar Assistindo. Detalhes com
    sinopse completa, créditos e elenco fornecidos pelo addon; episódios em
    cartões e temporadas com restauração. Permanecem temas/fontes/escala,
-   efeitos de profundidade, expansão temporizada, trailers internos/automáticos, coleções e comparação
+   efeitos de profundidade, expansão temporizada, trailers internos/automáticos, coleções pessoais e comparação
    Android/webOS com os mesmos dados. Preferências de layout ainda são locais.
 2. **Fontes, áudio e legendas — primeira entrega 0.5.** Organização de fontes,
    filtro por addon, atualização e retorno com foco. Painéis de áudio/faixas
@@ -63,8 +65,11 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    de Descobrir permanecem pendentes. **Metadados entregues na 0.10:** elenco dos
    addons, pessoa/filmografia e recomendações TMDB mediante chave própria;
    trailers externos no YouTube/navegador. Ver [METADATA.md](METADATA.md).
-   **Próxima etapa sugerida:** coleções/franquias e avaliações adicionais.
-   MDBList, recomendações Trakt e trailers internos/automáticos continuam pendentes.
+   **Coleções e notas entregues na 0.11:** franquias TMDB e avaliações MDBList
+   somente de leitura, com chaves próprias e seleção de fontes. Ver
+   [COLLECTIONS_RATINGS.md](COLLECTIONS_RATINGS.md). Coleções pessoais, notas por
+   episódio, recomendações Trakt e trailers internos/automáticos ficam pendentes.
+   **Próxima etapa sugerida:** seleção automática de idiomas e próximo episódio no player.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

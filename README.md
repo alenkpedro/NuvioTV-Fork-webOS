@@ -15,26 +15,28 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.10.0
+## Estado: prévia 0.11.0
 
-A 0.10.0 amplia **elenco, pessoas, recomendações e trailers** a partir dos
-contratos do fork. Fotos e personagens de `app_extras` são aproveitados;
-selecionar uma pessoa abre sua biografia e filmografia. As abas de detalhes
-mudam ao receber foco e preservam o cartão ao voltar.
+A 0.11.0 acrescenta **coleções/franquias TMDB** em ordem de lançamento e
+**avaliações adicionais via MDBList** na tela de detalhes. Cartões e ícones seguem
+a referência Android, com paginação e consultas limitadas para a LG.
 
-**Biografia, filmografia e recomendações exigem uma chave TMDB em Ajustes →
-Integrações → TMDB.** Essa chave não acompanha o código público do Android nem
-é fornecida pelo login Nuvio. Elenco e trailers enviados pelo addon continuam
-funcionando sem ela. Trailers abrem no YouTube/navegador da TV, com QR code como
-alternativa; reprodução interna e automática ainda estão pendentes.
-[Uso, referências e diferenças](webos/METADATA.md).
+Coleções usam a chave TMDB de **Ajustes → Integrações → TMDB**. As fontes adicionais
+de avaliações exigem sua chave em **Ajustes → Integrações → Avaliações MDBList**,
+onde também é possível escolher quais consultar. Sem MDBList, continuam as notas
+do addon e TMDB. Nenhuma chave acompanha o aplicativo ou vem do login Nuvio.
+[Uso, contratos e limites](webos/COLLECTIONS_RATINGS.md).
+
+Elenco, biografias/filmografia e trailers da 0.10 continuam disponíveis.
+Trailers abrem externamente no YouTube/navegador da TV.
+[Metadados e trailers](webos/METADATA.md).
 
 Descobrir, busca e organização de catálogos da 0.9 permanecem disponíveis.
 [Descoberta e busca](webos/DISCOVERY.md).
 
 Login, perfis/PIN, biblioteca, histórico e envio de progresso/assistidos/favoritos
 nativos Nuvio da 0.8 continuam disponíveis. [Sincronização](webos/SYNC.md).
-Trakt, Simkl e MDBList externos permanecem pendentes.
+Rastreamento e listas externos de Trakt, Simkl e MDBList permanecem pendentes.
 
 O **login Nuvio por QR code** e a importação dos addons do **perfil selecionado** continuam disponíveis. O usuário confirmou o login na LG com a 0.3.0; não é necessário sair da conta para atualizar.
 
@@ -51,7 +53,7 @@ Validação: testes de regras, conta e navegação com dados sintéticos; instal
 
 ## Próxima etapa
 
-**Coleções/franquias e avaliações adicionais** na tela de detalhes, conforme as fontes e contratos do fork. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Player:** seleção automática de idiomas de áudio/legendas e próximo episódio, conforme os recursos do fork e os limites da plataforma LG. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 
