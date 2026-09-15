@@ -178,3 +178,16 @@ Botões, condições e preferências derivados de SkipIntroButton/VisibilityRule
 StyleRail com família Netflix Sans fixa; preset anterior é o padrão restaurável.
 Miniaturas mantêm geometria de SeekThumbnailPane, com cache limitado do vídeo
 principal; worker Android antecipado não portado. Ver [PLAYER_EXTRAS.md](PLAYER_EXTRAS.md).
+
+## Entrega 0.20 — ajustes alinhados ao fork
+
+`SettingsScreen.kt` e `SettingsDesignSystem.kt` substituíram a lista anterior por
+rail de categorias e painel de grupos, com títulos e subtítulos das strings pt-BR.
+`ThemeColors.kt`, `SupporterThemeColors.kt` e `PrimitiveTokens.kt` fornecem as doze
+paletas de `AppTheme`; `ThemeDataStore.kt` e `SettingsUiStyle.kt` definem AMOLED,
+superfícies em preto puro e os estilos Padrão, Minimalista e Barra Superior.
+`LayoutSettingsScreen.kt`, `PlaybackSettingsSections.kt`, `NetworkSettingsScreen.kt`
+e `AboutScreen.kt` guiam os grupos e a redação de cada categoria. O editor de
+legendas do player passou a ser acessível também em Ajustes. Linhas sem
+equivalente webOS permanecem visíveis, marcadas como pendentes.
+Ver [SETTINGS_PARITY.md](SETTINGS_PARITY.md).

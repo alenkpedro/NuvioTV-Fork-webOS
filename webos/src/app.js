@@ -6,8 +6,13 @@ import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
 import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
 import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode } from './core/presentation.js';
+import { readSubtitleStyle } from './core/subtitle-style.js';
+import appinfo from '../public/appinfo.json';
 import { nextSource, readPlayback } from './core/playback.js';
 import { playbackSettingsScreen } from './playback-settings.js';
+import { settingsScreen } from './settings-screen.js';
+import { readAppearance, applyAppearance } from './core/appearance.js';
+import { subtitleStyleEditor } from './subtitle-style-editor.js';
 import { installNextEpisode } from './next-episode.js';
 import { installAspect } from './core/aspect.js';
 import { installEpisodePanel } from './player-episodes.js';
@@ -38,7 +43,10 @@ import './style.css';
 const root = document.querySelector('#app');
 const state = readState(localStorage);
 state.settings.layout = readLayout(state.settings.layout);
+state.settings.appearance = readAppearance(state.settings.appearance);
 const layout = state.settings.layout;
+const appearance = () => applyAppearance(root, state.settings.appearance);
+const appVersion = `webOS ${appinfo.version}`;
 const account = createAccountClient({ storage: localStorage });
 const ratings=createRatingsClient({settings:()=>readRatingsSettings(localStorage)});
 const metadata=createMetadataClient({settings:()=>readMetadataSettings(localStorage)});
@@ -191,6 +199,7 @@ function applyLayout() {
     'landscape-posters': layout.landscapePosters, 'full-backdrop': layout.fullBackdrop, 'hide-poster-labels': !layout.posterLabels })) root.classList.toggle(name, enabled);
   const g = homeGeometry(layout);
   for (const [key, value] of Object.entries(g)) root.style.setProperty(`--${key}`, `${value}px`);
+  appearance();
   syncSidebarPill();
 }
 function syncSidebarPill() {
@@ -232,7 +241,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
@@ -757,116 +766,34 @@ function showAccountLogin(main, signal) {
     } catch (error) { if (!signal.aborted) expire(error.message); }
   })();
 }
-function showSettings(main, signal) {
-  const content = el('div', { class: 'settings-content' });
-  const categories = [
-    ['account', 'Conta', 'Conta e status de sincronização', 'profile'],
-    ['profiles', 'Perfis', 'Gerenciar perfis de usuário', 'profile'],
-    ['appearance', 'Aparência', 'Tema e personalização visual', 'appearance'],
-    ['layout', 'Layout', 'Estrutura da página inicial e estilos de pôster', 'library'],
-    ['discovery', 'Conteúdo e Descoberta', 'Add-ons, plugins, catálogos e fontes de descoberta', 'search'],
-    ['integration', 'Integrações', '', 'link'],
-    ['playback', 'Reprodução', 'Player, legendas e reprodução automática', 'play'],
-    ['tracking', 'Rastreamento', '', 'sync'],
-    ['about', 'Sobre', '', 'info'],
-    ['advanced', 'Avançado', 'Desempenho, navegação, cache e diagnósticos', 'settings']
-  ];
-  function select(category) {
-    route.category = category[0];
-    main.querySelectorAll('.settings-tab').forEach(b => b.classList.toggle('selected', b.dataset.category === category[0]));
-    content.replaceChildren(el('h1', {}, category[1]));
-    if (category[2]) content.append(el('p', { class: 'muted settings-subtitle' }, category[2]));
-    const row = (title, subtitle, action) => button([el('span', { class: 'grow' }, el('strong', {}, title), el('small', { class: 'muted' }, subtitle)), icon('next')], action, { class: 'settings-row' });
-    switch (category[0]) {
-      case 'account':
-        if (account.user) {
-          content.append(el('p', { class: 'account-email' }, account.user.email), el('p', { class: 'muted' }, `Conta conectada · ${profileAccess?.name || 'Perfil'}`));
-          const syncStatus = el('p', { class: 'account-sync-status', role: 'status' }, state.accountSync?.at ? syncSummary(state.accountSync) : 'Sincronize para carregar os addons da sua conta.');
-          const sync = row('Sincronizar addons', 'Carregar os addons da conta nesta TV', async () => {
-            if (sync.disabled) return; sync.disabled = true; syncStatus.textContent = 'Carregando addons da conta…';
-            try { const result = await syncAccount(signal); if (!signal.aborted) syncStatus.textContent = syncSummary(result); }
-            catch (error) { if (!signal.aborted) syncStatus.textContent = error.message; }
-            finally { sync.disabled = false; }
-          });
-          const logout = row('Sair da conta', 'Desconectar somente esta TV', () => {
-            const dialog = el('div', { class: 'account-confirm', role: 'dialog', 'aria-label': 'Sair da conta' }, el('h2', {}, 'Sair da conta?'), el('p', {}, 'Os addons importados da conta serão removidos desta TV. Seus outros dispositivos continuam conectados.'));
-            const stay = button('Cancelar', () => { dialog.remove(); logout.focus(); });
-            const leave = button('Sair desta TV', async () => {
-              leave.disabled = true;
-              await signOutProfiles();
-            }, { class: 'primary' });
-            dialog.append(el('div', { class: 'toolbar' }, stay, leave)); main.append(dialog); stay.focus();
-          });
-          content.append(row('Trocar perfil', profileAccess?.name || 'Selecionar perfil', () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); }), syncStatus, sync, row('Sincronização',outboundSummary(state),()=>navigate({name:'sync'})), row('Histórico e assistidos', historySummary(state), () => navigate({name:'history'})), logout);
-        } else content.append(row('Entrar com Nuvio', 'Vincular a TV pelo celular e carregar seus addons', () => navigate({ name: 'account-login' })));
-        break;
-      case 'profiles':
-        content.append(account.user ? row('Selecionar perfil', profileAccess?.name || 'Perfis da conta', () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); }) : row('Entrar com Nuvio', 'Vincular a conta para carregar seus perfis', () => navigate({ name: 'account-login' })));
-        content.append(el('p', { class: 'muted' }, 'Criação, edição de perfis e alteração de PIN ainda devem ser feitas no Nuvio de referência.'));
-        break;
-      case 'discovery':
-        content.append(row('Addons', 'Gerenciar add-ons instalados', () => navigate({ name: 'addons' })),row('Catálogos do início','Ordem e visibilidade neste perfil',()=>navigate({name:'catalog-manager'})),row('Descobrir','Explorar por tipo, catálogo e gênero',()=>navigate({name:'discover'})));
-        break;
-      case 'integration':
-        content.append(row('TMDB',metadata.configured()?'Biografias, filmografia e coleções':'Configurar metadados complementares',()=>navigate({name:'metadata-settings'})),row('Avaliações MDBList',ratings.configured()?'Escolher fontes de avaliações':'Configurar notas de IMDb, Letterboxd e outras fontes',()=>navigate({name:'ratings-settings'})));
-        break;
-      case 'playback':
-        {
-          const toggle=button([el('span',{class:'grow'},el('strong',{},'Tela de pausa'),el('small',{class:'muted'},'Mostrar título, sinopse e elenco após 5 segundos de pausa manual.')),el('span',{class:'switch-track','aria-hidden':true})],()=>{const prefs=readPlayback(state.settings.playback);state.settings.playback={...prefs,pauseOverlay:!prefs.pauseOverlay};persist();toggle.setAttribute('aria-checked',String(!prefs.pauseOverlay));},{class:'settings-row',role:'switch','aria-label':'Tela de pausa','aria-checked':String(readPlayback(state.settings.playback).pauseOverlay)});
-          content.append(toggle);
-        }
-        for(const [key,title,description]of [['skipSegments','Pular abertura e créditos','Mostrar controles nos trechos identificados.'],['seekThumbnails','Miniaturas ao buscar','Prévia dos trechos já reproduzidos em fontes compatíveis.']]){
-          const toggle=button([el('span',{class:'grow'},el('strong',{},title),el('small',{class:'muted'},description)),el('span',{class:'switch-track','aria-hidden':true})],()=>{const prefs=readPlayback(state.settings.playback);state.settings.playback={...prefs,[key]:!prefs[key]};persist();toggle.setAttribute('aria-checked',String(!prefs[key]));},{class:'settings-row',role:'switch','aria-label':title,'aria-checked':String(readPlayback(state.settings.playback)[key])});content.append(toggle);
-        }
-        for(const [type,title]of [['intro','Pular abertura automaticamente'],['recap','Pular recapitulação automaticamente'],['outro','Pular créditos automaticamente']]){
-          const toggle=button([el('span',{class:'grow'},title),el('span',{class:'switch-track','aria-hidden':true})],()=>{const prefs=readPlayback(state.settings.playback),has=prefs.autoSkipTypes.includes(type);state.settings.playback={...prefs,autoSkipTypes:has?prefs.autoSkipTypes.filter(t=>t!==type):[...prefs.autoSkipTypes,type]};persist();toggle.setAttribute('aria-checked',String(!has));},{class:'settings-row',role:'switch','aria-label':title,'aria-checked':String(readPlayback(state.settings.playback).autoSkipTypes.includes(type))});content.append(toggle);
-        }
-        content.append(row('Idiomas e próximo episódio', 'Áudio, legendas e continuidade de séries', () => navigate({name:'playback-settings'})));
-        content.append(row('Preferências de fontes', 'Filtros, grupos de release e reprodução automática', () => navigate({ name: 'preferences' })));
-        break;
-      case 'appearance':
-        content.append(row('Tema', 'Branco', () => toast('Tema Branco do fork.')), row('Fonte', 'Inter', () => toast('Fonte Inter original incluída no aplicativo.')));
-        break;
-      case 'layout':
-        content.append(el('p', { class: 'muted' }, 'Página inicial Modern'));
-        for (const [key, title, description] of [
-          ['modernSidebar', 'Barra lateral moderna', 'Ative a navegação lateral flutuante.'],
-          ['hideSidebar', 'Recolher barra lateral', 'Esconda o menu; exiba-o apenas ao focar.'],
-          ['sidebarBlur', 'Desfoque no menu lateral', 'Ative o efeito de desfoque no menu moderno.'],
-          ['landscapePosters', 'Pôsteres Horizontais', 'Alterne os pôsteres para o formato horizontal.'],
-          ['fullBackdrop', 'Fundo em tela cheia', 'Expanda o fundo do modo Moderno por toda a tela.'],
-          ['posterLabels', 'Títulos nos pôsteres', 'Exiba os títulos abaixo das imagens e grades.'],
-          ['catalogAddonName', 'Nome do addon', 'Exiba o nome do addon ao lado do catálogo.'],
-          ['catalogType', 'Tipo de conteúdo', 'Indique se é Filme ou Série ao lado do subtítulo.'],
-          ['continueWatching', 'Continuar Assistindo', 'Exiba os títulos que você começou a assistir nesta TV.'],
-        ]) {
-          const toggle = button([el('span', { class: 'grow' }, el('strong', {}, title), el('small', { class: 'muted' }, description)), el('span', { class: 'switch-track', 'aria-hidden': true })], () => {
-            layout[key] = !layout[key]; persist(); applyLayout(); toggle.setAttribute('aria-checked', String(layout[key]));
-          }, { class: 'settings-row', role: 'switch', 'aria-label': title, 'aria-checked': String(layout[key]) });
-          content.append(toggle);
-        }
-        {
-          const styles = { card: 'Cartão', poster: 'Pôster', wide: 'Amplo' };
-          const value = el('small', { class: 'muted' }, styles[layout.continueStyle]);
-          content.append(button([el('span', { class: 'grow' }, el('strong', {}, 'Estilo de Continuar Assistindo'), value), icon('next')], () => {
-            const keys = Object.keys(styles); layout.continueStyle = keys[(keys.indexOf(layout.continueStyle) + 1) % keys.length];
-            persist(); applyLayout(); value.textContent = styles[layout.continueStyle];
-          }, { class: 'settings-row' }));
-        }
-        break;
-      case 'advanced':
-        content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
-        break;
-      case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.19.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
-        break;
-      default:
-        content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
-    }
-  }
-  const rail = el('div', { class: 'settings-rail', 'aria-label': 'Categorias de ajustes' }, ...categories.map(c => button([icon(c[3]), el('span', {}, c[1])], () => select(c), { class: 'settings-tab', 'data-category': c[0] })));
-  main.append(el('div', { class: 'settings-workspace' }, rail, content));
-  select(categories.find(c => c[0] === route.category) || categories[0]);
+function settingsContext(main, signal) {
+  return {
+    main, signal, el, button, icon, state, persist, navigate, toast, route, account, layout,
+    applyLayout: () => { applyLayout(); appearance(); },
+    applyAppearance: () => appearance(),
+    signOutProfiles: () => signOutProfiles(),
+    syncAccount: () => syncAccount(signal), syncSummary, outboundSummary, historySummary,
+    metadata, ratings, clearMetadataCache: () => metadataCache.clear(), textDialog,
+    profileName: () => profileAccess?.name || 'Perfil',
+    switchProfile: () => { profileAccess = null; stack = []; navigate({ name: 'profiles', automatic: false }, true); },
+    version: appVersion, base: 'Base: ysosrs123/NuvioTV-Fork · 45e0984'
+  };
+}
+function showSettings(main, signal) { settingsScreen(settingsContext(main, signal)); }
+// The fork keeps subtitle appearance inside Reprodução → Legendas. The editor is the
+// same component the player panel opens, so both paths write a single setting, and it
+// re-renders itself because the player panel used to rebuild it.
+function showSubtitleAppearance(main) {
+  state.settings.subtitleStyle = readSubtitleStyle(state.settings.subtitleStyle);
+  heading(main, '', 'Aparência das legendas', 'Tamanho, cores, contorno e posição salvos nesta TV.');
+  const host = el('div', { class: 'subtitle-appearance' });
+  const draw = () => host.replaceChildren(subtitleStyleEditor({ el, button, value: state.settings.subtitleStyle, change: value => {
+    const control = document.activeElement?.getAttribute('aria-label');
+    state.settings.subtitleStyle = readSubtitleStyle(value); persist(); draw();
+    if (control) host.querySelector(`button[aria-label="${control}"]`)?.focus({ preventScroll: true });
+  } }));
+  draw();
+  main.append(host, el('p', { class: 'muted' }, 'A família Netflix Sans é fixa; o player usa estes valores na hora e o padrão do fork pode ser restaurado no próprio editor.'));
 }
 function showPreferences(main) {
   heading(main, '', 'Reprodução', 'Preferências de fontes e compatibilidade com a LG.');

@@ -4,7 +4,7 @@
  * ModernHomeContent.kt, ModernHomeHero.kt, ModernHomeRows.kt. See UI_REFERENCE.md.
  */
 @font-face{font-family:Inter;src:url('./assets/fonts/inter.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:block}
-:root{font-family:Inter,sans-serif;color:#fff;background:#0d0d0d;font-size:14px;--muted:#b3b3b3;--line:#333;--background:#0d0d0d;--surface:#1a1a1a;--focus:#ffffff24;--accent:#f5f5f5}
+:root{font-family:Inter,sans-serif;color:#fff;background:#0d0d0d;font-size:14px;--muted:#b3b3b3;--line:#333333;--background:#0d0d0d;--background-elevated:#1a1a1a;--background-card:#242424;--surface:#1e1e1e;--surface-variant:#2d2d2d;--panel:#1a1a1a;--field:#222222;--menu:#1e1e1e;--modal:#1a1a1a;--focus:#ffffff24;--focus-ring:#ffffff;--accent:#f5f5f5;--accent-strong:#e0e0e0;--accent-on:#111111;--accent-gradient:linear-gradient(90deg,#f5f5f5)}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}#app{position:absolute;width:960px;height:540px;transform-origin:top left;overflow:hidden;background:var(--background)}button,input,textarea,select{font:inherit;color:inherit}button{border:1px solid #333;border-radius:999px;background:#222;padding:12px 20px;cursor:pointer;text-align:left;font-weight:500;line-height:20px}button:hover{background:#ffffff14}button:focus,input:focus,textarea:focus,select:focus,a:focus{outline:2px solid #fff;outline-offset:2px}button:focus{background:var(--focus)}button:disabled{opacity:.5;cursor:wait}button.primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:600}h1,h2,p{margin:0}h1{font-size:28px;line-height:36px;font-weight:600}h2{font-size:20px;line-height:28px;font-weight:500}p{line-height:20px}small{font-size:12px;line-height:16px;display:block}button strong{display:block;font-weight:500}button p{font-size:12px}.muted{color:var(--muted)}.grow{flex:1;min-width:0}.eyebrow{font-size:12px;line-height:16px;letter-spacing:.5px;color:var(--muted);margin-bottom:12px}.boot{padding:48px}.icon{display:inline-block;width:22px;height:22px;flex-shrink:0;background:currentColor;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain}
 /* The legacy rail uses Material Home; the other three icons are upstream SVGs. */
 .icon-home{-webkit-mask-image:url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Cpath d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/%3E%3C/svg%3E')}
@@ -17,6 +17,88 @@ main{position:relative;height:540px;width:960px;padding:24px 48px;overflow-y:aut
 .screen-settings{padding:24px 32px}.settings-workspace{height:100%;padding:20px;border-radius:28px;border:1px solid #333;background:#1a1a1a;display:flex;gap:16px}.settings-rail{flex:0 0 220px;overflow-y:auto;padding:4px}.settings-tab{width:100%;height:56px;margin-bottom:8px;display:flex;align-items:center;gap:12px;background:transparent;border:0;padding:12px 16px;font-size:14px;line-height:20px}.settings-tab.selected{background:#f5f5f5;color:#111}.settings-tab:focus{background:#ffffff24;color:#fff}.settings-tab span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.settings-content{min-width:0;flex:1;overflow-y:auto;padding:4px}.settings-content h1{font-size:24px;line-height:32px;margin-bottom:8px}.settings-subtitle{margin-bottom:20px;font-size:12px;line-height:16px}.settings-row{width:100%;display:flex;align-items:center;gap:12px;margin-bottom:12px;min-height:64px;padding:12px 20px}.settings-row small{margin-top:4px}.about-brand{width:180px;height:60px;object-fit:contain;margin:24px 0}.settings-content>p{margin-bottom:12px}#toast{position:fixed;z-index:20;bottom:5vh;left:50%;transform:translateX(-50%);max-width:80vw;background:#f5f5f5;color:#111;padding:1.4vh 2.4vh;border-radius:1.6vh;font:500 2.4vh/1.5 Inter,sans-serif}
 .player-screen{position:absolute;inset:0;background:#000}.player-screen video{width:100%;height:100%;object-fit:contain}.player-controls{position:absolute;bottom:0;left:0;right:0;padding:52px 52px 36px;background:linear-gradient(transparent,#000b 45%);transition:opacity .15s}.player-controls.faded{opacity:0;pointer-events:none}.player-controls h1{font-size:20px;line-height:28px}.player-controls progress{width:100%;height:4px;margin:0 0 16px;border:0}.player-controls .toolbar{margin:0;gap:12px}.player-controls button{font-size:12px;padding:10px 12px}.player-time{color:#b3b3b3;font-variant-numeric:tabular-nums;font-size:12px}.player-status{position:absolute;top:24px;left:52px;right:52px;background:#1a1a1aeb;border-radius:12px;padding:16px;font-size:14px}.stats{position:absolute;top:90px;left:52px;background:#111e;color:#fff;padding:16px;line-height:1.8;font-size:12px;max-width:80%;white-space:pre-wrap;overflow-wrap:anywhere}progress::-webkit-progress-bar{background:#ffffff40}progress::-webkit-progress-value{background:#fff}[hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+/* SettingsScreen.kt / SettingsDesignSystem.kt: rail 220, item 56, gap 16, workspace radius 28,
+ * padding 20; group cards follow SettingsUiStyle (Padrão / Minimalista / Barra Superior).
+ * Colors resolve from the active AppTheme palette; White keeps the previous literals. */
+.settings-group{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;background:var(--background-card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.settings-group:last-child{margin-bottom:0}
+.settings-group-title{font-size:16px;line-height:24px;font-weight:500;color:#fff}
+.settings-group-subtitle{font-size:12px;line-height:16px}
+.settings-group-rows{display:flex;flex-direction:column;gap:10px}
+.settings-group-rows .settings-row{min-height:62px;margin-bottom:0;padding:10px 18px;background:transparent;border:1px solid transparent;border-radius:12px}
+.settings-group-rows .settings-row:hover{background:var(--focus)}
+.settings-group-rows .settings-row:focus{background:var(--focus);outline:2px solid var(--focus-ring);outline-offset:-2px}
+.settings-group .settings-note{font-size:12px;line-height:16px;padding:0 2px}
+.settings-header{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.settings-header h1{font-size:24px;line-height:32px;font-weight:600;margin:0}
+.settings-header-bar{display:none;width:28px;height:3px;border-radius:999px;background:var(--accent-strong)}
+.settings-header p{font-size:12px;line-height:16px}
+.settings-value{flex-shrink:0;max-width:220px;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.settings-pending{flex-shrink:0;font-size:12px;line-height:16px;padding:4px 10px;border-radius:999px;background:var(--surface-variant);color:var(--muted)}
+.settings-status-card{display:flex;flex-direction:column;gap:4px;padding:14px 18px;border-radius:16px;background:var(--surface-variant);border:1px solid var(--line)}
+.settings-status-card strong{font-size:16px;line-height:24px}
+.settings-note{font-size:12px;line-height:16px;padding:0 2px}
+.settings-signout{align-self:flex-start;margin-top:4px}
+.settings-choices{display:flex;flex-wrap:wrap;gap:10px}
+.settings-choice{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:var(--surface-variant);border:1px solid transparent;font-size:14px}
+.settings-choice .chip-dot{width:12px;height:12px;border-radius:50%;background:transparent;border:1px solid var(--muted);flex-shrink:0}
+.settings-choice[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-on)}
+.settings-choice[aria-pressed=true] .chip-dot{background:var(--accent-on);border-color:var(--accent-on)}
+.settings-choice:focus{outline:2px solid var(--focus-ring);outline-offset:-2px;background:var(--focus)}
+.settings-choice[aria-pressed=true]:focus{background:var(--accent);color:var(--accent-on)}
+.theme-swatches{display:flex;flex-wrap:wrap;gap:10px}
+.theme-chip{display:flex;align-items:center;gap:8px;padding:8px 14px 8px 8px;border-radius:999px;background:var(--surface-variant);border:1px solid transparent;font-size:14px}
+.theme-swatch{width:26px;height:26px;border-radius:50%;flex-shrink:0;background:var(--swatch);background-image:var(--swatch-gradient)}
+.theme-chip.selected-choice{border-color:var(--accent)}
+.theme-chip:focus{outline:2px solid var(--focus-ring);outline-offset:-2px;background:var(--focus)}
+.settings-about{display:flex;flex-direction:column;align-items:center;gap:4px;margin-bottom:16px;text-align:center}
+.settings-about .about-brand{margin:0 0 8px}
+/* ThemeTokens: existing surfaces resolve from the palette instead of literals. White values
+ * equal the literals this file used before, so an untouched TV is unchanged. */
+button{background:var(--field);border-color:var(--line)}
+button.primary{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+button:focus,input:focus,textarea:focus,select:focus,a:focus{outline-color:var(--focus-ring)}
+input,textarea,select{background:var(--field);border-color:var(--line)}
+.selected{background:var(--accent);color:var(--accent-on)}
+.addon-row{background:var(--background-elevated);border-color:var(--line)}
+.episode{background:var(--background-elevated)}
+.source{background:var(--background-elevated);border-color:var(--line)}
+.source-quality{background:var(--line)}
+.settings-workspace{background:var(--background-elevated);border-color:var(--line)}
+.settings-tab.selected{background:var(--accent);color:var(--accent-on)}
+.settings-tab:focus{background:var(--focus)}
+.settings-row[aria-checked=true] .switch-track{background:var(--accent)}
+.settings-row[aria-checked=true] .switch-track:after{background:var(--accent-on)}
+.switch-track{background:var(--surface-variant)}
+.card:focus .art{outline-color:var(--focus-ring)}
+progress::-webkit-progress-value{background:var(--accent)}
+.chips{border-color:var(--line)}
+.theme-chip[aria-pressed=true]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.theme-chip[aria-pressed=true] .theme-name{color:var(--accent-on)}
+/* SettingsUiStyle ZEN: flat groups, uppercase labels, the accent bar under the title. */
+.settings-style-zen .settings-workspace{border-color:transparent;background:transparent}
+.settings-style-zen .settings-group{background:transparent;border:0;border-radius:0;padding:6px 0 10px}
+.settings-style-zen .settings-group-title{font-size:12px;line-height:16px;letter-spacing:1.4px;font-weight:600;text-transform:uppercase;color:var(--muted);padding-left:14px}
+.settings-style-zen .settings-group-subtitle{padding-left:14px}
+.settings-style-zen .settings-header{padding-left:12px}
+.settings-style-zen .settings-header-bar{display:block}
+.settings-style-zen .settings-group-rows .settings-row{border-radius:12px;background:var(--surface)}
+/* SettingsUiStyle HORIZON: categories move to a top tab bar over a grouped surface. */
+.settings-style-horizon .settings-workspace{flex-direction:column;gap:12px}
+.settings-style-horizon .settings-rail{flex:0 0 auto;display:flex;gap:8px;padding:0 0 4px;overflow-x:auto}
+.settings-style-horizon .settings-tab{width:auto;height:48px;margin:0;padding:10px 18px;border-radius:999px;background:transparent}
+.settings-style-horizon .settings-tab.selected{background:var(--accent);color:var(--accent-on)}
+.settings-style-horizon .settings-header{padding-left:4px}
+.settings-style-horizon .settings-header h1{font-size:28px;line-height:36px}
+.settings-style-horizon .settings-group{background:transparent;border:0;border-radius:0;padding:0}
+.settings-style-horizon .settings-group-title{font-size:12px;line-height:16px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);padding-left:20px}
+.settings-style-horizon .settings-group-subtitle{padding-left:20px}
+.settings-style-horizon .settings-group-rows{background:var(--background-card);border-radius:16px;padding:12px;gap:6px}
+.settings-style-horizon .settings-group-rows .settings-row{border-radius:10px}
+/* appearance.amoled / appearance.amoledSurfaces only swap tokens, so no rule sets pure black. */
+.amoled .settings-workspace,.amoled .addon-row,.amoled .episode,.amoled .source{background:var(--background-elevated)}
+.screen-subtitle-appearance{padding:24px 48px;height:100%;overflow-y:auto;display:block}
+.screen-subtitle-appearance .subtitle-style-editor{max-width:640px}
 
 /* StreamScreen.kt: 40/60 split, centered identity, 48dp outer edge. */
 .screen-streams{padding:0;display:flex;overflow:hidden}.stream-backdrop{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.3}.stream-fade{position:absolute;inset:0;background:linear-gradient(to right,#0d0d0d80,#0d0d0de6)}.stream-identity{position:relative;width:40%;padding:0 24px 0 48px;display:flex;align-items:center}.stream-identity>div{width:80%;text-align:center}.stream-title{font-size:36px;line-height:44px;font-weight:400;margin-bottom:8px}.stream-title .title-logo{width:100%;max-width:100%;height:120px;object-position:center}.stream-identity p{font-size:16px;line-height:24px;margin-top:4px}.stream-pane{position:relative;width:60%;padding:48px 48px 48px 0;display:flex;flex-direction:column;overflow:hidden}.stream-chips{display:flex;align-items:center;gap:8px;overflow-x:auto;flex-shrink:0;min-height:32px;margin-bottom:16px;padding:3px}.stream-chips button{padding:6px 14px;white-space:nowrap;font-size:12px;line-height:16px}.stream-pane .streams{overflow-y:auto;background:#2228;border-radius:24px;padding:16px;flex:1;min-height:0}.stream-pane .source{padding:16px;border-radius:16px;flex-shrink:0}.stream-actions{display:flex;gap:8px;margin-top:12px;flex-shrink:0}.stream-actions button{font-size:11px;line-height:16px;padding:6px 12px}.stream-pane>.notice{overflow-y:auto}.screen-addons{padding:28px 36px}.screen-addons h1{font-size:24px;line-height:32px}.addon-install{background:#222;border-radius:16px;padding:20px;margin-bottom:20px}.addon-install h2{font-size:16px;line-height:24px;font-weight:700}.addon-install .inline-form{margin:12px 0 0}.addon-install input{background:#1a1a1a}.search-form input{border-radius:16px}

@@ -27,12 +27,33 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Ajustes alinhados ao fork (0.20)
+
+A tela de Ajustes passou a ser o workspace do fork: rail com as dez categorias
+(Conta, Perfis, Aparência, Layout, Conteúdo e Descoberta, Integrações,
+Reprodução, Rastreamento, Sobre, Avançado), cabeçalho com título e subtítulo e
+cartões de grupo com linhas de alternância e de ação.
+
+Em **Aparência**, o tema de cores tem as doze paletas do fork; **Branco** é o
+padrão e mantém o visual anterior. Modo AMOLED, superfícies em preto puro e o
+estilo das configurações (Padrão, Minimalista, Barra Superior) também estão
+disponíveis. Fonte e idioma continuam fixos, com a linha explicando o motivo.
+
+Em **Reprodução**, os grupos seguem o fork. **Aparência das legendas** abre o
+mesmo editor do player dentro de Ajustes. Linhas que dependem do Android
+(guia parental, libass, cache de links, recomendações pós-reprodução, plugins,
+Direct Debrid, buffer e AFR) aparecem marcadas como **Pendente**, com o motivo.
+
+[Estrutura, diferenças e limites](SETTINGS_PARITY.md). Reiniciar o app não é
+necessário: as preferências entram no mesmo arquivo local de sempre.
+
 ## Trechos, miniaturas e aparência (0.19)
 
 **Legendas → Ajustes de legenda** permite tamanho, negrito, cor, opacidade,
 contorno e posição, com Netflix Sans fixa. Restaurar aparência preserva o atraso.
+O mesmo editor está em **Ajustes → Reprodução → Aparência das legendas**.
 
-Em **Ajustes → Reprodução**, pular abertura/créditos vem habilitado; as três
+Em **Ajustes → Reprodução**, "Pular introduções" vem habilitado; as três
 opções de pular automaticamente começam desligadas. Os botões dependem dos
 intervalos disponíveis no IntroDB. O IPK inclui o serviço local necessário à TV.
 
@@ -42,7 +63,7 @@ fontes SDR até 1080p, sem segundo player. Extração antecipada permanece pende
 
 ## Tela de pausa e logos (0.18)
 
-Ative **Ajustes → Reprodução → Tela de pausa**. Depois de pausar manualmente,
+Ative **Ajustes → Reprodução → Informações ao pausar**. Depois de pausar manualmente,
 aguarde 5 segundos sem interação. A tela mostra logo/título, ano, episódio,
 sinopse, elenco e relógio. OK no painel retoma; baixo acessa o elenco, OK abre
 foto/personagem e Voltar retorna. Voltar no painel fecha a tela sem reproduzir.

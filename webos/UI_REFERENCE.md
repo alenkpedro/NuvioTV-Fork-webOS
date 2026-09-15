@@ -31,7 +31,8 @@ Caminhos relativos a `app/src/main/java/com/nuvio/tv/`.
 | Controle | Esquerda na primeira capa abre menu; Direita restaura foco; hero após 450 ms | `MainActivity.kt`, `ModernHomeModels.kt` |
 | Detalhes | Hero 540, margem 48, alinhado embaixo, título 36/44 ou logo, ações antes da sinopse | `ui/screens/detail/HeroSection.kt` |
 | Fontes | Colunas 40/60, identidade centrada, margem 48, filtros acima da lista | `ui/screens/stream/StreamScreen.kt` |
-| Ajustes | Workspace com raio 28, padding 20, rail 220, itens 56, gap 16 | `ui/screens/settings/SettingsScreen.kt`, `SettingsDesignSystem.kt` |
+| Ajustes | Workspace com raio 28, padding 20, rail 220, itens 56, gap 16, grupo com raio 16 e padding 14; dez categorias, subtítulos e cartões conforme `SettingsUiStyle` | `ui/screens/settings/SettingsScreen.kt`, `SettingsDesignSystem.kt` |
+| Temas | Doze paletas de `AppTheme` (fundo, cartões, foco e destaque); Branco é o padrão e reproduz os literais anteriores | `ui/theme/ThemeColors.kt`, `SupporterThemeColors.kt`, `PrimitiveTokens.kt`, `ThemeDataStore.kt` |
 | Addons | Margens 36/28, bloco de instalação com padding 20 | `ui/screens/addon/AddonManagerScreen.kt` |
 
 Fonte, wordmark e SVGs de busca/biblioteca/ajustes são copiados **sem alteração**;

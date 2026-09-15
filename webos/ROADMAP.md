@@ -84,7 +84,8 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    **Player 0.17:** painéis compactos de áudio/legendas, lista única, sincronização por fala externa e ajuste fino de 100 ms. Ver [PLAYER_TRACKS_SYNC.md](PLAYER_TRACKS_SYNC.md).
    **Player 0.18:** tela de pausa com elenco e logos localizadas implementadas. Ver [PLAYER_PAUSE_ARTWORK.md](PLAYER_PAUSE_ARTWORK.md).
    **Player 0.19:** IntroDB por serviço local, miniaturas de quadros já vistos e StyleRail com fonte fixa. Extração antecipada ainda pendente. Ver [PLAYER_EXTRAS.md](PLAYER_EXTRAS.md).
-   **Próxima prioridade:** validação na LG, guia parental e pós-reprodução. A tabela de paridade mantém os recursos pendentes.
+   **Ajustes 0.20:** tela reconstruída como o workspace do fork, com as dez categorias, temas de cores, AMOLED, estilo das configurações e o editor de legendas dentro de Ajustes. Ver [SETTINGS_PARITY.md](SETTINGS_PARITY.md).
+   **Próxima prioridade:** validação na LG, guia parental e pós-reprodução (Up Next). A tabela de paridade mantém os recursos pendentes.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

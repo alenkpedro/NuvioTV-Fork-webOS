@@ -33,7 +33,7 @@ desabilitado; não se declara controle de aparência de ASS/PGS ou legenda grava
 
 ## Pular trechos
 
-**Ajustes → Reprodução → Pular abertura e créditos** vem habilitado. Os controles
+**Ajustes → Reprodução → Pular introduções** vem habilitado. Os controles
 aparecem para episódios com IMDb, temporada, episódio e intervalos válidos.
 Inclui abertura, recapitulação e créditos. Não estima trechos sem dados. Pular
 busca o fim do intervalo no mesmo vídeo, preservando pausa. Voltar dispensa o
