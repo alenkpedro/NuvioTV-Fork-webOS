@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.10.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.11.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.10.0",
+        "version": "0.11.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Elenco dos addons, perfis de pessoas, filmografia, recomendações TMDB e trailers no YouTube.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.10.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.10.0",
+        "appDescription": "Coleções de filmes do TMDB e avaliações de múltiplas fontes via MDBList, com seleção de provedores.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.11.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.11.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.10.0/org.nuviofork.webos_0.10.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.11.0/org.nuviofork.webos_0.11.0_all.ipk",
         "ipkHash": {
-          "sha256": "b7e93b71e2146fd330334e8d4de92202fd014db42677997ac8ca26b7561fe457"
+          "sha256": "98fb3a9a80204128647b3e27972147c91b7b0a090f61c144da9caddcdcabfeb5"
         },
-        "ipkSize": 683074
+        "ipkSize": 703062
       },
       "pool": "main",
-      "shortDescription": "Detalhes, filmografia e trailers para LG webOS 24."
+      "shortDescription": "Coleções e avaliações para LG webOS 24."
     }
   ]
 }
