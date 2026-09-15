@@ -72,6 +72,14 @@ export async function mapLimit(items, fn, signal, limit = 3) {
   }));
   return result.filter(Boolean);
 }
+// Same bound, no collecting: the caller consumes each result as soon as it is ready, which is
+// how the Home shows the first rail while the other catalogs are still on the wire.
+export async function eachLimit(items, fn, limit = 3) {
+  let cursor = 0;
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (cursor < items.length) { const index = cursor++; await fn(items[index], index); }
+  }));
+}
 export function extraOptions(catalog) {
   const extras=new Map();
   for(const e of Array.isArray(catalog.extra)?catalog.extra:[])if(e && typeof e.name==='string')extras.set(e.name.toLowerCase(),{...e,name:e.name.toLowerCase(),options:Array.isArray(e.options)?e.options:[]});

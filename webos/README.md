@@ -27,6 +27,19 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Abertura, carregamento e resposta (0.28)
+
+O app abre com a **tela do fork**: wordmark do Nuvio e anel de carregamento sobre fundo
+preto, até a primeira tela entrar. Escolher um título mostra o **esqueleto da própria
+tela** (fundo, logo, sinopse, botões, episódios) em vez de uma tela vazia, e a lista de
+fontes mostra linhas de esqueleto enquanto os add-ons respondem. A **Home entra por
+partes**: cada fileira tem o seu esqueleto e é substituída assim que aquele catálogo
+responde, sem esperar o mais lento, e as coleções deixaram de buscar títulos na Home (a
+capa vem da conta; os títulos entram ao abrir a pasta). O brilho e as formas são os do
+fork (`PlaceholderShimmer.kt`, `Skeletons.kt`). Catálogos e metadados ficam em memória por
+5 minutos, então voltar à Home não pergunta tudo de novo.
+[Comportamento, limites e testes](LOADING.md).
+
 ## Coleções (0.24)
 
 **Ajustes → Conteúdo e Descoberta → Coleções** cria fileiras extras na Home. Uma
@@ -134,7 +147,9 @@ opções de pular automaticamente começam desligadas. Os botões dependem dos
 intervalos disponíveis no IntroDB. O IPK inclui o serviço local necessário à TV.
 
 Ative **Miniaturas ao buscar** para prévias dos trechos já reproduzidos em
-fontes até 4K, sem segundo player. Extração antecipada permanece pendente.
+fontes até 4K, sem segundo player. A captura espera o quadro apresentado e não guarda
+quadro preto; se a TV não entregar o quadro, o port avisa em vez de deixar um bloco
+preto na linha do tempo. Extração antecipada permanece pendente.
 [Comportamento, diferenças e limites](PLAYER_EXTRAS.md).
 
 ## Tela de pausa e logos (0.18)

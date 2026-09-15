@@ -9,7 +9,7 @@ const movie = { id: 'tt1000001', type: 'movie', name: 'Filme da fileira', releas
 const accountCollections = [{
   id: 'acc1', title: 'Sagas do Xperience', pinToTop: true, viewMode: 'TABBED_GRID', showAllTab: true,
   folders: [{
-    id: 'f1', title: 'Star Wars', tileShape: 'POSTER', hideTitle: false,
+    id: 'f1', title: 'Star Wars', tileShape: 'POSTER', hideTitle: false, coverImageUrl: 'https://images.fixture/cover.jpg', coverEmoji: '🚀',
     sources: [{ provider: 'addon', addonId: 'local.test', type: 'movie', catalogId: 'test' }, { provider: 'trakt', traktListId: 5, title: 'Lista do Trakt' }]
   }]
 }];
@@ -48,6 +48,7 @@ async function mockAccount(page) {
     if (route.request().url().endsWith('manifest.json')) return json({ id: 'local.test', name: 'Addon da conta', resources: ['catalog', 'meta'], types: ['movie'], idPrefixes: ['tt'], catalogs: [{ id: 'test', type: 'movie', name: 'Coleção de teste' }] });
     return json({ metas: [movie] });
   });
+  await page.route('https://images.fixture/**', route => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') }));
   await page.route('https://api.tiffara.com/**', route => route.fulfill({ json: { parentsGuide: [] } }));
   return requests;
 }
@@ -61,12 +62,19 @@ test('collections built in another client arrive with the account and travel bac
   const requests = await mockAccount(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Entrar com Nuvio', exact: true }).click();
-  // Entering the account pulls collections along with the addons: the row appears on the Home.
-  const rail = page.locator('.home-rows .catalog-section', { hasText: 'Star Wars' });
+  // Entering the account pulls collections along with the addons: the row appears on the Home,
+  // with the cover the other client set for the folder.
+  const rail = page.locator('.home-rows .collection-section', { hasText: 'Star Wars' });
   await expect(rail).toBeVisible({ timeout: 15000 });
-  // One folder per collection: the rail carries the folder title, like the fork.
-  await expect(rail.locator('h2')).toHaveText('Star Wars');
-  await expect(rail.locator('.card').first()).toContainText('Filme da fileira');
+  // One row per collection with a cover card per folder, like the fork: the titles inside the
+  // folder stay behind the card.
+  await expect(rail.locator('h2')).toHaveText('Sagas do Xperience');
+  await expect(rail.locator('.collection-card')).toContainText('Star Wars');
+  await expect(rail.locator('.collection-card')).not.toContainText('Filme da fileira');
+  const cover = rail.locator('.collection-card .collection-cover img');
+  await expect(cover).toHaveAttribute('src', 'https://images.fixture/cover.jpg');
+  await expect.poll(() => cover.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  await page.screenshot({ path: 'test-results/collections-cover-home-1920.png' });
   await expect.poll(() => requests.filter(r => r.path.endsWith('sync_pull_collections')).length).toBeGreaterThan(0);
   // The management screen shows the imported collection and its sync state.
   await page.keyboard.press('Escape');
@@ -85,6 +93,10 @@ test('collections built in another client arrive with the account and travel bac
   expect(pushed.body.p_collections_json[0].pinToTop).toBe(false);
   expect(pushed.body.p_collections_json[0].folders[0].sources[0]).toMatchObject({ provider: 'addon', addonId: 'local.test', type: 'movie', catalogId: 'test' });
   expect(pushed.body.p_collections_json[0].folders[0].sources[1].provider).toBe('trakt');
+  // The cover and the appearance settings the other client chose travel back untouched, so an
+  // edit here never wipes the folder art in the app.
+  expect(pushed.body.p_collections_json[0].folders[0]).toMatchObject({ tileShape: 'POSTER', hideTitle: false, coverImageUrl: 'https://images.fixture/cover.jpg', coverEmoji: '🚀' });
+  expect(pushed.body.p_collections_json[0]).toMatchObject({ viewMode: 'TABBED_GRID', showAllTab: true, focusGlowEnabled: true });
   expect(errors).toEqual([]);
 });
 

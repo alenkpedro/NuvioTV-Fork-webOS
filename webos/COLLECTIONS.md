@@ -23,9 +23,19 @@ Descoberta → Coleções**, por perfil.
     a ordem original).
 - **Na Home**, as coleções vêm antes dos catálogos dos add-ons — são conteúdo curado pelo
   usuário — e uma coleção fixada no topo lidera as demais, que seguem a ordem do editor.
-  Cada fileira tem **Ver todos**, que abre a pasta com as fontes em abas, como o
-  `FolderDetailScreen`. A ordem dos add-ons em **Ajustes → Conteúdo e Descoberta → Addons**
+  Cada coleção é uma fileira com o nome no cabeçalho e **um cartão de capa por pasta**
+  (`CollectionRowSection` + `CollectionFolderCardMedia`): a capa que você escolheu no outro
+  cliente (imagem, ou o emoji quando não há imagem), com o nome da pasta embaixo e o formato
+  do cartão vindo do `tileShape` (quadrado, pôster ou paisagem). O cartão abre a pasta, com
+  as fontes em abas (`FolderDetailScreen`) — os títulos ficam atrás do cartão, como no fork.
+  Uma pasta sem fonte utilizável continua listada, marcada com o motivo.
+  A ordem dos add-ons em **Ajustes → Conteúdo e Descoberta → Addons**
   decide a ordem dos catálogos deles na Home.
+- **As capas e a aparência vêm da conta e voltam para ela**: `coverImageUrl`, `coverEmoji`,
+  `focusGifUrl`, `tileShape`, `hideTitle`, `viewMode`, `showAllTab` e `focusGlowEnabled` são
+  lidos do blob do perfil e escritos de volta iguais (a 0.27 reescrevia esses campos com
+  valores fixos, o que apagava a capa escolhida no aplicativo). Só URLs `http(s)` e formatos
+  conhecidos entram; o resto é descartado.
 - Um título vindo do TMDB abre a tela de detalhes normalmente e a busca de
   fontes usa os add-ons instalados: a coleção não exige add-on próprio.
 

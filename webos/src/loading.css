@@ -1,0 +1,35 @@
+/* PlaceholderShimmer.kt: a 1600 ms sweep across a 60%-wide band, white 7% → 13% → 7%. Every
+   block sits where the real content lands, so nothing moves when the data arrives. */
+.skeleton{position:relative;overflow:hidden;background:#242424;border-radius:10px}
+.skeleton:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,#ffffff12 40%,#ffffff21 50%,#ffffff12 60%,transparent 100%);background-size:60% 100%;background-repeat:no-repeat;animation:skeleton-sweep 1.6s linear infinite}
+@keyframes skeleton-sweep{from{background-position:-60% 0}to{background-position:160% 0}}
+@media(prefers-reduced-motion:reduce){.skeleton:after{animation:none;background-position:50% 0}}
+.skeleton-section{pointer-events:none}.skeleton-title{color:#8a8a8a}
+.skeleton-heading{width:220px;height:24px;margin-bottom:16px}
+.skeleton-rail{display:flex;gap:12px;padding:0 52px}
+.skeleton-card{flex:none;width:var(--poster-width,150px)}
+.skeleton-card .skeleton-art{width:100%;height:225px;border-radius:12px}
+.skeleton-card .skeleton-line{height:14px;margin-top:10px}
+.skeleton-rail-landscape .skeleton-card{width:210px}.skeleton-rail-landscape .skeleton-art{height:118px}
+.detail-skeleton{position:absolute;inset:0;pointer-events:none}
+.skeleton-hero{position:relative;height:540px}
+.skeleton-backdrop{position:absolute;inset:0;border-radius:0;background:#1c1c1c}
+.skeleton-detail-body{position:absolute;left:48px;bottom:120px;width:520px;display:flex;flex-direction:column;gap:12px}
+.skeleton-logo{width:300px;height:72px}
+.skeleton-meta-line{width:140px;height:16px}
+.skeleton-line{height:14px;border-radius:8px}.skeleton-line.wide{width:100%}.skeleton-line.short{width:45%}
+.skeleton-actions{display:flex;gap:12px;margin-top:8px}
+.skeleton-button{width:150px;height:48px;border-radius:999px}.skeleton-button.round{width:48px;border-radius:50%}
+.skeleton-episodes{display:flex;flex-direction:column;gap:12px;margin:24px 48px 0}
+.skeleton-episode{display:flex;align-items:center;gap:16px;padding:16px;border-radius:16px;background:#1a1a1a}
+.skeleton-thumb{width:130px;height:90px;flex:none;border-radius:10px}.skeleton-logo-small{width:36px;height:36px;flex:none;border-radius:8px}
+.skeleton-streams{display:flex;flex-direction:column;gap:12px}
+.skeleton-source{display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:16px;background:#1a1a1a}
+/* Splash: the port has no Lottie, so the fork's loading indicator becomes a monochrome ring on
+   the same black background, with the app wordmark the sign-in screens already use. */
+.boot-splash{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:#0d0d0d}
+.boot-wordmark{width:260px;height:76px;object-fit:contain;object-position:center}
+.boot-spinner{width:44px;height:44px;border-radius:50%;border:2px solid #ffffff26;border-top-color:#fff;animation:boot-spin 1s linear infinite}
+.boot-splash p{color:#b3b3b3;font-size:14px;letter-spacing:.4px}
+@keyframes boot-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.boot-spinner{animation:none}}

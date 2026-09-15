@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {addFolder,addSource,collectionLimits,collectionRails,collectionSourceCount,createCollection,createFolder,describeSource,moveFolder,moveIn,readCatalogSource,readCollectionSource,readCollections,readTmdbSource,removeCollection,removeFolder,removeSource,renameCollection,renameFolder,sameSource,sourceKindLabel,tmdbSorts,tmdbSourceTypes,togglePin} from '../src/core/collections.js';
+import {addFolder,addSource,collectionLimits,collectionRails,collectionSections,collectionSourceCount,createCollection,createFolder,describeSource,folderCover,moveFolder,moveIn,parseAccountCollections,readCatalogSource,readCollectionSource,readCollections,readTmdbSource,removeCollection,removeFolder,removeSource,renameCollection,renameFolder,sameSource,sourceKindLabel,tmdbSorts,tmdbSourceTypes,toAccountCollections,togglePin} from '../src/core/collections.js';
 const catalog={kind:'catalog',addonUrl:'https://fixture.example/manifest.json',addonName:'Catálogo de teste',type:'movie',catalogId:'test',catalogName:'Coleção de teste'};
 const tmdb={kind:'tmdb',sourceType:'collection',tmdbId:10,mediaType:'movie',sortBy:'popularity.desc'};
 test('collections and folders are validated like the fork store',()=>{
@@ -55,3 +55,34 @@ test('editing keeps the fork limits, the ordering and the pin',()=>{
   list=removeFolder(list,a.id,folderId);assert.equal(list.find(c=>c.id===a.id).folders.length,0);
   list=removeCollection(list,a.id);assert.equal(list.length,1);
 });
+test('folder covers from another client survive the trip and travel back',()=>{
+  const account=[{id:'c1',title:'Sagas',pinToTop:true,viewMode:'GRID',showAllTab:false,focusGlowEnabled:false,folders:[{id:'f1',title:'Star Wars',coverImageUrl:'https://x/c.jpg',coverEmoji:'🚀',tileShape:'LANDSCAPE',hideTitle:true,focusGifUrl:'https://x/a.gif',sources:[{provider:'addon',addonId:'a',type:'movie',catalogId:'c'}]}]}];
+  const parsed=parseAccountCollections(account);
+  assert.equal(parsed[0].viewMode,'GRID');assert.equal(parsed[0].showAllTab,false);assert.equal(parsed[0].focusGlowEnabled,false);
+  assert.deepEqual(folderCover(parsed[0].folders[0]),{image:'https://x/c.jpg',emoji:'🚀',hideTitle:true,shape:'LANDSCAPE'});
+  // Anything the TV cannot use is dropped instead of stored: no scheme tricks, no unknown shape.
+  const rough=parseAccountCollections([{id:'c2',title:'X',folders:[{id:'f2',title:'Y',coverImageUrl:'javascript:alert(1)',coverEmoji:'x'.repeat(20),tileShape:'HACK'}]}]);
+  assert.equal(rough[0].folders[0].coverImageUrl,'');assert.equal([...rough[0].folders[0].coverEmoji].length,8);assert.equal(rough[0].folders[0].tileShape,'SQUARE');
+  // The blob sent back keeps the cover and the appearance settings of the other client.
+  const back=toAccountCollections(parsed);
+  assert.equal(back[0].folders[0].coverImageUrl,'https://x/c.jpg');assert.equal(back[0].folders[0].tileShape,'LANDSCAPE');
+  assert.equal(back[0].viewMode,'GRID');assert.equal(back[0].showAllTab,false);assert.equal(back[0].folders[0].focusGifUrl,'https://x/a.gif');
+  // Local storage keeps them too, so a TV restart never loses the folder art.
+  assert.equal(readCollections(parsed)[0].folders[0].coverEmoji,'🚀');assert.equal(readCollections(parsed)[0].folders[0].hideTitle,true);
+});
+test('a collection row carries its folders with covers and keeps the reason for the ones it cannot open',()=>{
+  const collection={...createCollection('Sagas'),pinToTop:true};
+  let list=addFolder([collection],collection.id,createFolder('Clássicos'));
+  const sections=collectionSections(list,{addonInstalled:()=>false});
+  assert.equal(sections.length,1);assert.equal(sections[0].title,'Sagas');assert.equal(sections[0].pinned,true);assert.equal(sections[0].key,`collection-${collection.id}`);
+  assert.equal(sections[0].folders[0].title,'Clássicos');
+  assert.deepEqual(sections[0].folders[0].cover,{image:'',emoji:'',hideTitle:false,shape:'SQUARE'});
+  // A folder without a usable source keeps the same reason the rail used to report.
+  assert.equal(sections[0].folders[0].unavailable,'unsupported');
+  assert.match(sections[0].folders[0].unavailableMessage,/ainda não tem fontes/);
+  // A folder with a source the TV can open is playable and carries it.
+  const ready=addSource(list,collection.id,list[0].folders[0].id,{kind:'catalog',addonId:'a',type:'movie',catalogId:'c'});
+  assert.equal(collectionSections(ready)[0].folders[0].sources.length,1);
+  assert.equal(collectionSections(ready,{addonInstalled:()=>false})[0].folders[0].unavailable,'addon');
+});
+

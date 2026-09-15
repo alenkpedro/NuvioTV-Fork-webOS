@@ -8,17 +8,18 @@ async function drawer(page, title) {
   if (!await page.locator('#app').evaluate(node => node.classList.contains('drawer-open'))) await page.keyboard.press('Escape');
   await page.getByRole('button', { name: title, exact: true }).click();
 }
-async function boot(page, { playback = {}, progress = {} } = {}) {
+async function boot(page, { playback = {}, progress = {}, cast = false } = {}) {
   await page.addInitScript(({ addon, playback, progress }) => {
     if (!localStorage.getItem('nuvio-fork.webos.v1')) localStorage.setItem('nuvio-fork.webos.v1', JSON.stringify({ guestMode: true, addons: [addon], progress, library: {}, watched: {}, settings: { playback } }));
     localStorage.setItem('nuvio-fork.webos.metadata.v1', JSON.stringify({ key: '', language: 'pt-BR' }));
   }, { addon, playback, progress });
+  const meta = cast ? { ...movie, castMembers: Array.from({ length: 8 }, (_, i) => ({ name: `Pessoa ${i + 1}`, character: `Personagem ${i + 1}`, photo: origin + '/poster.svg' })) } : movie;
   await page.route(origin + '/**', route => {
     const p = decodeURIComponent(new URL(route.request().url()).pathname);
     const json = body => route.fulfill({ json: body, headers: { 'Access-Control-Allow-Origin': '*' } });
     if (p.endsWith('manifest.json')) return json(addon.manifest);
     if (p.includes('/catalog/')) return json({ metas: [movie] });
-    if (p.includes('/meta/')) return json({ meta: movie });
+    if (p.includes('/meta/')) return json({ meta });
     if (p.includes('/stream/')) return json({ streams: [{ name: 'Movie 1080p WEB-DL-FLUX', url: origin + '/clip.mp4' }] });
     if (p.endsWith('.mp4')) return route.fulfill({ contentType: 'video/mp4', body: fs.readFileSync('tests/fixtures/clip.mp4'), headers: { 'Access-Control-Allow-Origin': '*', 'Accept-Ranges': 'bytes' } });
     if (p.endsWith('.svg')) return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>' });
@@ -26,6 +27,25 @@ async function boot(page, { playback = {}, progress = {} } = {}) {
   });
   await page.route('https://api.tiffara.com/**', route => route.fulfill({ json: { parentsGuide: [] } }));
 }
+async function openPlayer(page) {
+  await page.goto('/');
+  await drawer(page, 'Início');
+  await page.getByRole('button', { name: /Horizonte de teste/ }).click();
+  await page.getByRole('button', { name: 'Assistir', exact: true }).click();
+  await page.getByRole('button', { name: 'Reproduzir melhor fonte' }).click();
+  await expect.poll(() => page.locator('video').evaluate(v => v.readyState)).toBeGreaterThanOrEqual(2);
+}
+// The ring must not be sliced by the scroll container that holds the row, which is what the
+// remote user sees as "the first one is cut".
+const ringOutside = (node, container) => {
+  const box = node.getBoundingClientRect();
+  const style = getComputedStyle(node);
+  const width = parseFloat(style.outlineWidth) || 0;
+  const offset = parseFloat(style.outlineOffset) || 0;
+  const spill = Math.max(0, offset + width);
+  const limit = container.getBoundingClientRect();
+  return { left: +(box.left - spill - limit.left).toFixed(1), right: +(limit.right - (box.right + spill)).toFixed(1), offset: style.outlineOffset };
+};
 async function settings(page, category) {
   await page.goto('/');
   await drawer(page, 'Ajustes');
@@ -123,5 +143,53 @@ test('the TMDB key field accepts the full key and refuses a short one', async ({
   await page.getByRole('button', { name: 'Salvar e verificar' }).click();
   await expect(page.locator('.settings-field p[role=status]')).toContainText('TMDB conectado');
   expect(calls).toContain('/3/configuration');
+});
+
+test('the first cast name and the first text colour keep their focus ring inside the row', async ({ page }) => {
+  await boot(page, { playback: { pauseOverlay: true }, cast: true });
+  await openPlayer(page);
+  // The cast rail scrolls horizontally: a ring drawn outside the chip is sliced by the rail.
+  await page.clock.install();
+  await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 19, bubbles: true })));
+  await page.clock.runFor(5200);
+  await page.keyboard.press('ArrowDown');
+  const chip = page.locator('.pause-cast-chip').first();
+  await expect(chip).toBeFocused();
+  const cast = await chip.evaluate(ringOutside, await page.locator('.pause-cast-rail').elementHandle());
+  expect(cast.offset).toBe('-2px');
+  expect(cast.left).toBeGreaterThanOrEqual(0);
+  expect(cast.right).toBeGreaterThanOrEqual(0);
+  await page.keyboard.press('Escape');
+  // Same shape in the subtitle editor: the first swatch sits on the scroll container edge.
+  await page.getByRole('button', { name: 'Legendas', exact: true }).click();
+  await page.getByRole('button', { name: 'Ajustes de legenda', exact: true }).click();
+  const swatch = page.getByRole('button', { name: 'Cor do texto: Branco', exact: true });
+  await swatch.focus();
+  const colors = await swatch.evaluate(ringOutside, await swatch.locator('..').elementHandle());
+  expect(colors.offset).toBe('-2px');
+  expect(colors.left).toBeGreaterThanOrEqual(0);
+  expect(colors.right).toBeGreaterThanOrEqual(0);
+});
+test('the playback info sits in the lower corner and leaves the toolbar in place', async ({ page }) => {
+  await boot(page);
+  await openPlayer(page);
+  const toolbar = () => page.locator('.player-icon-actions').evaluate(node => node.getBoundingClientRect().left);
+  const closed = await toolbar();
+  await page.getByRole('button', { name: 'Informações de reprodução', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  const stats = page.locator('.stats');
+  await expect(stats).toBeVisible();
+  // The row above the timeline used to slide left by 388 px when the panel opened.
+  expect(await toolbar()).toBe(closed);
+  await expect(page.locator('.player-icon-actions')).toHaveCSS('transform', 'none');
+  await expect(page.locator('.player-identity')).toHaveCSS('visibility', 'visible');
+  const box = await page.evaluate(() => {
+    const panel = document.querySelector('.stats').getBoundingClientRect(), controls = document.querySelector('.player-controls').getBoundingClientRect();
+    return { left: panel.left / 2, right: panel.right / 2, bottom: panel.bottom / 2, controlsTop: controls.top / 2 };
+  });
+  // A corner block: near the left edge, well under half the canvas, above the controls.
+  expect(box.left).toBeCloseTo(52, 0);
+  expect(box.right).toBeLessThanOrEqual(500);
+  expect(box.bottom).toBeLessThanOrEqual(box.controlsTop);
 });
 

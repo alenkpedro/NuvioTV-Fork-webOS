@@ -92,6 +92,34 @@ Ainda falta o equivalente à extração antecipada de quadros de partes não vis
 a persistência Android e a confirmação de captura pelo compositor real da LG.
 Não se declara a função integralmente idêntica ao fork.
 
+### Quando a TV não entrega o quadro
+
+Em muitas TVs o vídeo é composto por uma camada de hardware que o canvas não
+consegue ler; nesse caso o `drawImage` devolve preto, e a 0.27 mostrava esse preto
+como um bloco sobre a linha do tempo. A captura passou a esperar o quadro
+efetivamente apresentado (`requestVideoFrameCallback`, com `timeupdate` como
+alternativa) e, quando o canvas é legível, o port confere nove amostras do quadro
+antes de guardá-lo: um quadro preto **não entra no cache nem aparece**. Depois de
+duas respostas pretas seguidas ele avisa uma vez — "a TV não entrega o quadro para
+a prévia desta fonte" — e desliga as miniaturas naquela reprodução, em vez de
+deixar um bloco preto na tela. Se a origem for de outro domínio sem autorização de
+leitura (canvas contaminado), o port não consegue distinguir preto de cena escura
+e mantém o quadro como antes.
+
+A prévia também deixou de exigir um quadro a até 10 s: ela mostra o quadro mais
+próximo que já foi capturado, então andar um passo além do último trecho visto não
+apaga mais o painel.
+
+## Diagnóstico de reprodução no canto
+
+**Informações de reprodução** (o botão de informação entre os controles do player)
+mostra resolução decodificada, buffer à frente, frames perdidos, fonte e
+transporte. O painel fica no **canto inferior esquerdo**, acima dos controles, como
+o `StreamInfoOverlay` do fork (`BottomStart`), com no máximo 440×200 dp; antes ele
+ocupava a lateral direita e escondia o título. Com o painel aberto, a linha de
+ícones acima da linha do tempo **não muda de lugar** — o deslocamento de 388 px foi
+removido.
+
 ## Validação
 
 Testes com mídia sintética: estilos externos/internos, fonte invariável,

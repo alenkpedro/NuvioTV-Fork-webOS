@@ -68,23 +68,47 @@ export const readCollectionSource = value => {
   if (value?.kind === 'tmdb') return readTmdbSource(value);
   return readCatalogSource(value) || readForeignSource(value);
 };
+// CollectionFolder.kt: the cover the Android app lets the user pick (image or emoji) plus the
+// row/folder appearance. They are kept here so a folder covered in another client reaches the
+// TV with the cover, and travels back when the collections are sent to the account again.
+const posterShapes = ['POSTER', 'LANDSCAPE', 'SQUARE'];
+const viewModes = ['TABBED_GRID', 'GRID', 'LIST'];
+const urlField = (value, limit = 1000) => { const raw = typeof value === 'string' ? value.trim() : ''; return /^https?:\/\//i.test(raw) ? raw.slice(0, limit) : ''; };
+const emojiField = value => typeof value === 'string' ? [...value.trim()].slice(0, 8).join('') : '';
+function readFolderCovers(value) {
+  const covers = {
+    coverImageUrl: urlField(value.coverImageUrl), coverEmoji: emojiField(value.coverEmoji),
+    tileShape: posterShapes.includes(value.tileShape) ? value.tileShape : 'SQUARE',
+    hideTitle: value.hideTitle === true, focusGifEnabled: value.focusGifEnabled !== false
+  };
+  for (const [key, field] of [['focusGifUrl', 'focusGifUrl'], ['heroBackdropUrl', 'heroBackdropUrl'], ['titleLogoUrl', 'titleLogoUrl']]) {
+    const url = urlField(value[field]); if (url) covers[key] = url;
+  }
+  return covers;
+}
+export const folderCover = folder => ({ image: urlField(folder?.coverImageUrl), emoji: emojiField(folder?.coverEmoji), hideTitle: folder?.hideTitle === true, shape: posterShapes.includes(folder?.tileShape) ? folder.tileShape : 'SQUARE' });
+const readCollectionStyle = value => ({
+  focusGlowEnabled: value.focusGlowEnabled !== false,
+  viewMode: viewModes.includes(value.viewMode) ? value.viewMode : 'TABBED_GRID',
+  showAllTab: value.showAllTab !== false
+});
 function readFolder(value) {
   if (!value || typeof value !== 'object') return null;
   const title = text(value.title) || 'Sem título';
   const sources = (Array.isArray(value.sources) ? value.sources : []).map(readCollectionSource).filter(Boolean).slice(0, collectionLimits.sources);
-  return { id: text(value.id, 40) || newId(), title, sources };
+  return { id: text(value.id, 40) || newId(), title, ...readFolderCovers(value), sources };
 }
 function readCollection(value) {
   if (!value || typeof value !== 'object') return null;
   const title = text(value.title) || 'Coleção sem título';
   const folders = (Array.isArray(value.folders) ? value.folders : []).map(readFolder).filter(Boolean).slice(0, collectionLimits.folders);
-  return { id: text(value.id, 40) || newId(), title, pinToTop: value.pinToTop === true, folders };
+  return { id: text(value.id, 40) || newId(), title, pinToTop: value.pinToTop === true, ...readCollectionStyle(value), folders };
 }
 export function readCollections(value) {
   return (Array.isArray(value) ? value : []).map(readCollection).filter(Boolean).slice(0, collectionLimits.collections);
 }
-export const createCollection = title => ({ id: newId(), title: text(title) || 'Coleção sem título', pinToTop: false, folders: [] });
-export const createFolder = title => ({ id: newId(), title: text(title) || 'Sem título', sources: [] });
+export const createCollection = title => ({ id: newId(), title: text(title) || 'Coleção sem título', pinToTop: false, ...readCollectionStyle({}), folders: [] });
+export const createFolder = title => ({ id: newId(), title: text(title) || 'Sem título', ...readFolderCovers({}), sources: [] });
 const replace = (list, id, change) => list.map(item => item.id === id ? change(item) : item);
 export const renameCollection = (list, id, title) => replace(list, id, item => ({ ...item, title: text(title) || item.title }));
 export const removeCollection = (list, id) => list.filter(item => item.id !== id);
@@ -113,25 +137,35 @@ export const moveFolder = (list, id, folderId, move) => replace(list, id, item =
 // One rail per folder: a pinned collection comes first, like the fork's pinToTop. A folder
 // whose sources the TV cannot open still produces a rail, marked with the reason, so a
 // collection created elsewhere never disappears from the Home without an explanation.
+function folderRail(collection, folder, addonInstalled) {
+  const usable = folder.sources.filter(source => source.kind === 'tmdb' || (source.kind === 'catalog' && addonInstalled(source)));
+  const key = `collection-${collection.id}-${folder.id}`;
+  const base = { key, collectionId: collection.id, folderId: folder.id, pinned: collection.pinToTop === true, title: folder.title };
+  if (usable.length) return { ...base, sources: usable, cover: folderCover(folder) };
+  const catalog = folder.sources.find(source => source.kind === 'catalog');
+  return {
+    ...base, sources: [], cover: folderCover(folder), unavailable: catalog ? 'addon' : 'unsupported',
+    unavailableMessage: catalog
+      ? `O add-on “${catalog.addonName || catalog.addonId}” desta coleção não está instalado nesta TV.`
+      : folder.sources.length ? 'Esta pasta só tem fontes que a TV não abre (listas do Trakt, por exemplo).' : 'Esta pasta ainda não tem fontes.'
+  };
+}
 export function collectionRails(collections, { addonInstalled = () => true } = {}) {
   const rows = [];
-  const ordered = [...collections].sort((a, b) => Number(b.pinToTop) - Number(a.pinToTop));
-  for (const collection of ordered) {
-    for (const folder of collection.folders) {
-      const usable = folder.sources.filter(source => source.kind === 'tmdb' || (source.kind === 'catalog' && addonInstalled(source)));
-      const title = collection.folders.length > 1 ? `${collection.title} · ${folder.title}` : folder.title;
-      const key = `collection-${collection.id}-${folder.id}`;
-      if (usable.length) { rows.push({ key, collectionId: collection.id, folderId: folder.id, pinned: collection.pinToTop === true, title, sources: usable }); continue; }
-      const catalog = folder.sources.find(source => source.kind === 'catalog');
-      rows.push({
-        key, collectionId: collection.id, folderId: folder.id, pinned: collection.pinToTop === true, title, sources: [], unavailable: catalog ? 'addon' : 'unsupported',
-        unavailableMessage: catalog
-          ? `O add-on “${catalog.addonName || catalog.addonId}” desta coleção não está instalado nesta TV.`
-          : folder.sources.length ? 'Esta pasta só tem fontes que a TV não abre (listas do Trakt, por exemplo).' : 'Esta pasta ainda não tem fontes.'
-      });
-    }
+  for (const collection of [...collections].sort((a, b) => Number(b.pinToTop) - Number(a.pinToTop))) {
+    for (const folder of collection.folders) rows.push(folderRail(collection, folder, addonInstalled));
   }
   return rows;
+}
+// CollectionRowSection.kt: the Home shows one row per collection and one **cover card** per
+// folder — the cover the user picked, with the folder title underneath. The titles inside the
+// folder stay behind the card, exactly like the folder screen on the fork.
+export function collectionSections(collections, { addonInstalled = () => true } = {}) {
+  return [...(collections || [])].sort((a, b) => Number(b.pinToTop) - Number(a.pinToTop)).map(collection => ({
+    key: `collection-${collection.id}`, collectionId: collection.id, title: collection.title,
+    pinned: collection.pinToTop === true, coverEmoji: emojiField(collection.coverEmoji),
+    folders: collection.folders.map(folder => folderRail(collection, folder, addonInstalled))
+  }));
 }
 export const collectionSourceCount = collection => collection.folders.reduce((total, folder) => total + folder.sources.length, 0);
 
@@ -169,9 +203,9 @@ export function parseAccountCollections(json) {
       if (!folder || typeof folder !== 'object') return null;
       const listed = Array.isArray(folder.sources) ? folder.sources : Array.isArray(folder.catalogSources) ? folder.catalogSources.map(entry => ({ provider: 'addon', ...entry })) : [];
       const sources = listed.map(accountSource).filter(Boolean).slice(0, collectionLimits.sources);
-      return { id: text(folder.id, 40) || newId(), title: text(folder.title) || 'Sem título', sources };
+      return { id: text(folder.id, 40) || newId(), title: text(folder.title) || 'Sem título', ...readFolderCovers(folder), sources };
     }).filter(Boolean).slice(0, collectionLimits.folders);
-    return { id: text(row.id, 40) || newId(), title: text(row.title) || 'Coleção sem título', pinToTop: row.pinToTop === true, folders };
+    return { id: text(row.id, 40) || newId(), title: text(row.title) || 'Coleção sem título', pinToTop: row.pinToTop === true, ...readCollectionStyle(row), folders };
   }).filter(Boolean).slice(0, collectionLimits.collections);
 }
 const toAccountSource = source => {
@@ -185,9 +219,9 @@ const toAccountSource = source => {
 export function toAccountCollections(collections) {
   return (Array.isArray(collections) ? collections : []).map(collection => ({
     id: collection.id, title: collection.title, pinToTop: collection.pinToTop === true,
-    focusGlowEnabled: true, viewMode: 'TABBED_GRID', showAllTab: true,
+    ...readCollectionStyle(collection),
     folders: collection.folders.map(folder => ({
-      id: folder.id, title: folder.title, tileShape: 'SQUARE', hideTitle: false,
+      id: folder.id, title: folder.title, ...readFolderCovers(folder),
       sources: folder.sources.map(toAccountSource), catalogSources: []
     }))
   }));

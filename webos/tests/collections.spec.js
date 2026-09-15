@@ -103,12 +103,15 @@ test('a catalog source becomes a Home rail with its own see-all screen', async (
   await expect(page.locator('.collections-head .muted')).toContainText('fixada no topo da Home');
   await expect(page.getByRole('button', { name: 'Desafixar do topo', exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/collections-editor-1920.png' });
-  // The Home shows the folder as a rail, and "Ver todos" opens the folder screen.
+  // The Home shows the fork's collection row: one cover card per folder, and the card opens the
+  // folder screen, where the titles live.
   await home(page);
-  const rail = page.locator('.catalog-section', { hasText: 'Clássicos' });
+  const rail = page.locator('.collection-section', { hasText: 'Sagas' });
   await expect(rail).toBeVisible();
-  await expect(rail.locator('.card').first()).toContainText('Filme do catálogo');
-  await page.getByRole('button', { name: 'Ver todos: Clássicos', exact: true }).click();
+  await expect(rail.locator('.collection-card')).toHaveCount(1);
+  await expect(rail.locator('.collection-card')).toContainText('Clássicos');
+  await expect(rail.locator('.collection-card')).toContainText('Catálogo de teste · Coleção de teste');
+  await rail.locator('.collection-card').click();
   await expect(page.getByRole('heading', { name: 'Clássicos' })).toBeVisible();
   await expect(page.locator('.stream-chips button')).toHaveText(['Catálogo de teste · Coleção de teste']);
   await expect(page.locator('.card').first()).toContainText('Filme do catálogo');
@@ -136,12 +139,18 @@ test('a TMDB source is added through the pickers and reaches the Home without an
   await expect(page.locator('.collection-source')).toContainText('TMDB · Coleção do TMDB · 10');
   expect((await stored(page)).collections[0].folders[0].sources[0]).toMatchObject({ kind: 'tmdb', sourceType: 'collection', tmdbId: 10, mediaType: 'movie' });
   await home(page);
-  const rail = page.locator('.catalog-section', { hasText: 'Saga do TMDB' });
+  const rail = page.locator('.collection-section', { hasText: 'Sagas' });
   await expect(rail).toBeVisible();
-  await expect(rail.locator('.card:not(.more-card)')).toHaveCount(2);
+  // The Home draws the folder cover without asking TMDB: the titles are fetched when the
+  // folder is opened.
+  await expect(rail.locator('.collection-card')).toHaveCount(1);
+  expect(calls.some(call => call.startsWith('/3/collection/10'))).toBe(false);
+  await rail.locator('.collection-card').click();
+  await expect(page.getByRole('heading', { name: 'Saga do TMDB' })).toBeVisible();
+  await expect(page.locator('.card')).toHaveCount(2);
   expect(calls.some(call => call.startsWith('/3/collection/10'))).toBe(true);
   // A TMDB-only card opens the detail screen, which then searches the installed add-ons.
-  await rail.locator('.card').first().click();
+  await page.locator('.card').first().click();
   await expect(page.getByRole('heading', { name: 'Saga Um' })).toBeVisible();
   await page.getByRole('button', { name: 'Assistir', exact: true }).click();
   await expect(page.locator('.source')).toHaveCount(1);
@@ -154,14 +163,14 @@ test('pinning a collection moves its rail to the top of the Home', async ({ page
   ];
   await boot(page, { collections });
   await home(page);
-  // The user-curated collections lead the Home and the pinned one leads them; the add-on
-  // catalog follows the collections, as on the fork.
-  await expect(page.locator('.catalog-section h2')).toHaveText(['Fileira dois', 'Fileira um', 'Coleção de teste - Filme']);
+  // The user-curated collections lead the Home with the collection name in the header; the
+  // pinned one leads them, and the add-on catalog follows the collections, as on the fork.
+  await expect(page.locator('.catalog-section h2')).toHaveText(['Segunda', 'Primeira', 'Coleção de teste - Filme']);
   // Unpin in the management screen and the Home order follows.
   await openCollections(page);
   await page.getByRole('button', { name: 'Fixar Segunda no topo', exact: true }).click();
   await home(page);
-  await expect(page.locator('.catalog-section h2')).toHaveText(['Fileira um', 'Fileira dois', 'Coleção de teste - Filme']);
+  await expect(page.locator('.catalog-section h2')).toHaveText(['Primeira', 'Segunda', 'Coleção de teste - Filme']);
 });
 
 async function home(page) {

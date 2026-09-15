@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { loadAddon, getJSON, resourceURL, supports, mapLimit } from './core/addons.js';
+import { loadAddon, getJSON, resourceURL, supports, mapLimit, eachLimit } from './core/addons.js';
 import { defaults, enums, rankStreams, filterAndSort, factsFor, playbackIssue, sizeBytes } from './core/ranking.js';
 import { readState, saveState, progressKey, recordProgress } from './core/storage.js';
+import { railSkeleton, detailSkeleton, streamsSkeleton } from './skeletons.js';
 import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
 import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
@@ -42,7 +43,7 @@ import {ratingsSettingsScreen} from './ratings-screen.js';
 import { detailExtras,personScreen,metadataSettingsScreen,launchTrailer} from './metadata-screen.js';
 import { collectionsScreen, collectionEditorScreen } from './collections-screen.js';
 import { createSettingsKit } from './settings-kit.js';
-import { collectionRails, describeSource, isPlayableSource, parseAccountCollections, readCollections, toAccountCollections } from './core/collections.js';
+import { collectionSections, describeSource, isPlayableSource, parseAccountCollections, readCollections, toAccountCollections } from './core/collections.js';
 import { parseCatalogPage } from './core/discovery.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
@@ -50,6 +51,7 @@ import searchIcon from '../public/assets/icons/sidebar_search.svg';
 import libraryIcon from '../public/assets/icons/sidebar_library.svg';
 import settingsIcon from '../public/assets/icons/sidebar_settings.svg';
 import './style.css';
+import './loading.css';
 
 const root = document.querySelector('#app');
 const state = readState(localStorage);
@@ -105,6 +107,11 @@ function icon(name) {
   return box;
 }
 const metadataCache = new Map();
+// The TV re-enters the Home and the catalog screens all the time; a five-minute window over a
+// larger budget keeps those visits instant instead of asking every add-on again. Anything the
+// user edits (installing an add-on, syncing the account) clears the cache outright.
+const metadataCacheTTL = 300000;
+const metadataCacheLimits = { entries: 24, bytes: 6 * 1024 * 1024 };
 const labels = Object.fromEntries(Object.values(enums).flatMap(e => e.entries.map(x => [x.id, x.label])));
 const text = v => String(v ?? '');
 function el(tag, attrs = {}, ...children) {
@@ -324,6 +331,7 @@ function catalogSection(main, title, metas, addon, more, rowKey = title) {
     section.querySelector('.rail').append(all);
   }
   main.append(section);
+  return section;
 }
 function titleArt(meta, className = 'hero-title') {
   const title = el('h1', { class: className }, meta.name || meta.id);
@@ -371,72 +379,82 @@ function updateHomeHero(meta) {
 }
 async function cachedMetaJSON(url, signal) {
   const cached = metadataCache.get(url);
-  if (cached && Date.now() - cached.time < 120000) return cached.value;
+  if (cached && Date.now() - cached.time < metadataCacheTTL) return cached.value;
   const value = await getJSON(url, { signal });
   if (signal.aborted) return value;
   const weight = JSON.stringify(value).length * 2;
-  if (weight <= 2 * 1024 * 1024) {
+  if (weight <= metadataCacheLimits.bytes) {
     metadataCache.delete(url); metadataCache.set(url, { time: Date.now(), value, weight });
-    while (metadataCache.size > 8 || [...metadataCache.values()].reduce((n, entry) => n + entry.weight, 0) > 2 * 1024 * 1024) metadataCache.delete(metadataCache.keys().next().value);
+    while (metadataCache.size > metadataCacheLimits.entries || [...metadataCache.values()].reduce((n, entry) => n + entry.weight, 0) > metadataCacheLimits.bytes) metadataCache.delete(metadataCache.keys().next().value);
   }
   return value;
 }
 async function showHome(main, signal) {
   const recent = layout.continueWatching ? continueHistory(state) : [];
-  // Coleções: cada pasta com fonte utilizável vira uma fileira; as que a TV não abre entram
-  // com o motivo, para nunca desaparecerem da Home sem explicação.
+  // Coleções: o fork mostra uma fileira por coleção e um cartão de capa por pasta — a capa que
+  // o usuário escolheu no app, com o nome da pasta embaixo. As pastas que a TV não abre entram
+  // com o motivo, para nada desaparecer da Home sem explicação.
   const addonOf = source => state.addons.find(addon => (source?.addonId && addon.manifest.id === source.addonId) || (source?.addonUrl && addon.url === source.addonUrl));
-  const rails = collectionRails(state.collections || [], { addonInstalled: source => Boolean(addonOf(source)) });
-  if (!state.addons.length && !recent.length && !rails.length) {
+  const sections = collectionSections(state.collections || [], { addonInstalled: source => Boolean(addonOf(source)) });
+  if (!state.addons.length && !recent.length && !sections.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon instalado. Adicione um para começar.')); return;
   }
   const catalogs = homeCatalogEntries(state).slice(0,6);
-  if (!catalogs.length && !recent.length && !rails.length) {
+  if (!catalogs.length && !recent.length && !sections.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum catálogo visível no início. Confira seus addons e a organização dos catálogos.')); return;
   }
   main.append(el('section', { class: 'home-hero', 'aria-label': 'Título em destaque' }, el('div', { class: 'hero-fade' }), el('div', { class: 'hero-copy' })));
   const rows = el('div', { class: 'home-rows' }); main.append(rows);
+  let first = recent[0]?.meta;
   if (recent.length) {
     rows.append(el('section', { class: 'catalog-section continue-section' }, el('div', { class: 'section-head' }, el('h2', {}, 'Continuar assistindo')), el('div', { class: 'rail' }, recent.map(p => card(p.meta, null, p, 'continue')))));
     updateHomeHero(recent[0].meta);
     enrichRecentCards(recent, main, signal);
   }
-  const loading = el('p', { class: 'loading', role: 'status' }, 'Carregando…'); rows.append(loading);
-  let first = recent[0]?.meta, collectionFirst = null;
-  // Coleções vêm antes dos catálogos dos add-ons: é conteúdo curado pelo usuário, e é aqui
-  // que o port mostra o motivo quando não consegue abrir uma pasta (nada some da Home).
-  if (rails.length) {
-    const collectionResults = await mapLimit(rails.filter(rail => rail.sources.length), async rail => {
-      try { return { rail, data: await fetchCollectionSource(rail.sources[0], signal) }; }
-      catch (error) { return { rail, error }; }
-    }, signal);
-    if (!current(signal)) return;
-    for (const entry of collectionResults) {
-      const value = entry?.value;
-      if (!value) continue;
-      if (value.data?.items.length) {
-        collectionFirst ||= value.data.items[0];
-        catalogSection(rows, value.rail.title, value.data.items, value.data.addon, () => navigate({ name: 'collection-source', collectionId: value.rail.collectionId, folderId: value.rail.folderId }), value.rail.key);
-      } else if (value.error) collectionUnavailable(rows, value.rail.title, value.error.message);
-      else collectionUnavailable(rows, value.rail.title, 'esta fonte não devolveu títulos.');
+  for (const section of sections) {
+    if (section.folders.some(folder => folder.sources.length)) collectionSection(rows, section);
+    else collectionUnavailable(rows, section.title, section.folders.find(folder => folder.unavailableMessage)?.unavailableMessage || 'Esta coleção ainda não tem fontes.');
+  }
+  // Catálogos: cada fileira entra assim que chega, com o esqueleto do fork no lugar enquanto
+  // isso. Antes a Home esperava todas as respostas para desenhar a primeira fileira.
+  const pending = catalogs.map(({ addon, catalog }, index) => {
+    const skeleton = railSkeleton(el, { title: catalogTitle(catalog, layout), cards: 6, landscape: layout.landscapePosters });
+    rows.append(skeleton);
+    return { addon, catalog, skeleton, key: `home-${index}` };
+  });
+  await eachLimit(pending, async ({ addon, catalog, skeleton, key }) => {
+    let metas = [];
+    try {
+      const response = await cachedMetaJSON(resourceURL(addon, 'catalog', catalog.type, catalog.id), signal);
+      if (!current(signal) || !skeleton.isConnected) return;
+      metas = Array.isArray(response.metas) ? response.metas.map(m => ({ ...m, type: m.type || catalog.type })) : [];
+      if (!metas.length) { skeleton.replaceWith(el('p', { class: 'notice' }, `${addon.manifest.name}: esta lista não devolveu títulos.`)); return; }
+    } catch (error) {
+      if (current(signal) && skeleton.isConnected) skeleton.replaceWith(el('p', { class: 'notice' }, `${addon.manifest.name}: ${error.message}`));
+      return;
     }
-    for (const rail of rails.filter(entry => !entry.sources.length)) collectionUnavailable(rows, rail.title, rail.unavailableMessage);
-  }
-  const results = await mapLimit(catalogs, async ({ addon, catalog }) => {
-    const response = await cachedMetaJSON(resourceURL(addon, 'catalog', catalog.type, catalog.id), signal);
-    return { addon, catalog, metas: Array.isArray(response.metas) ? response.metas.map(m => ({ ...m, type: m.type || catalog.type })) : [] };
-  }, signal);
-  if (!current(signal)) return; loading.remove();
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i];
-    if (r.value?.metas.length) {
-      first ||= r.value.metas[0];
-      catalogSection(rows, catalogTitle(r.value.catalog, layout), r.value.metas, r.value.addon, () => navigate({ name: 'catalog', addon: r.value.addon, catalog: r.value.catalog }), `home-${i}`);
-    } else if (r.error) notice(rows, `${catalogs[i].addon.manifest.name}: ${r.error.message}`);
-  }
+    if (!first) { first = metas[0]; updateHomeHero(first); }
+    skeleton.replaceWith(catalogSection(rows, catalogTitle(catalog, layout), metas, addon, () => navigate({ name: 'catalog', addon, catalog }), key));
+  }, 3);
+  if (!current(signal)) return;
   if (first) updateHomeHero(first);
-  else if (collectionFirst) updateHomeHero(collectionFirst);
   else notice(rows, 'Nenhum conteúdo encontrado.');
+}
+// CollectionRowSection.kt + CollectionFolderCardMedia.kt: the Home shows the cover the user
+// picked for each folder (image first, emoji next), with the folder title underneath. A folder
+// the TV cannot open still shows up, marked, instead of vanishing from the Home.
+function collectionSection(rows, section) {
+  const cards = section.folders.map(folder => {
+    const cover = folder.cover || {};
+    const art = cover.image
+      ? el('div', { class: 'art collection-cover' }, el('img', { src: cover.image, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer', onerror: e => e.target.remove() }))
+      : el('div', { class: 'art collection-cover collection-cover-empty' }, cover.emoji ? el('span', { class: 'collection-emoji' }, cover.emoji) : icon('sidebar_library'));
+    const description = folder.sources.length ? describeSource(folder.sources[0]) : folder.unavailableMessage;
+    return button([art, cover.hideTitle ? null : el('strong', {}, folder.title), el('small', { class: 'muted' }, description)],
+      () => navigate({ name: 'collection-source', collectionId: folder.collectionId, folderId: folder.folderId }),
+      { class: `card collection-card${folder.sources.length ? '' : ' unavailable'}${cover.shape === 'LANDSCAPE' ? ' collection-card-wide' : cover.shape === 'POSTER' ? ' collection-card-poster' : ''}`, 'aria-label': `${folder.title}${folder.sources.length ? '' : ` · ${folder.unavailableMessage}`}`, 'data-focus': folder.key });
+  });
+  rows.append(el('section', { class: 'catalog-section collection-section' }, el('div', { class: 'section-head' }, el('h2', {}, section.title)), el('div', { class: 'rail' }, cards)));
 }
 // Uma coleção que a TV não consegue abrir continua na Home com o título e o motivo.
 function collectionUnavailable(rows, title, message) {
@@ -597,6 +615,9 @@ function metadataContext(main,signal) {return {main,signal,el,button,icon,toast,
 async function showDetail(main, signal) {
   let { meta, addon } = route;
   heading(main, meta.type === 'series' ? 'SÉRIE' : 'FILME', meta.name || meta.id);
+  // MetaDetailsSkeleton: the fork shows the shape of the screen while the metadata and the
+  // add-on response are on the wire, instead of an empty canvas.
+  main.append(detailSkeleton(el, { series: meta.type === 'series' }));
   if(meta.id?.startsWith('tmdb:') && metadata.configured()) {
     try {const data=await metadata.detail(meta,signal);if(signal.aborted)return;if(data)meta={...meta,...data.meta};}catch(error){if(signal.aborted)return;}
   }
@@ -721,7 +742,7 @@ async function showStreams(main, signal) {
     }
   }
   if (!view.rows || Date.now() - view.loadedAt > 120000) {
-    const loading = el('p', { class: 'loading' }, 'Buscando fontes nos seus add-ons…'); main.append(loading);
+    const loading = streamsSkeleton(el); main.append(loading);
     const responses = await mapLimit(providers, async (addon, provider) => {
       const result = await getJSON(resourceURL(addon, 'stream', context.type, context.id), { signal });
       if (!Array.isArray(result.streams)) throw Error('Resposta de fontes inválida.');
@@ -995,7 +1016,7 @@ async function showCollectionSource(main, signal) {
   async function draw() {
     const source = folder.sources[selected];
     for (const [index, node] of [...tabs.children].entries()) { node.classList.toggle('selected', index === selected); node.setAttribute('aria-pressed', String(index === selected)); }
-    list.replaceChildren(el('p', { class: 'loading' }, 'Carregando fileira…'));
+    list.replaceChildren(railSkeleton(el, { cards: 6, landscape: layout.landscapePosters }));
     try {
       const data = await fetchCollectionSource(source, signal);
       if (signal.aborted) return;

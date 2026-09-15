@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {addFolder,addSource,collectionRails,createCollection,createFolder,describeSource,isPlayableSource,parseAccountCollections,readCatalogSource,readCollections,sourceKindLabel,toAccountCollections,collectionSourceCount} from '../src/core/collections.js';
+import {addFolder,addSource,collectionRails,collectionSections,createCollection,createFolder,describeSource,isPlayableSource,parseAccountCollections,readCatalogSource,readCollections,sourceKindLabel,toAccountCollections,collectionSourceCount} from '../src/core/collections.js';
 const accountBlob = [{
   id: 'acc1', title: 'Sagas do Xperience', pinToTop: true, backdropImageUrl: 'https://img/x.jpg', viewMode: 'TABBED_GRID', showAllTab: true,
   folders: [{
@@ -30,7 +30,14 @@ test('collections built in another client arrive through the account blob',()=>{
   // Only the folder with a usable source becomes a real rail; the empty one still shows up
   // with the reason, so nothing disappears from the Home without an explanation.
   const rails = collectionRails(parsed, { addonInstalled: source => source.addonId === 'local.test' });
-  assert.deepEqual(rails.map(rail => rail.title), ['Sagas do Xperience · Star Wars', 'Sagas do Xperience · Vazia']);
+  // The rail is per folder and carries the folder's own title: the collection name is the row
+  // header now, exactly like the fork's CollectionRowSection.
+  assert.deepEqual(rails.map(rail => rail.title), ['Star Wars', 'Vazia']);
+  assert.deepEqual(rails.map(rail => rail.collectionId), [parsed[0].id, parsed[0].id]);
+  // The same folders reach the Home as cover cards of that one collection row.
+  const sections = collectionSections(parsed, { addonInstalled: source => source.addonId === 'local.test' });
+  assert.equal(sections.length, 1);assert.equal(sections[0].title, 'Sagas do Xperience');
+  assert.deepEqual(sections[0].folders.map(folder => folder.title), ['Star Wars', 'Vazia']);
   assert.deepEqual(rails[0].sources.map(source => source.kind), ['catalog', 'tmdb']);
   assert.equal(rails[0].unavailable, undefined);
   assert.equal(rails[1].unavailable, 'unsupported');
