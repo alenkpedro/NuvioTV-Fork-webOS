@@ -60,7 +60,7 @@ export function installNextEpisode({screen,video,context,settings,el,button,load
     shortcut.hidden = !next.hasAired;
     label.textContent = `${next.season ? `T${next.season} · ` : ''}E${next.episode} · ${next.title || 'Próximo episódio'}`;
     start.disabled = !next.hasAired;
-    const visible = !dismissed && (video.ended || nextThreshold(video.currentTime,video.duration,prefs));
+    const visible = !dismissed && (video.ended || context.skipIntervals?.some(v=>v.type==='outro' && v.end<=video.duration+1 && video.currentTime>=v.start) || nextThreshold(video.currentTime,video.duration,prefs));
     const wasVisible = !card.hidden;
     card.hidden = !visible;
     if (!visible) { stopTimer(); remaining = 5; if (wasVisible && card.contains(document.activeElement)) restoreFocus(); return; }

@@ -5,10 +5,12 @@ import { subtitleFlags, stripSdhText, subtitlePolicy, subtitleScoreFor, readTrac
 import { readPlayback, preferredLanguages, languageScore, languageCode } from './core/playback.js';
 import { languageName, mediaTracks, selectAudioTrack } from './core/media-tracks.js';
 import { clampSubtitleDelay, SUBTITLE_DELAY_LIMIT, SUBTITLE_DELAY_STEP, syncSubtitleDelay, formatSubtitleDelay, cueTimestamp, nearestCueIndex, selectSyncCues } from './core/subtitle-timing.js';
+import {readSubtitleStyle,applySubtitleStyle} from './core/subtitle-style.js';
+import {subtitleStyleEditor} from './subtitle-style-editor.js';
 import { nativeSubtitles } from './core/native-subtitles.js';
 
 export function installTrackControls({ screen, video, context, addons, settings, memoryState = {}, persist, el, button, onOpen, onClose }) {
-  let dialog, panelKind, returnFocus, editor = false, discovery, download, downloading = '', error = '', info = '', found = false;
+  let dialog, panelKind, returnFocus, editor = false, delayEditor=false, discovery, download, downloading = '', error = '', info = '', found = false;
   let external = normalizeSubtitles(context.stream.subtitles, context.stream.addonName || 'Fonte');
   let selected = null, cues = [], delay = readDelay(memoryState,context), timer, disposed = false;
   let previousCue = null, previousStrip = null, renderedCue = '';
@@ -36,8 +38,9 @@ export function installTrackControls({ screen, video, context, addons, settings,
   let audioLanguages = remembered.audio ? [remembered.audio.language,...baseAudioLanguages.filter(l=>l!==remembered.audio.language)] : baseAudioLanguages;
   let manualAudio = false, manualSubtitles = false, autoBusy = false, autoQueued = false, audioScore = Infinity, subtitleScore = Infinity, metadataReady = false, autoDirty = false, autoDiscoveryAttempted = false;
   const attemptedAudio = new Set(), attemptedText = new Set(), attemptedExternal = new Set();
-  // Subtitle appearance is a fixed app preset; ignore legacy size/background overrides.
+  // Preserve the requested default; only the new explicit appearance settings apply.
   const overlay = el('div', { class: 'subtitle-overlay', hidden: true, 'aria-label': 'Legenda' }); screen.append(overlay);
+  applySubtitleStyle(screen,memoryState.subtitleAppearance);
   const native = nativeSubtitles(video, renderCue);
   let fontStatus = 'loading';
   // Check the actual bundled face, not just the CSS family (which can fall back).
@@ -203,8 +206,10 @@ export function installTrackControls({ screen, video, context, addons, settings,
       for (const speed of playbackSpeeds) list.append(row(`${speed}×`, speed===1 ? 'Normal' : '',()=>chooseSpeed(speed),`speed-${speed}`,Math.abs(video.playbackRate-speed)<0.001));
       list.append(el('p',{class:'track-notice'},'Velocidade lembrada para este título neste perfil. A disponibilidade depende da fonte e do player da TV.'));
     } else {
-      panel.append(actionRow(editor ? 'Voltar às faixas' : 'Ajustes de legenda', () => { editor = !editor; draw(); }, 'style'));
+      panel.append(actionRow(editor ? 'Voltar às faixas' : 'Ajustes de legenda', () => { editor = !editor; delayEditor=false; draw(); }, 'style'));
       if (editor) {
+        list.append(actionRow(delayEditor?'Voltar à aparência':`Atraso: ${formatSubtitleDelay(delay)}`,()=>{delayEditor=!delayEditor;draw();},'delay-editor'));
+        if(delayEditor){
         const unavailable=syncUnavailable();
         const sync=actionRow('Sincronizar por fala',openTiming,'sync'); sync.disabled=Boolean(unavailable); list.append(sync);
         list.append(el('p',{class:'track-notice'},unavailable || 'Marque o início de uma fala e escolha a frase correspondente.'));
@@ -216,6 +221,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
         }
         list.append(stepper,row('Zerar atraso','',()=>{setDelay(0);draw();},'reset'));
         list.append(el('p',{class:'track-notice'},'Ajuste de até ±180 s para legendas externas, salvo para este filme ou episódio. Valores positivos atrasam a legenda.'));
+        }else list.append(subtitleStyleEditor({el,button,value:memoryState.subtitleAppearance,disabled:Boolean(!selected && native.selected() && !native.custom),change:value=>{if(disposed || profileKey!==memoryState.profileStore?.activeKey)return;memoryState.subtitleAppearance=readSubtitleStyle(value);persist();applySubtitleStyle(screen,value);draw();}}));
         list.append(row('Remover descrições SDH', 'Ocultar descrições de sons e identificação de falantes', () => { setPreference('stripSdh',!preferences.stripSdh); renderCue(); draw(); }, 'sdh-cleanup', preferences.stripSdh));
         list.append(row('Mostrar só idiomas preferidos', 'O idioma em uso continua acessível',()=>{setPreference('onlyPreferredSubtitles',!preferences.onlyPreferredSubtitles);draw();},'preferred-only',preferences.onlyPreferredSubtitles));
       } else {
@@ -247,7 +253,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
   }
   function open(kind) {
     if (dialog) close();
-    returnFocus = document.activeElement; panelKind = kind; editor = false; error = ''; syncNotice.hidden=true; clearTimeout(syncNoticeTimer);
+    returnFocus = document.activeElement; panelKind = kind; editor = false; delayEditor=false; error = ''; syncNotice.hidden=true; clearTimeout(syncNoticeTimer);
     dialog = el('div', { class: `player-track-dialog${kind==='speed' ? ' player-speed-dialog' : ''}`, role: 'dialog', 'aria-modal': true, 'aria-label': panelTitle(kind) });
     screen.append(dialog); onOpen(); draw();
     (dialog.querySelector('.track-list .selected-track') || dialog.querySelector('.track-list button') || dialog.querySelector('.track-action'))?.focus();

@@ -15,7 +15,14 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.18.0
+## Estado: prévia 0.19.0
+
+A 0.19.0 acrescenta pular abertura/recapitulação/créditos via IntroDB, com serviço
+local incluído no IPK, e personalização de legendas mantendo Netflix Sans fixa.
+Tamanho, negrito, cor, opacidade, contorno e posição seguem a StyleRail do fork;
+o estilo solicitado permanece como padrão. Miniaturas de busca são opcionais e
+cobrem quadros já reproduzidos em fontes compatíveis; extração antecipada ainda
+não foi portada. [Uso e limites](webos/PLAYER_EXTRAS.md).
 
 A 0.18.0 acrescenta a tela de pausa com logo, sinopse, episódio e elenco do
 fork. Ative **Ajustes → Reprodução → Tela de pausa**; ela aparece após 5 segundos
@@ -107,7 +114,7 @@ Validação: testes de regras, conta e navegação com dados sintéticos; instal
 
 ## Próxima etapa
 
-**Player:** investigar e implementar os dados e controles de intro/outro e miniaturas de busca. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Player:** validar os novos recursos na LG e avançar no guia parental e no pós-reprodução/Up Next. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 

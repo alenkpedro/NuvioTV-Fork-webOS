@@ -4,7 +4,7 @@ Referência: `ysosrs123/NuvioTV-Fork@45e0984`, preservada nesta árvore.
 
 ## Uso
 
-Player → Legendas → Ajustes de legenda → **Sincronizar por fala**.
+Player → Legendas → Ajustes de legenda → Atraso → **Sincronizar por fala**.
 Selecione antes uma legenda externa SRT/WebVTT da fonte ou dos addons.
 
 1. Com o vídeo reproduzindo, pressione **Sincronizar** ao ouvir o início de uma fala.

@@ -331,7 +331,7 @@ test('external subtitles render safely, survive errors, seek, adjust and close w
   await dialog.getByRole('button',{name:/Legenda com erro/}).click();
   await expect(dialog.getByRole('alert')).toContainText('HTTP 403');
   await expect(page.locator('.subtitle-overlay')).toHaveText('Olá mundo <img src=x>');
-  await dialog.getByRole('button',{name:/Ajustes de legenda/}).click();
+  await dialog.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/^Atraso:/}).click();
   await expect(dialog.getByRole('button',{name:/Tamanho|Fundo da legenda/})).toHaveCount(0);
   await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-size','19.44px');
   await dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();
@@ -551,7 +551,7 @@ test('SDH cleanup is reversible and preserves subtitle timing and Off',async({pa
   await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Português SDH',lang:'por',url:origin+'/sdh.srt'}]}]}}));
   await page.route('**/sdh.srt',r=>r.fulfill({body:'1\n00:00:20,000 --> 00:00:30,000\n>> JOHN: Hello!\n[Door closes]\n\n2\n00:00:30,000 --> 00:00:40,000\n[Music]'}));
   await startFixtureVideo(page);await expect(page.locator('.subtitle-overlay')).toHaveText('Hello!');
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/Remover descrições SDH/}).click();await expect(page.locator('.subtitle-overlay')).toContainText('[Door closes]');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/^Atraso:/}).click();await page.getByRole('button',{name:/Remover descrições SDH/}).click();await expect(page.locator('.subtitle-overlay')).toContainText('[Door closes]');
   await page.getByRole('button',{name:/Remover descrições SDH/}).click();await page.locator('video').evaluate(v=>v.currentTime=32);await expect(page.locator('.subtitle-overlay')).toBeHidden();await page.locator('video').evaluate(v=>v.currentTime=25);await expect(page.locator('.subtitle-overlay')).toHaveText('Hello!');
   await page.getByRole('button',{name:'Voltar às faixas',exact:true}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toBeHidden();
 });
@@ -564,10 +564,10 @@ test('manual audio and external subtitle choices survive next episode with reord
   await openPlayerSpeed(page);await page.getByRole('button',{name:'1.5×',exact:true}).click();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.getByRole('button',{name:/Dublado/}).click();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Português manual/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Português lembrado');
-  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/^Atraso:/}).click();await page.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Ir para o próximo episódio'}).click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>v.pause());
   await expect.poll(()=>page.locator('video').evaluate(v=>v.audioTracks.find(t=>t.enabled)?.language)).toBe('por');expect(await page.locator('video').evaluate(v=>v.playbackRate)).toBe(1.5);await expect(page.locator('.subtitle-overlay')).toHaveText('Português lembrado');expect(downloads).toEqual([origin+'/episode-1.srt',origin+'/episode-2.srt']);
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: 0 ms');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/^Atraso:/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: 0 ms');
   const memory=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).trackPreferences);expect(JSON.stringify(memory)).not.toMatch(/https:|delay|trackId/);
 });
 test('remembered Off persists across reopening the title and clearing it restores preferred subtitles',async({page})=>{
@@ -614,11 +614,11 @@ test('Netflix Sans loads locally, subtitle delay survives reopening and reset re
   expect(await page.evaluate(async()=>{const fonts=await document.fonts.load('500 19.44px "Netflix Sans"');return fonts.length===1 && fonts[0].status==='loaded';})).toBe(true);
   await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
   await page.screenshot({animations:'disabled',path:'test-results/player-netflix-sans-1920.png'});
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/^Atraso:/}).click();await page.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();
   await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
   await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=30.05;});
   await expect(page.locator('.subtitle-overlay')).toContainText('A próxima história');
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: +100 ms');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/^Atraso:/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: +100 ms');
   await page.getByRole('button',{name:'Zerar atraso',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toBeHidden();
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).subtitleDelays)).toEqual({});
 });
@@ -756,7 +756,7 @@ test('Netflix Sans renders internal text cues, retains selected menu and follows
   expect(await page.locator('video').evaluate(v=>v.textTracks[0].mode)).toBe('hidden');await expect(overlay).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
   await page.screenshot({animations:'disabled',path:'test-results/internal-netflix-sans-1920.png'});
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await expect(page.locator('[data-track-key="native-0"]')).toHaveAttribute('aria-pressed','true');
-  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).not.toContainText('Netflix Sans');
+  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/^Atraso:/}).click();await expect(page.getByRole('dialog')).not.toContainText('Netflix Sans');
   await expect(page.locator('.subtitle-font-preview,.subtitle-font-status')).toHaveCount(0);
   await page.screenshot({animations:'disabled',path:'test-results/subtitle-font-settings-1920.png'});
   await page.keyboard.press('Escape');await page.locator('video').evaluate(v=>{v.currentTime=32;});await expect(overlay).toBeHidden();
@@ -770,6 +770,7 @@ test('native opaque track remains usable without technical information and exter
   await startFixtureVideo(page);await page.locator('video').evaluate(v=>v.addTextTrack('subtitles','Interna sem texto','por'));
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.locator('[data-track-key="native-0"]').click();
   await expect(page.getByRole('dialog')).not.toContainText('player da TV');await expect(page.locator('.subtitle-overlay')).toBeHidden();
+  await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await expect(page.getByRole('button',{name:'Aumentar tamanho',exact:true})).toBeDisabled();await page.getByRole('button',{name:'Voltar às faixas',exact:true}).click();
   await page.getByRole('button',{name:/Externa/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Texto externo');
   await expect(page.locator('.subtitle-overlay')).toHaveAttribute('data-font-status','loaded');expect(await page.locator('video').evaluate(v=>v.textTracks[0].mode)).toBe('disabled');
 });
@@ -803,7 +804,7 @@ test('fixed subtitle preset survives old preferences and scales correctly at 108
     expect(metrics.bottom).toBeCloseTo(.065,3);expect(metrics.center).toBeCloseTo(width/2,1);expect(metrics.width).toBeLessThanOrEqual(metrics.canvasWidth*.78+1);expect(metrics.shadow).not.toBe('none');
     if(width===1920)await page.screenshot({animations:'disabled',path:'test-results/subtitle-medium-preset-1920.png'});
   }
-  await page.setViewportSize({width:1920,height:1080});await page.mouse.move(400,300);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();
+  await page.setViewportSize({width:1920,height:1080});await page.mouse.move(400,300);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/^Atraso:/}).click();
   await expect(page.getByRole('dialog')).not.toContainText('Netflix');await expect(page.getByRole('button',{name:/^Tamanho|^Fundo da legenda/})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Atrasar 0,1 s',exact:true})).toBeVisible();
 });
@@ -872,7 +873,7 @@ async function syncFixture(page,body='1\n00:00:20,000 --> 00:00:30,000\nA fala q
 }
 async function openSync(page) {
   await page.getByRole('button',{name:'Legendas',exact:true}).click();
-  await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();
+  await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await page.getByRole('button',{name:/^Atraso:/}).click();
   await page.getByRole('button',{name:'Sincronizar por fala',exact:true}).click();
   return page.getByRole('dialog',{name:'Sincronizar por fala',exact:true});
 }
@@ -889,7 +890,7 @@ test('spoken-line sync uses captured time, preserves playback and persists compe
   await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
   await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=30;});
   await expect(page.locator('.subtitle-overlay')).toHaveText('A fala que eu ouvi.');
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: +5000 ms');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await page.getByRole('button',{name:/^Atraso:/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: +5000 ms');
   await page.getByRole('button',{name:'Zerar atraso',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Outra fala.');expect(errors).toEqual([]);
 });
 test('spoken-line sync bounds long files, focuses nearest cue and cancels with LG Back or suspension',async({page})=>{
@@ -919,7 +920,7 @@ test('track panels follow fork dimensions and focus colors; native subtitles can
   await dialog.getByRole('button',{name:'Ajustes de áudio',exact:true}).click();await expect(dialog).toContainText('ainda não estão disponíveis');await page.keyboard.press('Escape');
   await page.locator('video').evaluate(v=>{const t=v.addTextTrack('subtitles','Interna','pt');t.mode='showing';t.addCue(new VTTCue(0,100,'Legenda interna'));});
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await dialog.locator('[data-track-key="native-0"]').click();await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await page.screenshot({path:'test-results/player-subtitle-panel-1920.png'});
-  await dialog.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await expect(dialog.getByRole('button',{name:'Sincronizar por fala',exact:true})).toBeDisabled();await expect(dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true})).toBeDisabled();
+  await dialog.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await page.getByRole('button',{name:/^Atraso:/}).click();await expect(dialog.getByRole('button',{name:'Sincronizar por fala',exact:true})).toBeDisabled();await expect(dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true})).toBeDisabled();
   await expect(dialog).not.toContainText('Netflix Sans');await expect(page.locator('.subtitle-overlay')).toContainText('Legenda interna');
 });
 
@@ -997,4 +998,47 @@ test('pause series metadata fits the logical canvas with long episode title and 
   for(const width of [1280,1920,3840]){
     await page.setViewportSize({width,height:width*9/16});await page.clock.runFor(100);await expect.poll(()=>page.locator('#app').evaluate(e=>new DOMMatrix(getComputedStyle(e).transform).a)).toBeCloseTo(width/960,3);const bounds=await page.locator('.pause-metadata').evaluate(e=>{const p=e.getBoundingClientRect(),i=e.querySelector('.pause-title-logo').getBoundingClientRect(),a=e.querySelector('.pause-artwork').getBoundingClientRect();return {top:p.top/(innerWidth/960),bottom:p.bottom/(innerWidth/960),logoBottom:i.bottom,boxBottom:a.bottom};});expect(bounds.top).toBeGreaterThanOrEqual(39);expect(bounds.bottom).toBeLessThanOrEqual(421);expect(bounds.logoBottom).toBeLessThanOrEqual(bounds.boxBottom+1);
   }
+});
+
+test('fork subtitle appearance updates live, preserves family, persists and resets only appearance',async({page})=>{
+ await syncFixture(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();const dialog=page.getByRole('dialog'),overlay=page.locator('.subtitle-overlay');
+ await dialog.getByRole('button',{name:'Aumentar tamanho',exact:true}).click();await expect(overlay).toHaveCSS('font-size','21.384px');await expect(dialog.getByRole('button',{name:'Aumentar tamanho',exact:true})).toBeFocused();
+ await dialog.getByRole('button',{name:'Cor do texto: Amarelo',exact:true}).click();await expect(overlay).toHaveCSS('color','rgb(255, 215, 0)');await dialog.getByRole('button',{name:'Diminuir opacidade do texto',exact:true}).click();await expect(overlay).toHaveCSS('color','rgba(255, 215, 0, 0.9)');
+ await dialog.getByRole('button',{name:'Negrito',exact:true}).click();await expect(overlay).toHaveCSS('font-weight','700');await dialog.getByRole('button',{name:'Contorno',exact:true}).click();await expect(overlay).toHaveCSS('text-shadow','none');
+ await dialog.getByRole('button',{name:'Aumentar posição vertical',exact:true}).click();expect(await overlay.evaluate(e=>parseFloat(getComputedStyle(e).bottom))).toBeCloseTo(62.1,1);await expect(overlay).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');await expect(dialog).not.toContainText('Netflix');
+ await dialog.getByRole('button',{name:/^Atraso:/}).click();await dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();await dialog.getByRole('button',{name:'Voltar à aparência',exact:true}).click();await dialog.getByRole('button',{name:'Cor do texto: Amarelo',exact:true}).focus();await page.locator('#toast').evaluate(e=>e.hidden=true);await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await page.screenshot({path:'test-results/subtitle-appearance-1920.png'});
+ await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=25;});await expect(overlay).toHaveCSS('font-size','21.384px');
+ await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await dialog.getByRole('button',{name:'Restaurar aparência padrão',exact:true}).click();await expect(overlay).toHaveCSS('font-size','19.44px');await expect(overlay).toHaveCSS('font-weight','500');await expect(overlay).toHaveCSS('color','rgb(255, 255, 255)');await expect(dialog).toContainText('Atraso: +100 ms');
+});
+async function segmentsFixture(page,{auto=[],late=false,next=false}={}){
+ await playbackPrefs(page,{autoSkipTypes:auto});const meta={...show,id:'tt1234567',videos:[{...show.videos[0],id:'tt1234567:1:1'},...(next?[{id:'tt1234567:1:2',season:1,episode:2,title:'Segundo episódio'}]:[])]};let release,requests=0;const gate=new Promise(r=>release=r);
+ await page.route('https://api.introdb.app/**',async r=>{requests++;if(late)await gate;await r.fulfill({json:{imdb_id:meta.id,season:1,episode:1,intro:{start_sec:10,end_sec:20},recap:{start_sec:25,end_sec:30},outro:{start_sec:50,end_sec:58}}}).catch(()=>{});});
+ await page.route('**/catalog/**',r=>r.fulfill({json:{metas:[meta]}}));await page.route('**/meta/series/**',r=>r.fulfill({json:{meta}}));await install(page);await navigation(page,'Início');await page.getByRole('button',{name:'Série de teste',exact:true}).click();await page.locator('.episode').first().click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await expect.poll(()=>requests).toBe(1);return {release};
+}
+test('skip segment labels seek once, preserve pause and never trap track-panel focus',async({page})=>{
+ await segmentsFixture(page);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=12;});const skip=page.getByRole('button',{name:'Pular abertura',exact:true});await expect(skip).toBeVisible();await expect(page.locator('.player-identity')).toHaveCSS('visibility','hidden');await skip.click();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(20);expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);
+ await page.locator('video').evaluate(v=>{v.currentTime=26;});await expect(page.getByRole('button',{name:'Pular recapitulação',exact:true})).toBeVisible();await page.getByRole('button',{name:'Legendas',exact:true}).click();await expect(page.locator('.skip-segment')).toBeHidden();await page.keyboard.press('Escape');await page.locator('video').evaluate(v=>{v.currentTime=52;});await expect(page.getByRole('button',{name:'Pular créditos',exact:true})).toBeVisible();await page.locator('#toast').evaluate(e=>e.hidden=true);await page.screenshot({path:'test-results/skip-credits-1920.png'});await page.getByRole('button',{name:'Pular créditos',exact:true}).click();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(58);
+});
+test('skip auto hide and Back dismissal restore controls; late lookup cannot revive a departed player',async({page})=>{
+ const {release}=await segmentsFixture(page,{late:true});await page.locator('video').evaluate(v=>{v.pause();v.currentTime=12;});release();await expect(page.locator('.skip-segment')).toBeVisible();await page.clock.install();await page.keyboard.press('Escape');await expect(page.locator('.skip-segment')).toBeFocused();await page.clock.runFor(10100);await expect(page.locator('.skip-segment')).toBeHidden();await page.keyboard.press('Enter');await expect(page.locator('.skip-segment')).toBeVisible();await page.locator('.skip-segment').focus();await page.keyboard.press('Escape');await expect(page.locator('.skip-segment')).toBeHidden();await leavePlayer(page);await page.clock.runFor(16000);await expect(page.locator('video,.skip-segment')).toHaveCount(0);
+});
+test('automatic skipping is opt-in, runs once per interval and never skips a paused video',async({page})=>{
+ await segmentsFixture(page,{auto:['intro']});await page.locator('video').evaluate(v=>{v.pause();v.currentTime=12;});await expect(page.getByRole('button',{name:'Pular abertura',exact:true})).toBeVisible();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(12);await page.locator('video').evaluate(v=>v.play());await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThanOrEqual(20);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=12;});await page.locator('video').evaluate(v=>v.play());await expect(page.getByRole('button',{name:'Pular abertura',exact:true})).toBeVisible();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBeLessThan(16);
+});
+test('thumbnail cache uses one video and only nearby viewed frames, cancels on Back and expires after commit',async({page})=>{
+ await playbackPrefs(page,{seekThumbnails:true});await page.route('**/clip.mp4',r=>{const body=fs.readFileSync('tests/fixtures/thumbnail.mp4'),range=r.request().headers().range?.match(/bytes=(\d+)-(\d*)/),start=range?Number(range[1]):0,end=range?.[2]?Math.min(Number(range[2]),body.length-1):body.length-1;return r.fulfill({status:range?206:200,contentType:'video/mp4',body:body.subarray(start,end+1),headers:{'Accept-Ranges':'bytes',...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})}});});await startFixtureVideo(page);await page.clock.install();
+ for(const time of [10,20,30]){await page.clock.runFor(1200);await page.locator('video').evaluate(async(v,t)=>{v.currentTime=t;await new Promise(r=>v.addEventListener('seeked',r,{once:true}));await v.play();v.dispatchEvent(new Event('timeupdate'));v.pause();},time);}
+ const timeline=page.getByRole('slider',{name:'Posição do vídeo'});await timeline.focus();await page.keyboard.down('ArrowLeft');await expect(page.locator('.seek-thumbnail')).toBeVisible();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBeCloseTo(30,0);await expect(page.locator('video')).toHaveCount(1);await page.locator('#toast').evaluate(e=>e.hidden=true);await page.screenshot({path:'test-results/seek-thumbnail-1920.png'});
+ await page.keyboard.press('Escape');await page.keyboard.up('ArrowLeft');await expect(page.locator('.seek-thumbnail')).toBeHidden();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBeCloseTo(30,0);
+ await timeline.focus();await page.keyboard.down('ArrowLeft');await page.keyboard.up('ArrowLeft');await expect(page.locator('.seek-thumbnail')).toBeVisible();await page.clock.runFor(3100);await expect(page.locator('.seek-thumbnail')).toBeHidden();await leavePlayer(page);await expect(page.locator('.seek-thumbnail')).toHaveCount(0);
+});
+
+test('outro starts next-episode prompt before percentage threshold and late segment results are cancelled on exit',async({page})=>{
+ await segmentsFixture(page,{next:true});await page.locator('video').evaluate(v=>{v.pause();v.currentTime=51;});await expect(page.getByRole('button',{name:'Reproduzir próximo episódio',exact:true})).toBeVisible();expect(await page.locator('video').evaluate(v=>v.currentTime/v.duration)).toBeLessThan(.99);await expect(page.locator('video')).toHaveCount(1);
+});
+test('leaving before segment response cannot restore skip controls or playback',async({page})=>{
+ const {release}=await segmentsFixture(page,{late:true});await leavePlayer(page);release();await page.clock.install();await page.clock.runFor(16000);await expect(page.locator('video,.skip-segment')).toHaveCount(0);
+});
+test('internal text cues accept appearance with the same fixed family',async({page})=>{
+ await startFixtureVideo(page);await page.locator('video').evaluate(v=>{const track=v.addTextTrack('subtitles','Interna','pt');track.addCue(new VTTCue(0,100,'Legenda interna'));track.mode='showing';});await expect(page.locator('.subtitle-overlay')).toHaveAttribute('data-renderer','native-text');await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await page.getByRole('button',{name:'Cor do texto: Ciano',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toHaveCSS('color','rgb(0, 229, 255)');await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
 });

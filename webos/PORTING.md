@@ -170,3 +170,11 @@ e ficha foto/personagem. Logos de catálogos não são apagadas por metadados se
 imagem. Enriquecimento TMDB usa `images` na chamada de detalhe e seleção de
 idioma/região baseada em `TmdbMetadataService`; atualiza o player sem reiniciá-lo.
 Ver [PLAYER_PAUSE_ARTWORK.md](PLAYER_PAUSE_ARTWORK.md) para diferenças e validação.
+
+## Entrega 0.19 — trechos, miniaturas e aparência
+
+IntroDB com serviço Node local de destino fixo para compatibilidade CORS na LG.
+Botões, condições e preferências derivados de SkipIntroButton/VisibilityRules.
+StyleRail com família Netflix Sans fixa; preset anterior é o padrão restaurável.
+Miniaturas mantêm geometria de SeekThumbnailPane, com cache limitado do vídeo
+principal; worker Android antecipado não portado. Ver [PLAYER_EXTRAS.md](PLAYER_EXTRAS.md).

@@ -1,4 +1,4 @@
-# Estilo padrão de legenda — 0.15.2
+# Fonte fixa e estilo padrão de legenda — 0.19.0
 
 Preset solicitado pelo usuário com duas referências visuais e valores CSS.
 Usa o arquivo **NetflixSans-Medium.otf**, peso real **500**, fornecido no ZIP,
@@ -15,8 +15,9 @@ continua com Inter. Fonte local, sem consultas externas.
   77,76 px no 4K. Usar 3.6vh diretamente duplicaria a escala na TV 1080p.
 - Com os controles abertos, a legenda sobe para a área acima deles, como já
   fazia o player, evitando sobreposição. Ao recolher, volta para 6,5%.
-- O preset é fixo. Preferências antigas de tamanho/fundo são ignoradas e os
-  controles de aparência são removidos. Prévia, nome, status e avisos técnicos
+- Desde a 0.19, o preset é o padrão restaurável e a aparência pode ser ajustada
+  pela StyleRail. A família continua fixa. Preferências antigas de tamanho/fundo
+  são ignoradas; os ajustes novos ficam separados por perfil. Prévia, nome, status e avisos técnicos
   da fonte não aparecem no fluxo do usuário. Permanecem idioma/faixa,
   sincronização e limpeza SDH. A verificação de fonte continua interna.
 
@@ -24,7 +25,9 @@ A camada externa SRT/VTT e o texto interno acessível usam o mesmo preset.
 Faixas opacas/PGS continuam dependendo do compositor nativo; não há promessa
 de forçar sua aparência. Não há transcodificação nem alteração do vídeo.
 
-Validação: carregamento da face Medium, ausência dos controles/informações,
+Ver [personalização atual](PLAYER_EXTRAS.md).
+
+Validação: carregamento da face Medium, ausência do seletor/informações de fonte,
 preferências antigas ignoradas, medidas reais em 1080p/1440p/4K, legenda externa
 legível no fallback de fonte e regressão das seleções/sincronismo. Imagem e
 texto de teste sintéticos no navegador; validação física permanece pendente.

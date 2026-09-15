@@ -27,6 +27,19 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Trechos, miniaturas e aparência (0.19)
+
+**Legendas → Ajustes de legenda** permite tamanho, negrito, cor, opacidade,
+contorno e posição, com Netflix Sans fixa. Restaurar aparência preserva o atraso.
+
+Em **Ajustes → Reprodução**, pular abertura/créditos vem habilitado; as três
+opções de pular automaticamente começam desligadas. Os botões dependem dos
+intervalos disponíveis no IntroDB. O IPK inclui o serviço local necessário à TV.
+
+Ative **Miniaturas ao buscar** para prévias dos trechos já reproduzidos em
+fontes SDR até 1080p, sem segundo player. Extração antecipada permanece pendente.
+[Comportamento, diferenças e limites](PLAYER_EXTRAS.md).
+
 ## Tela de pausa e logos (0.18)
 
 Ative **Ajustes → Reprodução → Tela de pausa**. Depois de pausar manualmente,
@@ -42,11 +55,11 @@ Sem imagem válida, o título é a alternativa. [Detalhes e limites](PLAYER_PAUS
 ## Áudio, legendas e sincronização por fala (0.17)
 
 Painéis de 320 dp no canto inferior direito, lista única e foco branco como no
-fork. Em Legendas → Ajustes de legenda → Sincronizar por fala, marque o início
+fork. Em Legendas → Ajustes de legenda → Atraso → Sincronizar por fala, marque o início
 de uma fala e escolha a frase correspondente. Requer legenda externa SRT/VTT
 já selecionada; o vídeo continua no estado em que estava. O atraso fica salvo
 por filme/episódio e perfil. Também há ajuste de 100 ms, até ±180 s.
-A aparência Netflix Sans Medium continua fixa. [Uso e limites](PLAYER_TRACKS_SYNC.md).
+Desde a 0.19, a aparência é personalizável; a família Netflix Sans continua fixa. [Uso e limites](PLAYER_TRACKS_SYNC.md).
 
 ## Player do fork (0.16)
 

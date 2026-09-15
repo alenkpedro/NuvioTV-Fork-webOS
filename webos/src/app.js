@@ -11,6 +11,8 @@ import { playbackSettingsScreen } from './playback-settings.js';
 import { installNextEpisode } from './next-episode.js';
 import { installAspect } from './core/aspect.js';
 import { installEpisodePanel } from './player-episodes.js';
+import {installSegments} from './player-segments.js';
+import {installThumbnails} from './player-thumbnails.js';
 import { installPauseOverlay } from './player-pause.js';
 import { artworkURL, enrichPlayerMetadata } from './core/player-artwork.js';
 import { people } from './core/metadata.js';
@@ -813,6 +815,12 @@ function showSettings(main, signal) {
           const toggle=button([el('span',{class:'grow'},el('strong',{},'Tela de pausa'),el('small',{class:'muted'},'Mostrar título, sinopse e elenco após 5 segundos de pausa manual.')),el('span',{class:'switch-track','aria-hidden':true})],()=>{const prefs=readPlayback(state.settings.playback);state.settings.playback={...prefs,pauseOverlay:!prefs.pauseOverlay};persist();toggle.setAttribute('aria-checked',String(!prefs.pauseOverlay));},{class:'settings-row',role:'switch','aria-label':'Tela de pausa','aria-checked':String(readPlayback(state.settings.playback).pauseOverlay)});
           content.append(toggle);
         }
+        for(const [key,title,description]of [['skipSegments','Pular abertura e créditos','Mostrar controles nos trechos identificados.'],['seekThumbnails','Miniaturas ao buscar','Prévia dos trechos já reproduzidos em fontes compatíveis.']]){
+          const toggle=button([el('span',{class:'grow'},el('strong',{},title),el('small',{class:'muted'},description)),el('span',{class:'switch-track','aria-hidden':true})],()=>{const prefs=readPlayback(state.settings.playback);state.settings.playback={...prefs,[key]:!prefs[key]};persist();toggle.setAttribute('aria-checked',String(!prefs[key]));},{class:'settings-row',role:'switch','aria-label':title,'aria-checked':String(readPlayback(state.settings.playback)[key])});content.append(toggle);
+        }
+        for(const [type,title]of [['intro','Pular abertura automaticamente'],['recap','Pular recapitulação automaticamente'],['outro','Pular créditos automaticamente']]){
+          const toggle=button([el('span',{class:'grow'},title),el('span',{class:'switch-track','aria-hidden':true})],()=>{const prefs=readPlayback(state.settings.playback),has=prefs.autoSkipTypes.includes(type);state.settings.playback={...prefs,autoSkipTypes:has?prefs.autoSkipTypes.filter(t=>t!==type):[...prefs.autoSkipTypes,type]};persist();toggle.setAttribute('aria-checked',String(!has));},{class:'settings-row',role:'switch','aria-label':title,'aria-checked':String(readPlayback(state.settings.playback).autoSkipTypes.includes(type))});content.append(toggle);
+        }
         content.append(row('Idiomas e próximo episódio', 'Áudio, legendas e continuidade de séries', () => navigate({name:'playback-settings'})));
         content.append(row('Preferências de fontes', 'Filtros, grupos de release e reprodução automática', () => navigate({ name: 'preferences' })));
         break;
@@ -850,7 +858,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.18.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.19.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -892,7 +900,7 @@ function showPlayer(context) {
   const chrome=playerUI({el,button,context,video,toggle,restart:()=>{seekTo(0);play();},audio:()=>tracks.openAudio(),subtitles:()=>tracks.openSubtitles(),sources:()=>episodes.openCurrent(),episodes:()=>episodes.open(),speed:()=>tracks.openSpeed(),aspect:()=>aspect.cycle(),stats:()=>{stats.hidden=!stats.hidden;screen.classList.toggle('stats-visible',!stats.hidden);chrome.info.setAttribute('aria-pressed',String(!stats.hidden));updateStats();}});
   const {controls,timeline,pause}=chrome;
   const screen = el('div', { class: 'player-screen controls-visible' }, video, chrome.top, status, stats, controls); root.append(screen);
-  let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview, pauseOverlay;
+  let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview, pauseOverlay, segments, thumbnails;
   const aspect=installAspect({video,settings:state.settings,persist,notify:toast});
   const listeners = [];
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
@@ -923,7 +931,10 @@ function showPlayer(context) {
   function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
   function hideControls(){manuallyHidden=true;clearTimeout(hideTimer);controls.classList.add('faded');controls.inert=true;screen.classList.remove('controls-visible');}
   function reveal() { manuallyHidden=false; pauseOverlay?.interaction(); if (pauseOverlay?.isOpen() || tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); controls.inert=false; screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen() && !seekPreview.active()) hideTimer = setTimeout(() => { controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); }, 4500); }
-  seekPreview=installSeek({video,timeline,update:updateTimeline,reveal});
+  const overlayBlocked=()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || Boolean(pauseOverlay?.isOpen()) || !stats.hidden;
+  thumbnails=installThumbnails({screen,video,context,settings:state.settings,el,blocked:overlayBlocked});
+  seekPreview=installSeek({video,timeline,update:updateTimeline,reveal,thumbnails});
+  segments=installSegments({screen,video,context,settings:state.settings,el,button,blocked:()=>overlayBlocked() || seekPreview.active() || upNext.focused(),onIntervals:items=>{context.skipIntervals=items;upNext.refresh();},seek:seekTo,restore:()=>{if(screen.classList.contains('controls-visible'))pause.focus();else document.activeElement?.blur();}});
   pauseOverlay=installPauseOverlay({screen,video,context,settings:state.settings,el,button,blocked:()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || seekPreview.active() || !stats.hidden || chrome.more.getAttribute('aria-expanded')==='true',onOpen:()=>{hideControls();upNext.refresh();},onClose:()=>{reveal();pause.focus();upNext.refresh();},resume:play});
   const clockTimer=setInterval(()=>{if(!document.hidden && screen.classList.contains('controls-visible'))chrome.updateClock();},1000);
   chrome.updateClock();
@@ -955,12 +966,13 @@ function showPlayer(context) {
   on('error', () => { status.hidden = false; status.textContent = 'Não foi possível reproduzir esta fonte. O link pode ter expirado ou o formato não ser compatível. Volte e escolha outra fonte.'; controls.classList.remove('faded'); controls.inert=false; clearTimeout(hideTimer); });
   const visibility = () => { if (document.hidden) { video.pause(); save(); } };
   document.addEventListener('visibilitychange', visibility);
-  screen.addEventListener('mousemove', reveal); screen.addEventListener('focusin', reveal);
+  screen.addEventListener('mousemove', reveal); screen.addEventListener('focusin',()=>{if(!segments.focused())reveal();});
   const issue = playbackIssue(context.stream, state.settings.avoidDvOnly);
   if (issue) status.textContent = issue;
   else { video.src = context.stream.url; play(); }
   player = { back(){
     if(seekPreview.active()){seekPreview.cancel();return true;}
+    if(segments.dismiss()){hideControls();return true;}
     if(!stats.hidden){stats.hidden=true;screen.classList.remove('stats-visible');chrome.info.setAttribute('aria-pressed','false');return true;}
     if(chrome.more.getAttribute('aria-expanded')==='true'){chrome.setMore(false);reveal();chrome.more.focus();return true;}
     if(screen.classList.contains('controls-visible')){hideControls();return true;}return false;
@@ -973,13 +985,16 @@ function showPlayer(context) {
     if (['MediaPlay', 'MediaPause', 'MediaStop', 'MediaRewind', 'MediaFastForward', ' '].includes(key)) {
       e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') pauseOverlay.manualPause(); else if (key === 'MediaStop') back(true); else if (key === 'MediaRewind' || key === 'MediaFastForward') seekPreview.key(key==='MediaRewind'?'ArrowLeft':'ArrowRight',e); else toggle(); return true;
     }
+    if(segments.focused() && key==='Enter')return false;
     if(!upNext.focused() && controls.classList.contains('faded') && ['ArrowLeft','ArrowRight'].includes(key)){reveal();timeline.focus();return seekPreview.key(key,e);}
     if (!upNext.focused() && controls.classList.contains('faded') && ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) { e.preventDefault(); reveal(); pause.focus(); return true; }
+    if(segments.focused()){if(key==='Enter')return false;if(['ArrowUp','ArrowDown','ArrowRight'].includes(key)){e.preventDefault();reveal();(key==='ArrowUp'?chrome.info:timeline).focus();return true;}}
+    if(document.activeElement===timeline && key==='ArrowUp' && segments.focus()){e.preventDefault();return true;}
     if(document.activeElement===timeline && seekPreview.key(key,e))return true;
     if(chrome.key(key,hideControls)){e.preventDefault();return true;}
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; pauseOverlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   const controlSize=new ResizeObserver(()=>screen.style.setProperty('--subtitle-control-clearance',`${controls.offsetHeight+8}px`));controlSize.observe(controls);
   const disposeBase=cleanupPlayer;cleanupPlayer=()=>{controlSize.disconnect();disposeBase();};
   const artworkSignal=request.signal;

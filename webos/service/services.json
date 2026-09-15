@@ -1,0 +1,1 @@
+{"id":"org.nuviofork.webos.segments","description":"Read-only IntroDB episode segments","services":[{"name":"org.nuviofork.webos.segments","commands":[{"name":"segments","public":true}]}]}

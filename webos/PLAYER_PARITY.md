@@ -1,4 +1,4 @@
-# Fidelidade do player ao fork — 0.18.0
+# Fidelidade do player ao fork — 0.19.0
 
 Referência usada: `ysosrs123/NuvioTV-Fork@45e0984`, preservada nesta árvore.
 A barra anterior era uma adaptação com uma única fileira de botões de texto.
@@ -55,6 +55,11 @@ até oito pessoas do elenco e ficha com foto/personagem. Logos preservadas dos
 catálogos e enriquecidas pelo TMDB configurado, com preferência por idioma/região.
 [Comportamento, dimensões e limites](PLAYER_PAUSE_ARTWORK.md).
 
+## Trechos, miniaturas e aparência — 0.19
+
+[Implementação, fontes, limites e testes](PLAYER_EXTRAS.md). Miniaturas são uma
+adaptação parcial com cache de quadros do próprio vídeo.
+
 ## Diferenças que permanecem
 
 Não se declara o player integralmente idêntico ou todos os recursos concluídos.
@@ -64,14 +69,16 @@ mesmos títulos, faixas e preferências do Android.
 | Área do fork | Estado webOS |
 | --- | --- |
 | Barra principal, reiniciar, ícones, Mais, relógio | Transpostos nesta entrega; confirmar renderização física |
-| Busca com aceleração | Implementada; prévia usa barra completa, ainda sem miniaturas |
+| Busca com aceleração | Implementada; miniaturas opcionais de quadros já vistos, sem worker antecipado Android |
 | Fontes, episódios, idiomas, velocidade, proporção | Operacionais; painéis precisam continuar a revisão fina contra a referência |
 | Estatísticas | Mesma posição/largura 380 dp; apenas dados reais disponíveis via APIs de mídia, conteúdo ainda simplificado |
 | Áudio e legendas sem faixas expostas | Acesso preservado para consulta/diagnóstico e addons; presença dos ícones ainda difere do gate estrito Android |
 | Sincronização por fala e atraso fino | Implementados para externas SRT/VTT; atraso de faixas nativas e de áudio continuam pendentes |
 | Busca manual de legendas, ASS/PGS/libass | Ainda pendentes ou limitados pelo compositor nativo |
 | Tela de pausa com elenco e logos | Implementada; ficha limitada aos dados do título, validar na LG |
-| Prévia de busca, intro/outro e guia parental | Ainda pendentes, incluindo origem/contratos dos dados |
+| Abertura, recapitulação e créditos | IntroDB integrado por serviço local; automático opcional; validar Luna na LG |
+| Aparência de legenda | StyleRail transposta com família fixa e preset solicitado; internas opacas não personalizáveis |
+| Guia parental e extração antecipada de miniaturas | Pendentes |
 | Recomendações pós-reprodução e detalhes avançados de Up Next | Parcial; próximo episódio/contagem/“Ainda assistindo?” existentes |
 | Trocar ExoPlayer/MPV e abrir player Android externo | Não executáveis neste app webOS; botões sem implementação não foram adicionados |
 | AFR/display modes, tunneling, passthrough, downmix, decoder/FFmpeg | Dependem de alternativa específica LG; sem alegação de suporte |
@@ -79,7 +86,7 @@ mesmos títulos, faixas e preferências do Android.
 
 ## Próxima etapa do player
 
-Investigar os contratos dos dados de intro/outro e miniaturas de busca. Manter as diferenças acima rastreáveis até serem verificadas.
+Validar trechos/miniaturas no aparelho e avançar no guia parental e pós-reprodução. Manter as diferenças acima rastreáveis até serem verificadas.
 Não avançar para outras áreas enquanto esta revisão prioritária estiver ativa.
 
 ## Testes
