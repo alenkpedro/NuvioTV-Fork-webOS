@@ -47,6 +47,12 @@ function blocks(markdown) {
     }
     const item = line.match(/^(\s*)-\s+(.*)$/);
     const ordered = item ? null : line.match(/^(\s*)(\d+)\.\s+(.*)$/);
+    if (line.startsWith('>')) {
+      const quote = [];
+      while (index < lines.length && lines[index].startsWith('>')) { quote.push(lines[index].replace(/^>\s?/, '')); index += 1; }
+      out.push({ type: 'quote', text: quote.join(' ') });
+      continue;
+    }
     if (item || ordered) {
       const items = [];
       const matches = current => {
@@ -91,6 +97,8 @@ function render(parsed) {
       html.push(`<h${level}>${inline(block.text)}</h${level}>`);
     } else if (block.type === 'paragraph') {
       html.push(`<p>${inline(block.text)}</p>`);
+    } else if (block.type === 'quote') {
+      html.push(`<p class="note">${inline(block.text)}</p>`);
     } else if (block.type === 'code') {
       html.push(`<pre>${escape(block.text)}</pre>`);
     } else if (block.type === 'table') {
@@ -145,8 +153,11 @@ const styles = `
   .legend div { flex: 1; border: .25mm solid #dfe3ea; border-radius: 1.2mm; padding: 2.5mm; font-size: 9pt; }
   .legend strong { display: block; margin-bottom: .8mm; }
   .legend .k { font-size: 8pt; color: #6b7280; }
+  p.note { background: #f2f6fd; border-left: 1.2mm solid #1f6feb; border-radius: 1mm; padding: 2.4mm 3mm; font-size: 9.5pt; color: #24303f; }
 `;
 const parsed = blocks(readFileSync(source, 'utf8'));
+// The version comes from the package itself, so the cover never goes stale again.
+const version = JSON.parse(readFileSync(resolve(import.meta.dirname, '../public/appinfo.json'), 'utf8')).version;
 const body = render(parsed);
 const title = parsed.find(block => block.type === 'heading' && block.level === 1)?.text || 'Checklist de validação';
 const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escape(title)}</title><style>${styles}</style></head><body>
@@ -155,7 +166,7 @@ const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><tit
   <h1>${inline(title)}</h1>
   <div class="meta">
     <span class="chip">LG 55UT8050 · webOS 25</span>
-    <span class="chip">Pacote 0.24.1</span>
+    <span class="chip">Pacote ${version}</span>
     <span class="chip">${new Date().toLocaleDateString('pt-BR')}</span>
     <span class="chip">Início rápido: A1 → A2 → A3</span>
   </div>
@@ -178,7 +189,7 @@ await page.pdf({
   printBackground: true,
   displayHeaderFooter: true,
   headerTemplate: '<div></div>',
-  footerTemplate: '<div style="width:100%;font:7.5pt Helvetica,Arial,sans-serif;color:#8b93a3;padding:0 12mm;display:flex;justify-content:space-between;"><span>Checklist de validação · Nuvio Fork webOS 0.24.1</span><span>página <span class="pageNumber"></span> de <span class="totalPages"></span></span></div>'
+  footerTemplate: `<div style="width:100%;font:7.5pt Helvetica,Arial,sans-serif;color:#8b93a3;padding:0 12mm;display:flex;justify-content:space-between;"><span>Checklist de validação · Nuvio Fork webOS ${version}</span><span>página <span class="pageNumber"></span> de <span class="totalPages"></span></span></div>`
 });
 await browser.close();
 const pdf = readFileSync(target);

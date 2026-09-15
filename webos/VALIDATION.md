@@ -16,7 +16,7 @@ são falhas novas.
 ## Como usar
 
 - **Bloco A (essencial, ~10 min):** o que, se quebrar, quebra o resto.
-- **Bloco B (~15 min):** o que cada versão recente acrescentou (0.20 a 0.24.1).
+- **Bloco B (~15 min):** o que cada versão recente acrescentou (0.20 a 0.25.0).
 - **Bloco C (~20 min):** fluxos que nunca foram confirmados no aparelho desde a 0.4.
 - **Bloco D:** formatos de vídeo/áudio — só a TV responde.
 - Marque **OK / FALHOU / DÚVIDA** e anote o número do item. Se algo falhar, mande
@@ -323,7 +323,7 @@ Para cada item com problema, mande uma linha neste formato:
 
 ```text
 Item: B1 (fileira de coleção não aparece)
-Versão: 0.24.1   Firmware: webOS 25.x.y
+Versão: 0.25.0   Firmware: webOS 25.x.y
 O que fiz: criei a coleção, adicionei catálogo 'X', fui para Início
 O que aconteceu: a Home mostrou 'Nenhum conteúdo encontrado'
 O que esperava: a fileira 'Clássicos' com os títulos
