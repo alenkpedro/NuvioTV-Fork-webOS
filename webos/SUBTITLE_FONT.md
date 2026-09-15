@@ -42,6 +42,23 @@ por CSS `video::cue` às legendas nativas. Isso não garantia a fonte nas faixas
 que a LG desenha por conta própria. O relato do usuário motivou esta correção;
 não houve acesso ao aparelho para identificar a faixa exata ou medir a saída.
 
+## Peso do texto: negrito e face fina
+
+O port traz duas faces: **Netflix Sans Medium** (o visual que sempre existiu) é o estado
+**com negrito**, e o estado **sem negrito** pede uma face mais fina. Enquanto o arquivo
+`NetflixSans-Regular.otf` não estiver em `webos/public/assets/fonts/`, o navegador da TV cai
+para a **Inter** embutida, que já é mais fina que o Medium — o ajuste muda o que está na tela
+em qualquer caso.
+
+Para usar a Netflix Sans fina exata:
+
+1. coloque `NetflixSans-Regular.otf` (ou a face Light) em `webos/public/assets/fonts/`;
+2. rode `npm run package:webos` de novo — a regra `@font-face` de `Netflix Sans Regular` já
+   existe em `src/style.css` e passa a servir o arquivo.
+
+Estilos salvos antes da 0.26.0 mantêm o mesmo aspecto: a leitura migra o valor antigo para o
+estado Medium, então nada muda até o usuário tocar no **Negrito**.
+
 ## Comportamento
 
 - O arquivo NetflixSans-Regular.otf fornecido permanece incluído sem alteração.
