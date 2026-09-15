@@ -39,7 +39,10 @@ import { homeCatalogEntries } from './core/discovery.js';
 import {createMetadataClient,readMetadataSettings} from './core/metadata.js';
 import {createRatingsClient,readRatingsSettings} from './core/ratings.js';
 import {ratingsSettingsScreen} from './ratings-screen.js';
-import {detailExtras,personScreen,metadataSettingsScreen,launchTrailer} from './metadata-screen.js';
+import { detailExtras,personScreen,metadataSettingsScreen,launchTrailer} from './metadata-screen.js';
+import { collectionsScreen, collectionEditorScreen } from './collections-screen.js';
+import { collectionRails, describeSource, readCollections } from './core/collections.js';
+import { parseCatalogPage } from './core/discovery.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
@@ -49,6 +52,7 @@ import './style.css';
 
 const root = document.querySelector('#app');
 const state = readState(localStorage);
+state.collections = readCollections(state.collections);
 state.settings.layout = readLayout(state.settings.layout);
 state.settings.appearance = readAppearance(state.settings.appearance);
 const layout = state.settings.layout;
@@ -249,7 +253,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, collections: showCollections, 'collection-editor': showCollectionEditor, 'collection-source': showCollectionSource, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
@@ -350,11 +354,13 @@ async function cachedMetaJSON(url, signal) {
 }
 async function showHome(main, signal) {
   const recent = layout.continueWatching ? continueHistory(state) : [];
-  if (!state.addons.length && !recent.length) {
+  // Coleções: cada pasta com ao menos uma fonte vira uma fileira, as fixadas primeiro.
+  const rails = collectionRails(state.collections || []);
+  if (!state.addons.length && !recent.length && !rails.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon instalado. Adicione um para começar.')); return;
   }
   const catalogs = homeCatalogEntries(state).slice(0,6);
-  if (!catalogs.length && !recent.length) {
+  if (!catalogs.length && !recent.length && !rails.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum catálogo visível no início. Confira seus addons e a organização dos catálogos.')); return;
   }
   main.append(el('section', { class: 'home-hero', 'aria-label': 'Título em destaque' }, el('div', { class: 'hero-fade' }), el('div', { class: 'hero-copy' })));
@@ -377,6 +383,22 @@ async function showHome(main, signal) {
       first ||= r.value.metas[0];
       catalogSection(rows, catalogTitle(r.value.catalog, layout), r.value.metas, r.value.addon, () => navigate({ name: 'catalog', addon: r.value.addon, catalog: r.value.catalog }), `home-${i}`);
     } else if (r.error) notice(rows, `${catalogs[i].addon.manifest.name}: ${r.error.message}`);
+  }
+  if (rails.length) {
+    const collectionResults = await mapLimit(rails, async rail => {
+      try { return { rail, data: await fetchCollectionSource(rail.sources[0], signal) }; }
+      catch (error) { return { rail, error }; }
+    }, signal);
+    if (!current(signal)) return;
+    for (const entry of collectionResults) {
+      const value = entry?.value;
+      if (!value) continue;
+      if (value.data?.items.length) {
+        first ||= value.data.items[0];
+        catalogSection(rows, value.rail.title, value.data.items, value.data.addon, () => navigate({ name: 'collection-source', collectionId: value.rail.collectionId, folderId: value.rail.folderId }), value.rail.key);
+      } else if (value.error) notice(rows, `${value.rail.title}: ${value.error.message}`);
+      else notice(rows, `${value.rail.title}: esta fonte não devolveu títulos.`);
+    }
   }
   if (first) updateHomeHero(first);
   else notice(rows, 'Nenhum conteúdo encontrado.');
@@ -778,7 +800,9 @@ async function showProfiles(main, signal) {
       if (libraryResult.status === 'rejected') messages.push(`Biblioteca: ${libraryResult.reason.message}`);
       if (results[2].status === 'rejected') messages.push(`Histórico: ${results[2].reason.message}`);
       const failedAddons = addonResult.status === 'rejected' || addonResult.value.failed;
-      stack = []; navigate(failedAddons ? { name: 'settings', category: 'account' } : { name: 'home' }, true);
+      // Entrar na conta leva para a Home: uma falha de addon vira mensagem, e a nova
+      // tentativa continua disponível em Ajustes → Conta.
+      stack = []; navigate({ name: 'home' }, true);
       if (messages.length) toast(messages.join(' '));
       else if (failedAddons) toast(syncSummary(addonResult.value));
     }
@@ -854,6 +878,51 @@ function settingsContext(main, signal) {
   };
 }
 function showSettings(main, signal) { settingsScreen(settingsContext(main, signal)); }
+// CollectionsDataStore + CollectionManagementScreen/CollectionEditorScreen: the extra
+// rows of the Home, built from add-on catalogs and TMDB sources, edited on the TV.
+function collectionsContext(main, signal) {
+  return { main, signal, el, button, icon, state, persist, navigate, toast, route };
+}
+function showCollections(main, signal) { collectionsScreen(collectionsContext(main, signal)); }
+function showCollectionEditor(main, signal) { collectionEditorScreen(collectionsContext(main, signal)); }
+// Collection folder detail: the folder's sources as tabs, like FolderDetailScreen.
+async function showCollectionSource(main, signal) {
+  const rail = { collectionId: route.collectionId, folderId: route.folderId };
+  const collection = (state.collections || []).find(entry => entry.id === rail.collectionId);
+  const folder = collection?.folders.find(entry => entry.id === rail.folderId);
+  if (!folder) { heading(main, 'COLEÇÃO', 'Pasta removida'); notice(main, 'Esta pasta não existe mais nesta coleção.'); return; }
+  heading(main, 'COLEÇÃO', folder.title, `${collection.title} · ${folder.sources.length} fonte(s)`);
+  const tabs = el('div', { class: 'stream-chips' });
+  const list = el('div', { class: 'streams' });
+  const status = el('p', { class: 'muted', role: 'status' });
+  main.append(tabs, status, list);
+  let selected = 0;
+  async function draw() {
+    const source = folder.sources[selected];
+    for (const [index, node] of [...tabs.children].entries()) { node.classList.toggle('selected', index === selected); node.setAttribute('aria-pressed', String(index === selected)); }
+    list.replaceChildren(el('p', { class: 'loading' }, 'Carregando fileira…'));
+    try {
+      const data = await fetchCollectionSource(source, signal);
+      if (signal.aborted) return;
+      status.textContent = `${data.items.length} título(s) · ${describeSource(source)}`;
+      list.replaceChildren(...(data.items.length ? data.items.slice(0, 100).map((meta, index) => card(meta, data.addon, null, `collection-${index}`, { portrait: layout.landscapePosters })) : [el('p', { class: 'notice' }, 'Esta fonte não devolveu títulos.')]));
+    } catch (error) { if (!signal.aborted) { status.textContent = error.message; list.replaceChildren(); } }
+  }
+  folder.sources.forEach((source, index) => tabs.append(button(describeSource(source), () => { selected = index; draw(); }, { 'aria-label': `Fonte ${describeSource(source)}`, 'aria-pressed': String(index === selected), 'data-focus': `collection-source-${index}` })));
+  main.append(el('div', { class: 'toolbar' }, button('Voltar para Coleções', () => navigate({ name: 'collections' }), { 'aria-label': 'Voltar para Coleções' })));
+  draw();
+}
+// One fetch for both families: an add-on catalog response or a TMDB source.
+async function fetchCollectionSource(source, signal) {
+  if (source?.kind === 'tmdb') {
+    const data = await metadata.source(source, signal);
+    return { title: data.title, items: data.items, addon: null };
+  }
+  const addon = state.addons.find(entry => entry.url === source?.addonUrl);
+  if (!addon) throw Error('O add-on desta coleção não está instalado nesta TV.');
+  const data = parseCatalogPage(await cachedMetaJSON(resourceURL(addon, 'catalog', source.type, source.catalogId, source.genre ? { genre: source.genre } : {}), signal), source.type);
+  return { title: source.catalogName || source.catalogId, items: data.items.map(item => ({ ...item, type: item.type || source.type })), addon, catalog: { id: source.catalogId, type: source.type, name: source.catalogName }, genre: source.genre };
+}
 // The fork keeps subtitle appearance inside Reprodução → Legendas. The editor is the
 // same component the player panel opens, so both paths write a single setting, and it
 // re-renders itself because the player panel used to rebuild it.

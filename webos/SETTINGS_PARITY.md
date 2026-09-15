@@ -88,8 +88,12 @@ Grupos: **Geral**, **Pular automaticamente**, **Player e Seleção de Fontes**,
   Barra lateral moderna, Desfoque no menu lateral, Recolher barra lateral,
   Títulos nos pôsteres, Nome do addon, Tipo de conteúdo) e o estilo de Continuar
   Assistindo em três opções (Cartão, Amplo, Pôster).
-- **Conteúdo e Descoberta** reúne Addons, Catálogos do início e Descobrir;
-  Plugins fica pendente porque são módulos Android.
+- **Conteúdo e Descoberta** reúne Addons, Catálogos do início, **Coleções** e
+  Descobrir; Plugins fica pendente porque são módulos Android.
+- **Coleções** (0.24) é o port do `CollectionsDataStore`: coleções com pastas e
+  fontes de catálogo/TMDB, editor pelo controle e fileiras na Home com fixar no
+  topo. A lista do Trakt, a importação/exportação JSON e a aparência da fileira
+  continuam pendentes, com motivo. Ver [COLLECTIONS.md](COLLECTIONS.md).
 - **Integrações** é o hub do fork: Debrid pendente, TMDB e MDBList com o estado
   real da configuração.
 - **Rastreamento** mostra Trakt e Simkl como não conectados (o login OAuth é

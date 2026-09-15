@@ -165,6 +165,7 @@ export function settingsScreen(context) {
       group('Addons', 'Gerenciar add-ons, ordem dos catálogos e coleções',
         row('Addons', 'Instalar, atualizar e remover add-ons desta TV', () => navigate({ name: 'addons' }), { leading: 'search' }),
         row('Catálogos do início', 'Ordem e visibilidade neste perfil', () => navigate({ name: 'catalog-manager' })),
+        row('Coleções', 'Criar fileiras extras na Home a partir de catálogos e do TMDB', () => navigate({ name: 'collections' }), { value: `${(state.collections || []).length} coleção(ões)` }),
         row('Descobrir', 'Explorar por tipo, catálogo e gênero', () => navigate({ name: 'discover' }))),
       group('Plugins', 'Repositórios e provedores de stream',
         row('Plugins', 'Gerenciar repositórios e provedores de stream', null, { pending: true, pendingMessage: 'Plugins do fork são módulos Android com binários próprios; eles não são carregados no webOS.' }))

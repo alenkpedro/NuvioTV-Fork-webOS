@@ -88,7 +88,8 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    **Guia parental e pós-reprodução 0.21:** avisos de conteúdo no início da reprodução e a janela de recomendações do fim do filme, com o limite de 80–100% do fork. Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).
    **Reprodução automática 0.22:** os quatro modos de seleção de fonte do fork (Manual, Primeira fonte, Seleção inteligente e Palavra-chave/Regex, com exclusões por grupo negativo), o cache do último link com duração de 1 h a 7 dias e o trailer automático no detalhe e no fim do filme. Ver [AUTO_PLAY.md](AUTO_PLAY.md).
    **Buffer e Rede 0.23:** buffer inicial (5 s) e após travamento (3 s) com os padrões do fork, tempo limite de espera e o teste de velocidade real sobre a fonte, pelo mesmo transporte do player. Ver [NETWORK.md](NETWORK.md).
-   **Próxima prioridade:** validação na LG, downloads paralelos/buffer de bytes (que dependem do Media3), avaliação do dispositivo e as integrações que ainda dependem de serviço Android. A tabela de paridade mantém os recursos pendentes.
+   **Coleções 0.24:** coleções com pastas e fontes (catálogo de add-on e TMDB: coleção, lista, produtora, emissora, pessoa, direção e descobrir), fileiras extras na Home com fixar no topo, gerenciamento e editor pelo controle, e entrar na conta levando direto para a Home. Ver [COLLECTIONS.md](COLLECTIONS.md).
+   **Próxima prioridade:** validação na LG, sincronização das coleções com a conta, avaliação do dispositivo e as integrações que ainda dependem de serviço Android. A tabela de paridade mantém os recursos pendentes.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

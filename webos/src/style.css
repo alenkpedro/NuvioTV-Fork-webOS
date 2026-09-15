@@ -131,6 +131,22 @@ progress::-webkit-progress-value{background:var(--accent)}
 .post-play-steps button{flex:1;min-width:0;font-size:12px;padding:10px 12px}
 .post-play-counter{min-width:52px;text-align:center;font-size:12px}
 .post-play-countdown{margin-top:8px;font-size:13px;letter-spacing:.4px}
+.screen-collections{padding:28px 36px}.collections-head h1{font-size:24px;line-height:32px}.collections-head p{font-size:13px;line-height:18px;margin-top:6px}.collections-head .toolbar{margin-top:16px}
+.collections-body{display:flex;flex-direction:column;gap:12px;margin-top:20px}
+.collection-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:16px;background:#1a1a1a}
+.collection-open{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex:1;min-width:0;text-align:left;background:transparent;border:0;padding:0}
+.collection-open strong{font-size:16px;line-height:22px}.collection-open small{font-size:11px;line-height:16px}
+.collection-pin{font-size:10px;line-height:14px;padding:2px 6px;border-radius:4px;background:#ffffff18;color:#ddd}
+.collection-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.collection-action{font-size:11px;line-height:16px;padding:6px 10px}
+.collection-action.danger{color:#e6a1a1}
+.collection-folder{border:1px solid #333;border-radius:16px;background:#1a1a1a;padding:14px 16px;margin-bottom:12px}
+.collection-folder-head{display:flex;align-items:center;gap:12px}.collection-folder-head h2{font-size:15px;line-height:22px;flex:0 0 auto}.collection-folder-head .muted{font-size:11px}
+.collection-sources{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.collection-source{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;background:#ffffff0f}
+.collection-source .grow{display:flex;flex-direction:column}.collection-source strong{font-size:12px;line-height:16px}.collection-source small{font-size:11px;line-height:15px}
+.collection-choices{display:flex;flex-direction:column;gap:8px;margin:12px 0;max-height:420px;overflow-y:auto}
+.collection-choice{font-size:13px;line-height:18px;text-align:left;justify-content:flex-start}
 .post-play-back{font-size:12px}
 .post-play-open .player-controls{opacity:0;pointer-events:none}
 

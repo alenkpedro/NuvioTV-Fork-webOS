@@ -88,5 +88,57 @@ export function createMetadataClient({settings,request=getJSON}={}) {
     const data=await api(`collection/${id}`,signal,{},refresh);if(positive(data?.id)!==id)throw Error('O TMDB retornou uma coleção diferente da solicitada.');
     return {id,name:str(data.name) || reference.name || 'Coleção',items:collectionItems(data)};
   }
-  return {configured,detail,person,collection,clear:()=>cache.clear(),validate:signal=>api('configuration',signal)};
+  // TmdbCollectionSourceResolver.kt: a collection folder can point at a TMDB list,
+  // collection, company, network, person, director or discover query. Only the portable
+  // subset of filters is kept (media type, order and year for discover).
+  const discoverPath = type => type === 'tv' ? 'tv' : 'movie';
+  const sortParam = sortBy => ['original', ''].includes(sortBy) ? null : sortBy;
+  function sortLocally(items, sortBy) {
+    if (sortBy === 'original' || !items.length) return items;
+    const value = item => sortBy === 'vote_average.desc' ? Number(item.vote_average) || 0
+      : sortBy === 'vote_count.desc' ? Number(item.vote_count) || 0
+      : Number(item.popularity) || 0;
+    return [...items].sort((a, b) => value(b) - value(a));
+  }
+  async function source(reference, signal) {
+    const type = reference?.sourceType, mediaType = reference?.mediaType === 'tv' ? 'tv' : 'movie';
+    if (type === 'collection') {
+      const data = await api(`collection/${reference.tmdbId}`, signal);
+      const parts = list(data?.parts);
+      return { title: str(reference.title) || str(data?.name) || `Coleção TMDB ${reference.tmdbId}`, items: sortLocally(parts, reference.sortBy).map(part => preview(part, 'movie')).filter(Boolean).slice(0, 200) };
+    }
+    if (type === 'list') {
+      const data = await api(`list/${reference.tmdbId}`, signal);
+      const items = list(data?.items).map(item => preview(item, item?.media_type === 'tv' ? 'series' : mediaType === 'tv' ? 'series' : 'movie')).filter(Boolean);
+      return { title: str(reference.title) || str(data?.name) || `Lista TMDB ${reference.tmdbId}`, items: items.slice(0, 200) };
+    }
+    if (type === 'person' || type === 'director') {
+      const data = await api(`person/${reference.tmdbId}/combined_credits`, signal);
+      const rows = type === 'director' ? list(data?.crew).filter(item => String(item?.job || '').toLowerCase() === 'director') : list(data?.cast);
+      const items = sortLocally(rows, reference.sortBy).map(item => preview(item, item?.media_type === 'tv' ? 'series' : 'movie')).filter(Boolean);
+      const seen = new Set();
+      return { title: str(reference.title) || str(data?.name) || (type === 'director' ? 'Direção' : 'Elenco'), items: items.filter(item => !seen.has(item.id) && seen.add(item.id)).slice(0, 200) };
+    }
+    const path = type === 'network' ? 'tv' : discoverPath(mediaType);
+    const params = { include_adult: 'false', page: '1' };
+    const sort = sortParam(reference.sortBy);
+    if (sort) params.sort_by = sort;
+    if (type === 'company') params.with_companies = String(reference.tmdbId);
+    if (type === 'network') params.with_networks = String(reference.tmdbId);
+    if (reference.year) path === 'movie' ? params.primary_release_year = String(reference.year) : params.first_air_date_year = String(reference.year);
+    if (reference.genres) params.with_genres = reference.genres;
+    if (type !== 'discover' && !sort) params.sort_by = 'popularity.desc';
+    const data = await api(`discover/${path}`, signal, params);
+    const label = tmdbDiscoverLabel(type, reference);
+    return { title: label, items: list(data?.results).map(item => preview(item, path === 'tv' ? 'series' : 'movie')).filter(Boolean).slice(0, 200) };
+  }
+  return {configured,detail,person,collection,source,clear:()=>cache.clear(),validate:signal=>api('configuration',signal)};
 }
+function tmdbDiscoverLabel(type, reference) {
+  const names = { company: 'Produtora', network: 'Emissora', discover: 'Descobrir' };
+  const media = reference?.mediaType === 'tv' ? 'séries' : 'filmes';
+  if (reference?.title) return reference.title;
+  if (type === 'company' || type === 'network') return `${names[type]} ${reference?.tmdbId || ''}`.trim();
+  return `Descobrir · ${media}${reference?.year ? ` · ${reference.year}` : ''}`;
+}
+

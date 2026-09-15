@@ -15,7 +15,14 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.23.0
+## Estado: prévia 0.24.0
+
+A 0.24.0 acrescenta **Coleções** em **Ajustes → Conteúdo e Descoberta**: fileiras
+extras na Home montadas com catálogos de add-ons e fontes do TMDB (coleção, lista,
+produtora, emissora, pessoa, direção e descobrir), com pastas, fixar no topo,
+gerenciamento e editor pelo controle, e **Ver todos** abrindo a pasta com as
+fontes em abas. Entrar na conta passou a terminar na **Home**, mesmo quando algum
+add-on da conta não responde. Ver [webos/COLLECTIONS.md](webos/COLLECTIONS.md).
 
 A 0.23.0 acrescenta **Buffer e Rede** em **Ajustes → Reprodução**: o **buffer de
 reprodução personalizado** com **Buffer inicial** (5 s) e **Buffer após

@@ -27,6 +27,23 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Coleções (0.24)
+
+**Ajustes → Conteúdo e Descoberta → Coleções** cria fileiras extras na Home. Uma
+coleção tem pastas; cada pasta tem fontes; cada pasta com ao menos uma fonte vira
+uma fileira, e as coleções **fixadas no topo** vêm primeiro.
+
+As fontes são as duas famílias que funcionam nesta TV: **catálogo de add-on**
+(com gênero opcional) e **TMDB** — coleção, lista, produtora, emissora, pessoa,
+direção e descobrir, com os passos de ID, tipo e ordem em diálogos pelo controle.
+Um título do TMDB abre a tela de detalhes normalmente e a busca de fontes usa os
+add-ons instalados. **Ver todos** abre a pasta com as fontes em abas.
+
+Entrar na conta agora leva direto para a Home: uma falha ao importar add-ons vira
+mensagem, e a nova tentativa continua em **Ajustes → Conta**.
+
+[Gerenciamento, fontes e limites](COLLECTIONS.md).
+
 ## Buffer e Rede (0.23)
 
 **Buffer de reprodução personalizado** liga os dois controles que o player da TV

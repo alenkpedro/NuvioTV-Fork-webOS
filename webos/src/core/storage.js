@@ -5,7 +5,7 @@ import { captureProfile } from './profiles.js';
 import { migrateAutoPlay } from './auto-play.js';
 import { readLinkCache } from './link-cache.js';
 const KEY = 'nuvio-fork.webos.v1';
-export const initial = () => ({ addons: [], settings: { avoidDvOnly: true, autoPlay: false, preferences: {} }, progress: {}, library: {}, watched: {}, linkCache: {} });
+export const initial = () => ({ addons: [], settings: { avoidDvOnly: true, autoPlay: false, preferences: {} }, progress: {}, library: {}, watched: {}, linkCache: {}, collections: [] });
 export function readState(storage) {
   try {
     const parsed = JSON.parse(storage.getItem(KEY));

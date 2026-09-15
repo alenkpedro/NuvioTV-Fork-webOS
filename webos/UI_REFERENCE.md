@@ -39,6 +39,7 @@ Caminhos relativos a `app/src/main/java/com/nuvio/tv/`.
 | Reprodução automática | Modos, durações e atrasos em chips e passos dentro do grupo do fork (`settings-choices` 10 px, passo 44×44); o padrão do atraso usa o mesmo `settings-threshold` | `ui/screens/settings/PlaybackAutoPlaySettings.kt` |
 | Buffer e Rede | Mesmo `settings-threshold` do fork para as três durações, com os rótulos de `playback_buffer_*`; as linhas sem equivalente usam o marcador de pendência | `ui/screens/settings/PlaybackAutoPlaySettings.kt`, `NetworkSettingsScreen.kt` |
 | Medição de velocidade | Linha de 11 px em verde sob as etiquetas da fonte, sem foco próprio; o cartão continua sendo o alvo do controle | `ui/screens/settings/NetworkSettingsScreen.kt` |
+| Coleções | Cartões de coleção com ações inline (mover, fixar, renomear, excluir) e pastas com fontes listadas; os diálogos de escolha do fork viram listas de botões (`collection-choices`, 60 s de rolagem em 420 px) | `ui/screens/collection/CollectionManagementScreen.kt`, `CollectionEditorScreen.kt`, `FolderDetailScreen.kt` |
 | Addons | Margens 36/28, bloco de instalação com padding 20 | `ui/screens/addon/AddonManagerScreen.kt` |
 
 Fonte, wordmark e SVGs de busca/biblioteca/ajustes são copiados **sem alteração**;

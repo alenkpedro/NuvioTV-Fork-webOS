@@ -15,6 +15,7 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 | `src/core/trailer.js` | Port de `data/local/TrailerSettingsDataStore.kt` e de `PostPlayRecommendationState.kt` (contador de 5 s). O player trabalha em segundos; o fork em milissegundos. |
 | `src/core/buffer.js` | Port das duas durações de `PlayerSettingsDataStore.BufferSettings` que o elemento de mídia da TV obedece (`bufferForPlaybackMs`, `bufferForPlaybackAfterRebufferMs`), com os padrões e faixas do fork e o tempo limite de espera. Ver [NETWORK.md](NETWORK.md). |
 | `src/core/speed-test.js` | Port de `core/network/StreamSpeedTester.kt` sobre o transporte do port: aquecimento, orçamento de bytes, janela e sub-janelas. O `StreamSweepEngine` (conexões paralelas) não tem equivalente. |
+| `src/core/collections.js`, `collections-screen.js` | Port de `data/local/CollectionsDataStore.kt`, `domain/model/Collection.kt`, `CollectionManagementScreen.kt` e `CollectionEditorScreen.kt`: coleções, pastas, fontes de catálogo/TMDB e as fileiras da Home. A resolução de cada tipo de fonte do TMDB segue `core/tmdb/TmdbCollectionSourceResolver.kt`. Ver [COLLECTIONS.md](COLLECTIONS.md). |
 | `src/core/addons.js` | Contratos de `data/remote/api/AddonApi.kt` e comportamento de URLs de `data/repository/AddonRepositoryImpl.kt`; transporte substituído por fetch limitado/cancelável. |
 | `src/core/account.js`, `account-sync.js` | `core/auth/AuthManager.kt`, `ui/screens/account/AccountViewModel.kt`, `core/sync/AddonSyncService.kt`: vinculação, renovação, resolução de proprietário e leitura de addons do perfil principal. Ver [ACCOUNT.md](ACCOUNT.md). |
 | `src/core/presentation.js`, opções em `app.js`/`style.css` | `LayoutPreferenceDataStore`, `ModernHomeContent`, `ModernSidebarBlurPanel`, `HeroSection`, `EpisodesSection`, `CastSection`. Ver [UI_REFERENCE.md](UI_REFERENCE.md) para dimensões e diferenças. |
@@ -49,6 +50,10 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 9. A medição de velocidade reporta taxa e latência por fonte sem reordenar a
    lista: o `StreamSweepEngine` do fork escolhe uma configuração de rede, o que um
    aplicativo web não faz.
+10. As coleções são locais por perfil: o blob de coleções do
+   `CollectionSyncService` ainda não é enviado à conta. Ficam de fora as listas do
+   Trakt, a importação/exportação JSON e a aparência da fileira (capa, GIF, emoji,
+   formato e modo de exibição).
 
 ## Próximos marcos
 
