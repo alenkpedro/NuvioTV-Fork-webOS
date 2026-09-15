@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.17.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.18.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.17.0",
+        "version": "0.18.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Painéis de áudio e legendas do fork, sincronização por fala e ajuste fino de 100 ms.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.17.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.17.0",
+        "appDescription": "Tela de pausa com sinopse e elenco, logos dos títulos e player adaptado do fork.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.18.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.18.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.17.0/org.nuviofork.webos_0.17.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.18.0/org.nuviofork.webos_0.18.0_all.ipk",
         "ipkHash": {
-          "sha256": "fe69fba33e1b60724695b2e1cfc88bd038f99c6050665b2e43eac6434b82099c"
+          "sha256": "d9a0d8882181e16ae5be97e3eba297f987da5c8b0eb3762ce3516656992518a3"
         },
-        "ipkSize": 807250
+        "ipkSize": 809950
       },
       "pool": "main",
-      "shortDescription": "Player do fork com sincronização por fala para LG webOS 24."
+      "shortDescription": "Player do fork com logos e tela de pausa para LG webOS 24."
     }
   ]
 }
