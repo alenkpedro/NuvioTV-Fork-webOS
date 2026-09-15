@@ -26,7 +26,7 @@ export function trailerDialog(ctx,trailer) {
   root.append(dialog);open.focus();signal.addEventListener('abort',close,{once:true});
 }
 export function detailExtras(ctx,meta,addon) {
-  const {main,el,button,card,poster,navigate,signal,route,metadata}=ctx;
+  const {main,el,button,card,poster,navigate,signal,route,metadata,readTrailer}=ctx;
   const section=el('section',{class:'detail-extras'}),tabs=el('div',{class:'detail-tabs',role:'tablist','aria-label':'Mais sobre o título'}),panel=el('div',{class:'detail-extra-panel',role:'tabpanel','aria-label':'Conteúdo do título'}),source=el('p',{class:'metadata-source muted'});
   section.append(tabs,panel,source);main.append(section);
   const scoreRow=installRatings(ctx,meta),collection=collectionSection(ctx);
@@ -36,6 +36,30 @@ export function detailExtras(ctx,meta,addon) {
   const heroTrailer=button(el('img',{src:'assets/icons/trailer_play_button.svg',alt:'',class:'trailer-action-icon'}),()=>{if(videos.length)trailerDialog(ctx,videos[0]);},{class:'round-button detail-trailer-button','aria-label':'Trailer','data-focus':'detail-trailer'});main.querySelector('.detail-actions')?.append(heroTrailer);heroTrailer.addEventListener('focus',()=>{main.scrollTop=0;},{signal});
   const labels={cast:'Elenco',related:'Semelhantes',trailers:'Trailers'};
   const configure=()=>navigate({name:'metadata-settings'});
+  // MetaDetailsViewModel.startIdleTimer: with "Trailer automático" on, the trailer
+  // starts after the configured delay while the play button stays focused, once per
+  // title. The fork plays it inside the hero; this target cannot, so the port opens
+  // the same dialog the Trailer button opens and the user keeps control of the TV.
+  const playButton=main.querySelector('.detail-actions .play-button');
+  let idleTimer, trailerOffered=false;
+  const clearIdleTimer=()=>{clearTimeout(idleTimer);idleTimer=null;};
+  function armIdleTimer() {
+    clearIdleTimer();
+    const settings=readTrailer?.() || {};
+    if(!settings.trailerAutoPlay || trailerOffered || !videos.length)return;
+    if(!playButton || document.activeElement!==playButton)return;
+    idleTimer=setTimeout(()=>{
+      idleTimer=null;
+      if(signal.aborted || trailerOffered)return;
+      if(!playButton.isConnected || document.activeElement!==playButton)return;
+      trailerOffered=true;
+      trailerDialog(ctx,videos[0]);
+    },settings.trailerDelay*1000);
+  }
+  playButton?.addEventListener('focus',armIdleTimer,{signal});
+  main.addEventListener('focusin',event=>{if(event.target!==playButton)clearIdleTimer();},{signal});
+  for(const event of ['keydown','pointerdown','wheel'])main.addEventListener(event,()=>clearIdleTimer(),{signal,capture:true});
+  signal.addEventListener('abort',clearIdleTimer,{once:true});
   function draw(preserve=false) {
     heroTrailer.hidden=!videos.length;
     const focused=preserve && section.contains(document.activeElement)?document.activeElement.dataset.focus:null;
@@ -59,6 +83,7 @@ export function detailExtras(ctx,meta,addon) {
     else if(error)panel.append(button('Tentar novamente',()=>load(),{'data-focus':'detail-retry-metadata'}));
     source.textContent=loading?'Carregando dados complementares…':error?'Dados do addon preservados. TMDB indisponível.':recommendations.length || members.some(m=>m.tmdbId)?'Metadados dos addons / TMDB':'';
     if(focused){const node=[...section.querySelectorAll('[data-focus]')].find(n=>n.dataset.focus===focused);node?.focus({preventScroll:true});const rail=panel.querySelector('.rail,.cast-rail,.trailer-rail');if(rail)rail.scrollLeft=scroll;}
+    armIdleTimer();
   }
   let running=false;
   async function load() {

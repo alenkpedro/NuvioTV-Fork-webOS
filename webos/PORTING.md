@@ -10,6 +10,9 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 | `src/core/ranking.js: rankStreams` | Port de `core/player/StreamQualityRank.kt`, incluindo fallback quando todas as fontes são excluídas e estabilidade em empates. |
 | `src/core/ranking.js: filterAndSort` | Filtros, comparadores, prioridade de cache e limites de `DirectDebridStreamFilter.kt`. Nesta prévia a UI permite aplicá-los à lista de todos os add-ons; o original os aplica à lista Direct Debrid. |
 | `src/core/ranking.js: sizeBytes` | Port de `core/debrid/StreamTextSizeParser.kt`, incluindo unidades binárias e precedência de campos estruturados. |
+| `src/core/auto-play.js` | Port de `core/player/StreamAutoPlaySelector.kt` e `core/player/StreamAutoPlayPolicy.kt`: os quatro modos, `orderAddonStreams` resumido à ordem dos add-ons (sem plugins), exclusões extraídas de `(?!...)` e o escopo por add-on. Ver [AUTO_PLAY.md](AUTO_PLAY.md). |
+| `src/core/link-cache.js` | Port de `data/local/StreamLinkCacheDataStore.kt`: chave por conteúdo, validade pela duração configurada e loja limitada. Somente links HTTP(S), porque torrents não têm reprodução neste alvo. |
+| `src/core/trailer.js` | Port de `data/local/TrailerSettingsDataStore.kt` e de `PostPlayRecommendationState.kt` (contador de 5 s). O player trabalha em segundos; o fork em milissegundos. |
 | `src/core/addons.js` | Contratos de `data/remote/api/AddonApi.kt` e comportamento de URLs de `data/repository/AddonRepositoryImpl.kt`; transporte substituído por fetch limitado/cancelável. |
 | `src/core/account.js`, `account-sync.js` | `core/auth/AuthManager.kt`, `ui/screens/account/AccountViewModel.kt`, `core/sync/AddonSyncService.kt`: vinculação, renovação, resolução de proprietário e leitura de addons do perfil principal. Ver [ACCOUNT.md](ACCOUNT.md). |
 | `src/core/presentation.js`, opções em `app.js`/`style.css` | `LayoutPreferenceDataStore`, `ModernHomeContent`, `ModernSidebarBlurPanel`, `HeroSection`, `EpisodesSection`, `CastSection`. Ver [UI_REFERENCE.md](UI_REFERENCE.md) para dimensões e diferenças. |
@@ -32,6 +35,12 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
    a suíte Kotlin e não se afirma paridade integral do aplicativo.
 5. Esta versão prioriza um alvo recente (webOS 24) e não declara compatibilidade
    com TVs LG antigas. JavaScript é compilado para Chromium 108.
+6. O cache do último link é consultado antes de pedir as fontes aos add-ons; o
+   fork pede a lista e depois decide. Desligar o ajuste apaga os links guardados,
+   o que o fork não faz.
+7. O trailer automático não reproduz YouTube dentro do app: o detalhe abre o
+   diálogo do trailer e o fim do filme abre o aplicativo do YouTube da TV. O fork
+   reproduz os dois dentro de uma segunda instância do player.
 
 ## Próximos marcos
 

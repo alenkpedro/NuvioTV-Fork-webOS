@@ -27,6 +27,28 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Reprodução automática (0.22)
+
+**Seleção automática de fonte** tem os quatro modos do fork. Manual (padrão)
+sempre mostra a lista; **Primeira fonte** usa a ordem dos add-ons; **Seleção
+inteligente** usa o ranking do fork; **Palavra-chave (Regex)** reproduz a
+primeira fonte que coincidir com o padrão — `4K|2160p|Remux` para incluir e
+`(?!(cam|ts))` para descartar. Sem padrão válido ou sem coincidência, a lista
+continua aparecendo. **Addons permitidos** limita a escolha automática.
+
+**Reutilizar último link** guarda o endereço direto da fonte escolhida por título
+e perfil por 1 h a 7 dias (padrão 24 h) e o reutiliza sem consultar os add-ons de
+novo. Somente links HTTP(S) entram no cache, e desligar o ajuste apaga o que
+estiver guardado.
+
+**Trailer automático após assistir** abre o trailer do título no diálogo do
+detalhe depois do atraso configurado (3 s a 15 s, padrão 7 s) enquanto o foco
+fica em Assistir, e mostra um contador nos últimos cinco segundos do filme para
+abrir o trailer da recomendação no fim. No webOS o trailer abre no aplicativo do
+YouTube da TV, não dentro do Nuvio.
+
+[Modos, cache, diferenças e limites](AUTO_PLAY.md).
+
 ## Guia parental e pós-reprodução (0.21)
 
 **Avisos de conteúdo** vêm ligados: ao começar a reprodução, o port consulta o

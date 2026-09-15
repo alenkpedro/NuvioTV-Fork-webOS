@@ -96,7 +96,13 @@ test('playback groups follow the fork, keep the port toggles working and mark An
   await expect(page.getByRole('switch', { name: 'Aberturas', exact: true })).toHaveAttribute('aria-checked', 'true');
   // Avisos de conteúdo is a real switch now; the Android-only rows stay marked.
   await expect(page.getByRole('switch', { name: 'Avisos de conteúdo', exact: true })).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('button', { name: /^Reutilizar último link/ })).toContainText('Pendente');
+  // Reprodução automática is no longer pending: the fork's four modes are chips,
+  // and the link cache and the trailer are switches of their own.
+  await expect(page.getByRole('switch', { name: 'Reutilizar último link', exact: true })).toBeVisible();
+  const modes = page.locator('[aria-label="Seleção automática de fonte"] button');
+  await expect(modes).toHaveText(['Manual (escolher fonte)', 'Primeira fonte', 'Seleção inteligente', 'Palavra-chave (Regex)']);
+  await expect(modes.nth(0)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('switch', { name: 'Trailer automático após assistir', exact: true })).toHaveAttribute('aria-checked', 'false');
   await page.screenshot({ path: 'test-results/settings-playback-1920.png' });
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).settings.playback);
   expect(stored.pauseOverlay).toBe(true);

@@ -15,7 +15,13 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.21.0
+## Estado: prévia 0.22.0
+
+A 0.22.0 acrescenta a **reprodução automática** do fork em **Ajustes →
+Reprodução**: os quatro modos de seleção de fonte (Manual, Primeira fonte,
+Seleção inteligente e Palavra-chave/Regex, com `(?!(cam|ts))` como exclusão), o
+cache do último link por 1 h a 7 dias e o trailer automático no detalhe e no fim
+do filme. Ver [webos/AUTO_PLAY.md](webos/AUTO_PLAY.md).
 
 A 0.21.0 acrescenta o **guia parental** e a **pós-reprodução** do fork. Com
 **Ajustes → Reprodução → Avisos de conteúdo** ligado (padrão), a reprodução

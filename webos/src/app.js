@@ -9,6 +9,9 @@ import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episo
 import { readSubtitleStyle } from './core/subtitle-style.js';
 import appinfo from '../public/appinfo.json';
 import { nextSource, readPlayback } from './core/playback.js';
+import { autoPlayConfigured, autoPlayModeLabel, selectAutoPlayStream } from './core/auto-play.js';
+import { cacheDurationLabel, clearLinkCache, linkKey, readLink, writeLink } from './core/link-cache.js';
+import { postPlayCountdown, postPlayTrailerCountdown, shouldCountTrailer } from './core/trailer.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -22,7 +25,7 @@ import {installSegments} from './player-segments.js';
 import {installThumbnails} from './player-thumbnails.js';
 import { installPauseOverlay } from './player-pause.js';
 import { artworkURL, enrichPlayerMetadata } from './core/player-artwork.js';
-import { people } from './core/metadata.js';
+import { people, trailers } from './core/metadata.js';
 import { playerUI } from './player-ui.js';
 import { installSeek } from './core/player-seek.js';
 import { installTrackControls } from './player-tracks.js';
@@ -34,7 +37,7 @@ import { homeCatalogEntries } from './core/discovery.js';
 import {createMetadataClient,readMetadataSettings} from './core/metadata.js';
 import {createRatingsClient,readRatingsSettings} from './core/ratings.js';
 import {ratingsSettingsScreen} from './ratings-screen.js';
-import {detailExtras,personScreen,metadataSettingsScreen} from './metadata-screen.js';
+import {detailExtras,personScreen,metadataSettingsScreen,launchTrailer} from './metadata-screen.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
@@ -510,7 +513,7 @@ function textDialog(title, body) {
   const close = button('Fechar', () => { dialog.remove(); previous?.focus({ preventScroll: true }); }, { 'data-dismiss': true });
   dialog.firstChild.append(close); root.append(dialog); close.focus();
 }
-function metadataContext(main,signal) {return {main,signal,el,button,card,poster,route,root,navigate,textDialog,metadata,ratings,qr:url=>{
+function metadataContext(main,signal) {return {main,signal,el,button,card,poster,route,root,navigate,textDialog,metadata,ratings,readTrailer:()=>readPlayback(state.settings.playback),qr:url=>{
   const matrix=qrcode(0,'M');matrix.addData(url);matrix.make();const count=matrix.getModuleCount(),canvas=el('canvas',{width:(count+8)*4,height:(count+8)*4,'aria-label':'QR code do trailer',role:'img'}),ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#000';for(let r=0;r<count;r++)for(let c=0;c<count;c++)if(matrix.isDark(r,c))ctx.fillRect((c+4)*4,(r+4)*4,4,4);return canvas;
 }};}
 async function showDetail(main, signal) {
@@ -593,6 +596,26 @@ async function showDetail(main, signal) {
   if(route.restoreFocus)await extrasReady;
   main.querySelectorAll('.detail-actions button, .synopsis').forEach(b => b.addEventListener('focus', () => { if (!pointerFocus) main.scrollTop = 0; }));
 }
+// One path for every way a source reaches the player, so the link cache sees the
+// same choice the fork saves in PlayerRuntimeControllerStreams.
+function playStream(context, stream) {
+  rememberLink(context, stream);
+  navigate({ ...context, name: 'player', stream });
+}
+// The fork stores the direct URL with the source name; torrents are not reused here
+// because this target has no torrent path at all.
+function rememberLink(context, stream) {
+  if (!stream?.url || !readPlayback(state.settings.playback).reuseLastLink) return;
+  const key = linkKey(context.type, context.id);
+  if (!key) return;
+  state.linkCache = writeLink(state.linkCache, key, { url: stream.url, streamName: stream.name || stream.title, addonName: stream.addonName });
+  persist();
+}
+// CachedStreamLink carries the source name and headers; on webOS the TV plays the
+// URL directly, so the entry is rebuilt as a plain HTTP(S) source.
+function cachedStream(link) {
+  return { name: link.streamName, url: link.url, addonName: link.addonName || 'Link anterior', sourceKey: 'cached-link' };
+}
 async function showStreams(main, signal) {
   // Ephemeral route state preserves selection on Back; signed source URLs are not persisted.
   route.sourceView ||= { showAll: false, provider: null };
@@ -605,6 +628,20 @@ async function showStreams(main, signal) {
     context.episode?.title ? el('p', {}, context.episode.title) : null));
   const pane = el('div', { class: 'stream-pane' }); main.append(identity, pane); main = pane;
   const providers = state.addons.filter(a => supports(a, 'stream', context.type, context.id)).slice(0, 30);
+  const sourcePrefs = () => readPlayback(state.settings.playback);
+  // StreamLinkCacheDataStore: with "Reutilizar último link" on, a valid entry for this
+  // content plays straight away. The port reads the cache before asking the add-ons,
+  // which is the point of the setting on a TV; the entry is consumed once per visit,
+  // so Back from a link that expired on the server always reaches the list.
+  if (sourcePrefs().reuseLastLink && !view.visited) {
+    const cached = readLink(state.linkCache, linkKey(context.type, context.id), sourcePrefs().reuseLastLinkHours);
+    state.linkCache = cached.cache;
+    if (cached.link) {
+      view.visited = true;
+      persist();
+      if (!document.hidden) { playStream(context, cachedStream(cached.link)); return; }
+    }
+  }
   if (!view.rows || Date.now() - view.loadedAt > 120000) {
     const loading = el('p', { class: 'loading' }, 'Buscando fontes nos seus add-ons…'); main.append(loading);
     const responses = await mapLimit(providers, async (addon, provider) => {
@@ -618,10 +655,11 @@ async function showStreams(main, signal) {
   }
   const all = view.rows;
   const chooseBest = rows => rankStreams(rows.filter(s => !playbackIssue(s, state.settings.avoidDvOnly)), state.settings.preferences)[0];
-  if ((context.nextPlayback ? context.nextPlayback.auto : state.settings.autoPlay) && !view.visited) {
+  if ((context.nextPlayback ? context.nextPlayback.auto : autoPlayConfigured(sourcePrefs())) && !view.visited) {
     view.visited = true;
-    const best = context.nextPlayback ? nextSource(rankStreams(all.filter(s=>!playbackIssue(s,state.settings.avoidDvOnly)),state.settings.preferences),context.nextPlayback.bingeGroup,state.settings.playback) : chooseBest(all);
-    if (best && !document.hidden) { navigate({ ...context, name: 'player', stream: best }); return; }
+    const prefs = sourcePrefs();
+    const best = context.nextPlayback ? nextSource(rankStreams(all.filter(s=>!playbackIssue(s,state.settings.avoidDvOnly)),state.settings.preferences),context.nextPlayback.bingeGroup,state.settings.playback) : selectAutoPlayStream(all, { mode: prefs.autoPlayMode, regex: prefs.autoPlayRegex, preferences: state.settings.preferences, avoidDvOnly: state.settings.avoidDvOnly, allowedAddons: prefs.autoPlayAddons });
+    if (best && !document.hidden) { playStream(context, best); return; }
   }
   view.visited = true;
   if (context.nextPlayback) context.nextPlayback = {...context.nextPlayback,count:0};
@@ -636,7 +674,7 @@ async function showStreams(main, signal) {
     count.textContent = `${Math.min(100, visible.length)} de ${rows.length} fonte(s)${view.failed ? ` · ${view.failed} addon(s) não responderam` : ''}`;
     if (!visible.length) notice(list, !providers.length ? 'Nenhum add-on instalado fornece fontes para este título.' : !rows.length ? 'Nenhuma fonte encontrada. Tente atualizar ou escolher outro addon.' : 'Nenhuma fonte passou pelos filtros. Use “Mostrar todas” para revisar.');
     for (const s of visible.slice(0, 100)) {
-      list.append(sourceCard(s,providers,()=>navigate({ ...context, name: 'player', stream: s }),!list.childElementCount));
+      list.append(sourceCard(s,providers,()=>playStream(context, s),!list.childElementCount));
     }
   };
   const toggle = button(view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas', () => { view.showAll = !view.showAll; toggle.textContent = view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas'; display(); }, { 'data-focus': 'source-filters' });
@@ -645,7 +683,7 @@ async function showStreams(main, signal) {
     view.provider = provider; [...chips.querySelectorAll('[data-provider]')].forEach(b => b.classList.toggle('selected', b.dataset.provider === String(provider))); display();
   }, { class: provider === view.provider ? 'selected' : '', 'data-provider': String(provider), 'data-focus': `source-addon-${provider}` }));
   const actions = el('div', { class: 'stream-actions' }, button('Reproduzir melhor fonte', () => {
-    const best = chooseBest(subset()); best ? navigate({ ...context, name: 'player', stream: best }) : toast('Não há fonte HTTP(S) elegível nesta seleção.');
+    const best = chooseBest(subset()); best ? playStream(context, best) : toast('Não há fonte HTTP(S) elegível nesta seleção.');
   }, { 'data-focus': 'source-best' }), toggle);
   main.append(chips, count, list, actions); display();
 }
@@ -804,7 +842,11 @@ function showPreferences(main) {
     const input = el('input', { type: 'checkbox', checked, onchange: e => { change(e.target.checked); persist(); } });
     return el('label', { class: 'setting' }, el('span', { class: 'grow' }, el('strong', {}, title), el('small', { class: 'muted' }, description)), input);
   };
-  main.append(option('Evitar fontes anunciadas como somente Dolby Vision', 'Perfil LG UT8050: HDR10 e HLG. A classificação usa as informações fornecidas pelo add-on.', state.settings.avoidDvOnly, v => state.settings.avoidDvOnly = v), option('Reproduzir automaticamente a melhor fonte', 'Usa a ordem de qualidade e a regra de fallback do fork entre fontes elegíveis.', state.settings.autoPlay, v => state.settings.autoPlay = v));
+  main.append(option('Evitar fontes anunciadas como somente Dolby Vision', 'Perfil LG UT8050: HDR10 e HLG. A classificação usa as informações fornecidas pelo add-on.', state.settings.avoidDvOnly, v => state.settings.avoidDvOnly = v));
+  // The old single switch became the fork's four modes, the link cache and the trailer:
+  // all of them live in Ajustes → Reprodução → Reprodução automática.
+  const automation = readPlayback(state.settings.playback);
+  main.append(el('div', { class: 'setting' }, el('span', { class: 'grow' }, el('strong', {}, 'Reprodução automática'), el('small', { class: 'muted' }, `Seleção de fonte: ${autoPlayModeLabel(automation.autoPlayMode)} · Último link: ${automation.reuseLastLink ? cacheDurationLabel(automation.reuseLastLinkHours) : 'desligado'} · Trailer automático: ${automation.trailerAutoPlay ? `${automation.trailerDelay}s` : 'desligado'}`)), button('Abrir em Ajustes', () => navigate({ name: 'settings', category: 'playback' }), { 'data-focus': 'preferences-automation' })));
   main.append(el('h2', { class: 'section-title' }, 'Filtros e ordem de qualidade'));
   const fields = [['excludedReleaseGroups', 'Grupos excluídos'], ['preferredReleaseGroups', 'Ordem dos grupos preferidos']];
   for (const [key, label] of fields) {
@@ -849,13 +891,14 @@ function showPlayer(context) {
         nextPlayback:{auto,count,bingeGroup:context.stream.behaviorHints?.bingeGroup || null}},true);
     }});
   episodes=installEpisodePanel({screen,context,state,el,button,poster,sourceCard,
-    playCurrent:stream=>{save();navigate({...context,stream,nextPlayback:{...context.nextPlayback,auto:false,count:0}},true);},
+    playCurrent:stream=>{save();rememberLink(context,stream);navigate({...context,stream,nextPlayback:{...context.nextPlayback,auto:false,count:0}},true);},
     loadMeta:async signal=>(await loadMeta(context.meta,context.addon,signal))?.meta,
     onOpen:()=>{clearTimeout(hideTimer);controls.classList.add('faded');controls.inert=true;screen.classList.remove('controls-visible');upNext.refresh();},
     onClose:()=>{reveal();upNext.refresh();},
     play:(episode,stream,meta)=>{
       while(['player','streams'].includes(stack.at(-1)?.route.name))stack.pop();
       const target={name:'streams',meta,addon:context.addon,id:episode.id,type:context.type,episode:{title:episode.title,season:episode.season,episode:episode.episode},nextPlayback:{auto:false,count:0}};
+      rememberLink({type:context.type,id:episode.id},stream);
       stack.push({route:target,focus:stream.sourceKey});navigate({...target,name:'player',stream},true);
     }});
   function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
@@ -874,6 +917,15 @@ function showPlayer(context) {
   // while a following episode is offerable, so only one prompt is on screen.
   postPlay=installPostPlay({screen,video,context,settings:state.settings,el,button,poster,
     recommendations:()=>postPlayCandidates,
+    // TrailerSettingsDataStore + PostPlayRecommendationController: "Trailer automático"
+    // plays the recommendation's trailer at the end of a movie. The fork resolves the
+    // candidate's trailer with the rest of its details; the port asks TMDB once, when
+    // the countdown reaches the trailer, and opens it the same way the detail screen does.
+    trailer:{
+      enabled:()=>readPlayback(state.settings.playback).trailerAutoPlay,
+      resolve:async item=>{ if(!metadata.configured())return ''; const data=await metadata.detail({...item,id:item.id,type:item.type},request.signal); const list=data?trailers(data.meta):[]; return list[0]?.ytId || ''; },
+      launch:ytId=>launchTrailer(ytId,{signal:request.signal}).catch(()=>{})
+    },
     // The fork resolves the candidate through the addons before playing it. The port
     // asks TMDB for the same title so the detail screen gets the IMDb id addons route by.
     open:async item=>{

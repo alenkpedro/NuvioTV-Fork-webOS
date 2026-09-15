@@ -2,13 +2,18 @@
 import { markWatched } from './history.js';
 import { enqueueKnown } from './outbox.js';
 import { captureProfile } from './profiles.js';
+import { migrateAutoPlay } from './auto-play.js';
+import { readLinkCache } from './link-cache.js';
 const KEY = 'nuvio-fork.webos.v1';
-export const initial = () => ({ addons: [], settings: { avoidDvOnly: true, autoPlay: false, preferences: {} }, progress: {}, library: {}, watched: {} });
+export const initial = () => ({ addons: [], settings: { avoidDvOnly: true, autoPlay: false, preferences: {} }, progress: {}, library: {}, watched: {}, linkCache: {} });
 export function readState(storage) {
   try {
     const parsed = JSON.parse(storage.getItem(KEY));
     if (!parsed || !Array.isArray(parsed.addons) || typeof parsed.progress !== 'object' || !parsed.progress) return initial();
-    return { ...initial(), ...parsed, library: parsed.library && typeof parsed.library === 'object' ? parsed.library : {}, watched: parsed.watched && typeof parsed.watched === 'object' ? parsed.watched : {}, settings: { ...initial().settings, ...parsed.settings }, addons: parsed.addons.filter(a => a?.url && a?.manifest?.id && Array.isArray(a.manifest.resources)).slice(0, 30) };
+    // The single auto-play switch became four fork modes; existing installs keep
+    // working as "Seleção inteligente" and stop carrying the old flag.
+    const settings = migrateAutoPlay({ ...initial().settings, ...parsed.settings });
+    return { ...initial(), ...parsed, library: parsed.library && typeof parsed.library === 'object' ? parsed.library : {}, watched: parsed.watched && typeof parsed.watched === 'object' ? parsed.watched : {}, linkCache: readLinkCache(parsed.linkCache), settings, addons: parsed.addons.filter(a => a?.url && a?.manifest?.id && Array.isArray(a.manifest.resources)).slice(0, 30) };
   } catch { return initial(); }
 }
 export function saveState(storage, state) {

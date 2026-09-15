@@ -65,11 +65,15 @@ Grupos: **Geral**, **Pular automaticamente**, **Player e Seleção de Fontes**,
 - **Aparência das legendas** abre o mesmo editor da StyleRail do player dentro de
   Ajustes (tamanho, negrito, cor, opacidade, contorno e posição), com a família
   fixa. Antes esse ajuste só existia dentro do player.
-- Avisos de conteúdo, renderização ASS/libass, seleção automática de fonte,
-  reutilização do último link e recomendações pós-reprodução aparecem marcados
-  como **Pendente**: dependem de classificação do Android, decodificador,
-  serviço em segundo plano ou tela que ainda não existe no port. Linhas pendentes
-  explicam o motivo e não ficam selecionáveis.
+- Avisos de conteúdo, renderização ASS/libass e recomendações pós-reprodução
+  aparecem marcados como **Pendente**: dependem de classificação do Android,
+  decodificador ou tela que ainda não existe no port. Linhas pendentes explicam o
+  motivo e não ficam selecionáveis.
+- **Reprodução automática** deixou de ser pendente na 0.22: as linhas "Seleção
+  automática de fonte", "Reutilizar último link" e "Trailer automático após
+  assistir" são controles reais — quatro modos em chips, cache de 1 h a 7 dias,
+  atraso do trailer de 3 s a 15 s e o filtro de palavras (Regex) em diálogo.
+  Ver [AUTO_PLAY.md](AUTO_PLAY.md).
 
 ## Demais categorias
 

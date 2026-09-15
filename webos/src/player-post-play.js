@@ -4,13 +4,19 @@
 // Candidates come from the same TMDB detail call the player already makes for artwork.
 import { postPlayMax, postPlayReason, shouldShowPostPlay, stepRecommendation } from './core/post-play.js';
 import { readPlayback } from './core/playback.js';
-export function installPostPlay({ screen, video, context, settings, el, button, poster, recommendations, open, blocked, defer, restoreFocus, onOpen }) {
+import { postPlayCountdown, postPlayTrailerCountdown, shouldCountTrailer } from './core/trailer.js';
+// PostPlayRecommendationController: with "Trailer automático" on, the last five
+// seconds show a countdown and the trailer starts when playback ends. The fork plays
+// it in a second player instance; the TV opens the same trailer the detail screen
+// offers, and the window stays put if there is no trailer or the launch fails.
+export function installPostPlay({ screen, video, context, settings, el, button, poster, recommendations, open, trailer, blocked, defer, restoreFocus, onOpen }) {
   const art = el('div', { class: 'post-play-art', 'aria-hidden': true });
   const reason = el('p', { class: 'post-play-reason' });
   const title = el('h2', {});
   const facts = el('p', { class: 'post-play-facts muted' });
   const description = el('p', { class: 'post-play-description' });
   const counter = el('span', { class: 'post-play-counter muted', role: 'status' });
+  const countdown = el('p', { class: 'post-play-countdown muted', role: 'status', hidden: true });
   const play = button([el('span', { class: 'player-icon player-icon-play', 'aria-hidden': true }), el('span', {}, 'Assistir')], choose, { class: 'primary post-play-play', 'aria-label': 'Assistir' });
   const previous = button('Recomendação anterior', () => step(-1), { class: 'post-play-previous', 'aria-label': 'Recomendação anterior' });
   const next = button('Próxima recomendação', () => step(1), { class: 'post-play-next', 'aria-label': 'Próxima recomendação' });
@@ -18,14 +24,52 @@ export function installPostPlay({ screen, video, context, settings, el, button, 
   const overlay = el('section', { class: 'post-play', hidden: true },
     el('div', { class: 'post-play-panel' },
       art,
-      el('div', { class: 'post-play-copy' }, reason, title, facts, description),
+      el('div', { class: 'post-play-copy' }, reason, title, facts, description, countdown),
       el('div', { class: 'post-play-actions' }, play, el('div', { class: 'post-play-steps' }, previous, counter, next), leave)));
   screen.append(overlay);
-  let index = 0, openState = false, dismissed = false, disposed = false;
+  let index = 0, openState = false, dismissed = false, disposed = false, trailerLaunched = false, countdownTimer;
+  const trailerEnabled = () => Boolean(trailer?.enabled?.());
   function list() {
     return (Array.isArray(recommendations()) ? recommendations() : []).filter(item => item && item.name).slice(0, postPlayMax);
   }
   function current() { return list()[index]; }
+  function paintCountdown(value) {
+    const next = Number.isFinite(value) && value > 0 ? `Trailer em ${value}s` : '';
+    countdown.hidden = !next;
+    if (next) countdown.textContent = next;
+  }
+  function stopCountdown() { clearInterval(countdownTimer); countdownTimer = null; }
+  // The trailer only starts once, and only when nothing else took the screen.
+  async function startTrailer() {
+    stopCountdown();
+    const item = current();
+    trailerLaunched = true;
+    paintCountdown(null);
+    if (!item || disposed || !openState || blocked()) return;
+    let ytId = '';
+    try { ytId = await trailer?.resolve?.(item) || ''; } catch { ytId = ''; }
+    if (!ytId || disposed || !openState || dismissed) return;
+    try { await trailer?.launch?.(ytId); } catch { /* the window stays for the user */ }
+  }
+  function startEndCountdown() {
+    if (countdownTimer || trailerLaunched) return;
+    if (!shouldCountTrailer({ enabled: trailerEnabled(), open: openState, launched: trailerLaunched, hasTrailer: Boolean(current()) })) return;
+    let seconds = postPlayTrailerCountdown;
+    paintCountdown(seconds);
+    countdownTimer = setInterval(() => {
+      seconds -= 1;
+      if (seconds > 0) { paintCountdown(seconds); return; }
+      startTrailer();
+    }, 1000);
+  }
+  function updateTrailerCountdown() {
+    if (!openState || trailerLaunched) { stopCountdown(); paintCountdown(null); return; }
+    if (!trailerEnabled() || !current()) { stopCountdown(); paintCountdown(null); return; }
+    // Before the end this is the fork's informational countdown; the trailer starts
+    // only after playback ends, never earlier.
+    if (!video.ended) { stopCountdown(); paintCountdown(postPlayCountdown(video.currentTime, video.duration)); return; }
+    startEndCountdown();
+  }
   function paint() {
     const item = current();
     if (!item) { dismiss(); return; }
@@ -54,6 +98,7 @@ export function installPostPlay({ screen, video, context, settings, el, button, 
   function close(permanent) {
     if (!openState) return;
     openState = false; dismissed = dismissed || permanent;
+    stopCountdown(); paintCountdown(null);
     hideVisual();
     restoreFocus();
   }
@@ -77,7 +122,12 @@ export function installPostPlay({ screen, video, context, settings, el, button, 
     if (disposed) return;
     if (!readPlayback(settings.playback).postPlayRecommendations) return;
     // While it is open it only steps aside for panels, and comes back when they close.
-    if (openState) { if (blocked()) hideVisual(); else if (overlay.hidden) showVisual(); return; }
+    if (openState) {
+      if (blocked()) { hideVisual(); stopCountdown(); }
+      else if (overlay.hidden) { showVisual(); updateTrailerCountdown(); }
+      else updateTrailerCountdown();
+      return;
+    }
     if (dismissed) return;
     if (!list().length) return;
     if (defer?.()) return;
@@ -87,6 +137,7 @@ export function installPostPlay({ screen, video, context, settings, el, button, 
     index = 0; openState = true; paint(); showVisual();
     onOpen?.();
     play.focus({ preventScroll: true });
+    updateTrailerCountdown();
   }
   const events = { timeupdate: update, seeked: update, ended: update, playing: update, pause: update };
   for (const [event, fn] of Object.entries(events)) video.addEventListener(event, fn);
@@ -106,6 +157,7 @@ export function installPostPlay({ screen, video, context, settings, el, button, 
     },
     dispose() {
       disposed = true;
+      stopCountdown();
       for (const [event, fn] of Object.entries(events)) video.removeEventListener(event, fn);
       document.removeEventListener('visibilitychange', visibility);
       overlay.remove();

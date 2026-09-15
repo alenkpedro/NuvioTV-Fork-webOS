@@ -130,6 +130,7 @@ progress::-webkit-progress-value{background:var(--accent)}
 .post-play-steps{display:flex;align-items:center;gap:8px}
 .post-play-steps button{flex:1;min-width:0;font-size:12px;padding:10px 12px}
 .post-play-counter{min-width:52px;text-align:center;font-size:12px}
+.post-play-countdown{margin-top:8px;font-size:13px;letter-spacing:.4px}
 .post-play-back{font-size:12px}
 .post-play-open .player-controls{opacity:0;pointer-events:none}
 

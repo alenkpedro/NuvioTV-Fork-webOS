@@ -4,6 +4,9 @@
 // wording come from the fork's pt-BR strings; rows whose Android dependency has
 // no webOS equivalent stay visible, disabled and marked as pending.
 import { readPlayback, postPlayThresholdRange } from './core/playback.js';
+import { autoPlayModes, compileRegex } from './core/auto-play.js';
+import { cacheDurationLabel, clearLinkCache, linkCacheHours } from './core/link-cache.js';
+import { trailerDelayRange } from './core/trailer.js';
 import { themes, settingsStyles, readAppearance } from './core/appearance.js';
 export const settingsCategories = Object.freeze([
   { id: 'account', title: 'Conta', subtitle: 'Conta e status de sincronização', icon: 'profile' },
@@ -74,6 +77,17 @@ export function settingsScreen(context) {
     const accept = button(confirmLabel, async () => { accept.disabled = true; try { await onConfirm(); close(); } catch (error) { accept.disabled = false; toast(error.message); } }, { class: 'primary' });
     sheet.append(el('section', { class: 'dialog-panel' }, el('h2', {}, title), el('p', { class: 'dialog-copy' }, message), el('div', { class: 'toolbar' }, cancel, accept)));
     document.querySelector('#app').append(sheet); cancel.focus();
+  }
+  // SettingsTextInputDialog: a single field, like the fork's on-screen keyboard.
+  function prompt(title, message, value, onSave) {
+    const previous = document.activeElement;
+    const input = el('input', { type: 'text', value: value || '', maxlength: 200, spellcheck: 'false', autocomplete: 'off', 'aria-label': title, placeholder: 'Nenhuma palavra definida. Ex: 4K|2160p|Remux', onkeydown: event => { if (event.key !== 'Enter') return; event.preventDefault(); accept(); } });
+    const sheet = el('div', { class: 'app-dialog', role: 'dialog', 'aria-modal': true, 'aria-label': title, onkeydown: event => { if (event.key === 'Escape') { event.stopPropagation(); close(); } } });
+    const close = () => { sheet.remove(); previous?.focus({ preventScroll: true }); };
+    const accept = () => { onSave(input.value); close(); };
+    sheet.append(el('section', { class: 'dialog-panel' }, el('h2', {}, title), el('p', { class: 'dialog-copy' }, message), input,
+      el('div', { class: 'toolbar' }, button('Cancelar', close, { 'data-dismiss': true }), button('Salvar', accept, { class: 'primary' }))));
+    document.querySelector('#app').append(sheet); input.focus();
   }
   function renderAccount() {
     if (account.user) {
@@ -165,6 +179,24 @@ export function settingsScreen(context) {
   }
   function renderPlayback() {
     const pending = (title, subtitle, pendingMessage) => row(title, subtitle, null, { pending: true, pendingMessage });
+    // PlayerSettings SliderSettingsItem for the trailer delay, 3–15 s like the fork.
+    const delayStep = (label, delta) => button(delta < 0 ? '−' : '+', () => {
+      const prefs = play(), next = Math.max(trailerDelayRange[0], Math.min(trailerDelayRange[1], prefs.trailerDelay + delta));
+      if (next === prefs.trailerDelay) return;
+      updatePlayback({ trailerDelay: next });
+      redraw(`button[aria-label="${label}"]`);
+    }, { class: 'settings-threshold-step', 'aria-label': label, disabled: delta < 0 ? play().trailerDelay <= trailerDelayRange[0] : play().trailerDelay >= trailerDelayRange[1] });
+    const automationChip = (label, selected, action, description) => chip(label, selected, () => { action(); redraw(`button[aria-label="${label}"]`); }, description);
+    // SettingsTextInputDialog: the fork stores the pattern as typed, so an invalid
+    // expression is refused here instead of silently never matching a source.
+    function promptRegex() {
+      prompt('Filtro de palavras (Regex)', 'Reproduza a fonte que coincidir com as palavras-chave. Separe alternativas com | e exclua termos com um grupo negativo, como (?!(cam|ts)).', play().autoPlayRegex, value => {
+        const pattern = value.trim();
+        if (pattern && !compileRegex(pattern)) { toast('Expressão inválida; o filtro não foi salvo.'); return; }
+        updatePlayback({ autoPlayRegex: pattern });
+        redraw('[data-focus="playback-regex"]');
+      });
+    }
     return [
       group('Geral', 'Comportamento principal do player',
         toggle('Informações ao pausar', 'Detalhes após 5s de pausa', () => play().pauseOverlay, value => updatePlayback({ pauseOverlay: value })),
@@ -185,9 +217,37 @@ export function settingsScreen(context) {
           threshold('Diminuir limite de recomendações', -1, () => play().postPlayMovieThreshold <= postPlayThresholdRange[0]),
           el('span', { class: 'settings-threshold-value' }, `${play().postPlayMovieThreshold}%`),
           threshold('Aumentar limite de recomendações', 1, () => play().postPlayMovieThreshold >= postPlayThresholdRange[1])) : null,
-        pending('Seleção automática de fonte', 'Reproduzir automaticamente a primeira fonte', 'A escolha da fonte usa o ranking do fork nesta TV; a seleção por palavra-chave ainda não existe.'),
-        pending('Reutilizar último link', 'Use o último link válido se o cache estiver ativo.', 'O cache de links do fork é um serviço Android em segundo plano.'),
-        pending('Trailer automático após assistir', 'Reproduzir trailer da recomendação', 'O trailer interno usa uma segunda instância do player no Android; o port abre trailers no YouTube pelo detalhe do título.'))
+        toggle('Reutilizar último link', 'Use o último link válido se o cache estiver ativo.', () => play().reuseLastLink, value => {
+          // Turning the setting off drops the stored links instead of leaving them behind.
+          if (!value) state.linkCache = clearLinkCache();
+          updatePlayback({ reuseLastLink: value });
+          redraw('button[aria-label="Reutilizar último link"]');
+        }),
+        play().reuseLastLink ? el('div', { class: 'settings-choices', 'aria-label': 'Duração do cache do link' },
+          ...linkCacheHours.map(hours => automationChip(cacheDurationLabel(hours), play().reuseLastLinkHours === hours, () => updatePlayback({ reuseLastLinkHours: hours }), `Duração do cache do link: ${cacheDurationLabel(hours)}`))) : null,
+        note('São guardados apenas o endereço direto e o nome da fonte escolhida, por título e por perfil. Sem cache, a TV pergunta a lista de fontes de novo.'),
+        el('div', { class: 'settings-choices', 'aria-label': 'Seleção automática de fonte' },
+          ...autoPlayModes.map(mode => automationChip(mode.label, play().autoPlayMode === mode.id, () => updatePlayback({ autoPlayMode: mode.id }), mode.description))),
+        play().autoPlayMode === 'regex' ? row('Filtro de palavras (Regex)', 'Separe alternativas com | e exclua termos com um grupo negativo', () => promptRegex(), { value: play().autoPlayRegex || 'Nenhuma palavra definida', attrs: { 'data-focus': 'playback-regex' } }) : null,
+        play().autoPlayMode === 'regex' ? note('Exemplo: 4K|2160p|Remux reproduz a primeira fonte que traga uma dessas palavras. (?!(cam|ts)) descarta as que trouxerem cam ou ts, como no fork.') : null,
+        state.addons.length ? el('div', { class: 'settings-choices', 'aria-label': 'Addons permitidos' },
+          automationChip('Todos os addons instalados', !play().autoPlayAddons.length, () => updatePlayback({ autoPlayAddons: [] }), 'Considera fontes de todos os addons instalados.'),
+          ...state.addons.map(addon => {
+            const name = addon.manifest.name;
+            const selected = play().autoPlayAddons.includes(name);
+            return automationChip(name, selected, () => {
+              const list = new Set(play().autoPlayAddons);
+              selected ? list.delete(name) : list.add(name);
+              updatePlayback({ autoPlayAddons: [...list] });
+            }, `Permitir fontes de ${name}`);
+          })) : null,
+        toggle('Trailer automático após assistir', 'Reproduzir automaticamente trailers nas telas de detalhes e após reprodução.', () => play().trailerAutoPlay, value => { updatePlayback({ trailerAutoPlay: value }); redraw('button[aria-label="Trailer automático após assistir"]'); }),
+        play().trailerAutoPlay ? el('div', { class: 'settings-threshold' },
+          el('span', { class: 'grow' }, el('strong', {}, 'Atraso do trailer'), el('small', { class: 'muted' }, 'Tempo parado no botão Assistir antes do trailer automático.')),
+          delayStep('Diminuir atraso do trailer', -1),
+          el('span', { class: 'settings-threshold-value' }, `${play().trailerDelay}s`),
+          delayStep('Aumentar atraso do trailer', 1)) : null,
+        play().trailerAutoPlay ? note('No webOS o trailer abre no aplicativo do YouTube da TV, não dentro do Nuvio. Sem trailer no TMDB, a janela de recomendações continua igual.') : null)
     ];
   }
   const sourceLabels = { TRAKT: 'Trakt', SIMKL: 'Simkl', MDBLIST: 'MDBList', NUVIO_SYNC: 'Nuvio Sync' };

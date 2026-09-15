@@ -98,10 +98,12 @@ test('0.1 storage migrates without losing add-ons, source preferences or progres
   const previous = { addons: [{ url: 'https://fixture.example/manifest.json', manifest: { id: 'fixture', resources: [] } }], settings: { avoidDvOnly: false, autoPlay: true, preferences: { excludedReleaseGroups: ['MyGroup'] } }, progress: { old: { time: 15 } } };
   const next = readState({ getItem: () => JSON.stringify(previous) });
   assert.deepEqual(next.addons, previous.addons);
-  assert.deepEqual(next.settings, previous.settings);
+  // The single auto-play switch is now the fork's mode list; nothing else moves.
+  assert.deepEqual(next.settings, { avoidDvOnly: false, preferences: { excludedReleaseGroups: ['MyGroup'] }, playback: { autoPlayMode: 'rank' } });
   assert.deepEqual(next.progress, previous.progress);
   assert.deepEqual(next.library, {});
   assert.deepEqual(next.watched, {});
+  assert.deepEqual(next.linkCache, {});
 });
 
 test('font, branding and legacy sidebar artwork are byte-identical to the selected fork', async () => {

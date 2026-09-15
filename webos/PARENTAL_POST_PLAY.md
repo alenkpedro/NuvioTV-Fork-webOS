@@ -92,6 +92,15 @@ Os três ficam no mesmo arquivo local de sempre e sobrevivem a atualização e
 reinício. O rótulo do limite usa uma tradução própria porque o pt-BR do fork não
 tem `autoplay_post_play_movie_threshold` e cairia no inglês.
 
+## Trailer automático na janela
+
+A 0.22 acrescenta o contador de cinco segundos do fork: com **Trailer automático
+após assistir** ligado, os últimos cinco segundos de reprodução mostram
+`Trailer em Ns` sob a sinopse e, com o filme encerrado, o contador roda de novo e
+abre o trailer da recomendação no aplicativo do YouTube da TV. Sem trailer no
+TMDB ou sem chave configurada, a janela continua igual e nada é exibido. O
+detalhe do comportamento está em [AUTO_PLAY.md](AUTO_PLAY.md).
+
 ## Limites
 
 A consulta do guia parental depende de um serviço de terceiros que pode limitar

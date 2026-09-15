@@ -35,6 +35,8 @@ Caminhos relativos a `app/src/main/java/com/nuvio/tv/`.
 | Temas | Doze paletas de `AppTheme` (fundo, cartões, foco e destaque); Branco é o padrão e reproduz os literais anteriores | `ui/theme/ThemeColors.kt`, `SupporterThemeColors.kt`, `PrimitiveTokens.kt`, `ThemeDataStore.kt` |
 | Guia parental | Linha 3×altura das linhas, deslocamento 32/24 do topo, linha 18, intervalo 2, texto 11 | `ui/screens/player/ParentalGuideOverlay.kt` |
 | Pós-reprodução | Arte 200×113, coluna de ações 240, motivo 12/16, título 28/36, sinopse 14/20 em até 3 linhas | `ui/screens/player/PostPlayRecommendationOverlay.kt`, `PostPlayOverlay.kt` |
+| Contador do trailer | Linha de 13 px sob a sinopse, texto `Trailer em Ns`, sem foco; alimentada pelo contador de 5 s do fork | `ui/screens/player/PostPlayRecommendationState.kt` |
+| Reprodução automática | Modos, durações e atrasos em chips e passos dentro do grupo do fork (`settings-choices` 10 px, passo 44×44); o padrão do atraso usa o mesmo `settings-threshold` | `ui/screens/settings/PlaybackAutoPlaySettings.kt` |
 | Addons | Margens 36/28, bloco de instalação com padding 20 | `ui/screens/addon/AddonManagerScreen.kt` |
 
 Fonte, wordmark e SVGs de busca/biblioteca/ajustes são copiados **sem alteração**;
