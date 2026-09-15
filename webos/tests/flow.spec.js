@@ -24,6 +24,8 @@ test.beforeEach(async ({ page }) => {
     }
     return route.abort();
   });
+  // The parental guide has no fixture: answer empty so player tests never touch the public API.
+  await page.route('https://api.tiffara.com/**', route => route.fulfill({ json: { parentsGuide: [] } }));
 });
 async function navigation(page, title) {
   for (let i = 0; i < 5 && !await page.locator('.sidebar').count(); i++) await page.keyboard.press('Escape');

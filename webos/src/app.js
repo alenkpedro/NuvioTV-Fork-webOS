@@ -13,6 +13,8 @@ import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
 import { subtitleStyleEditor } from './subtitle-style-editor.js';
+import { installParentalGuide } from './player-parental.js';
+import { installPostPlay } from './player-post-play.js';
 import { installNextEpisode } from './next-episode.js';
 import { installAspect } from './core/aspect.js';
 import { installEpisodePanel } from './player-episodes.js';
@@ -164,7 +166,8 @@ function navigate(next, replace = false) {
   route = next; render();
 }
 function back(force = false) {
-  const dialog = root.querySelector('[role=dialog]');
+  // Only a dialog the user can see may consume Back: player overlays stay mounted hidden.
+  const dialog = root.querySelector('[role=dialog]:not([hidden])');
   if (dialog) { (dialog.querySelector('[data-dismiss]') || dialog.querySelector('button'))?.click(); return; }
   if(force!==true && player?.back?.())return;
   if(route.name==='discover' && document.activeElement?.closest('.discover-grid')) {root.querySelector('[data-picker]')?.focus();root.querySelector('main').scrollTop=0;return;}
@@ -827,7 +830,7 @@ function showPlayer(context) {
   const chrome=playerUI({el,button,context,video,toggle,restart:()=>{seekTo(0);play();},audio:()=>tracks.openAudio(),subtitles:()=>tracks.openSubtitles(),sources:()=>episodes.openCurrent(),episodes:()=>episodes.open(),speed:()=>tracks.openSpeed(),aspect:()=>aspect.cycle(),stats:()=>{stats.hidden=!stats.hidden;screen.classList.toggle('stats-visible',!stats.hidden);chrome.info.setAttribute('aria-pressed',String(!stats.hidden));updateStats();}});
   const {controls,timeline,pause}=chrome;
   const screen = el('div', { class: 'player-screen controls-visible' }, video, chrome.top, status, stats, controls); root.append(screen);
-  let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview, pauseOverlay, segments, thumbnails;
+  let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview, pauseOverlay, segments, thumbnails, parental, postPlay, postPlayCandidates = [];
   const aspect=installAspect({video,settings:state.settings,persist,notify:toast});
   const listeners = [];
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
@@ -857,12 +860,34 @@ function showPlayer(context) {
     }});
   function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
   function hideControls(){manuallyHidden=true;clearTimeout(hideTimer);controls.classList.add('faded');controls.inert=true;screen.classList.remove('controls-visible');}
-  function reveal() { manuallyHidden=false; pauseOverlay?.interaction(); if (pauseOverlay?.isOpen() || tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); controls.inert=false; screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen() && !seekPreview.active()) hideTimer = setTimeout(() => { controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); }, 4500); }
+  function reveal() { manuallyHidden=false; pauseOverlay?.interaction(); postPlay?.refresh(); if (pauseOverlay?.isOpen() || postPlay?.isOpen() || tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); controls.inert=false; screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen() && !seekPreview.active()) hideTimer = setTimeout(() => { controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); }, 4500); }
   const overlayBlocked=()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || Boolean(pauseOverlay?.isOpen()) || !stats.hidden;
   thumbnails=installThumbnails({screen,video,context,settings:state.settings,el,blocked:overlayBlocked});
   seekPreview=installSeek({video,timeline,update:updateTimeline,reveal,thumbnails});
   segments=installSegments({screen,video,context,settings:state.settings,el,button,blocked:()=>overlayBlocked() || seekPreview.active() || upNext.focused(),onIntervals:items=>{context.skipIntervals=items;upNext.refresh();},seek:seekTo,restore:()=>{if(screen.classList.contains('controls-visible'))pause.focus();else document.activeElement?.blur();}});
   pauseOverlay=installPauseOverlay({screen,video,context,settings:state.settings,el,button,blocked:()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || seekPreview.active() || !stats.hidden || chrome.more.getAttribute('aria-expanded')==='true',onOpen:()=>{hideControls();upNext.refresh();},onClose:()=>{reveal();pause.focus();upNext.refresh();},resume:play});
+  // Ajustes → Reprodução → Avisos de conteúdo: fetched from the profile IMDb id and
+  // shown once per playback, exactly like ParentalGuideOverlay.
+  parental=installParentalGuide({screen,video,context,settings:state.settings,el,request:getJSON,signal:request.signal,
+    blocked:()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || seekPreview.active() || pauseOverlay.isOpen() || postPlay?.isOpen() || !stats.hidden});
+  // Pós-reprodução: the fork's recommendation overlay. Series keep the Up Next card
+  // while a following episode is offerable, so only one prompt is on screen.
+  postPlay=installPostPlay({screen,video,context,settings:state.settings,el,button,poster,
+    recommendations:()=>postPlayCandidates,
+    // The fork resolves the candidate through the addons before playing it. The port
+    // asks TMDB for the same title so the detail screen gets the IMDb id addons route by.
+    open:async item=>{
+      while(['player','streams'].includes(stack.at(-1)?.route.name))stack.pop();
+      let target=item;
+      if(metadata.configured()){
+        try {const data=await metadata.detail(item,request.signal);if(data?.meta)target={...item,...data.meta,tmdbId:item.tmdbId};}catch {}
+      }
+      navigate({name:'detail',meta:target,addon:context.addon},true);
+    },
+    blocked:()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || seekPreview.active() || !stats.hidden || pauseOverlay.isOpen() || chrome.more.getAttribute('aria-expanded')==='true',
+    defer:()=>context.type==='series' && upNext.hasNext(),
+    onOpen:()=>hideControls(),
+    restoreFocus:()=>{reveal();pause.focus();}});
   const clockTimer=setInterval(()=>{if(!document.hidden && screen.classList.contains('controls-visible'))chrome.updateClock();},1000);
   chrome.updateClock();
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
@@ -899,11 +924,13 @@ function showPlayer(context) {
   else { video.src = context.stream.url; play(); }
   player = { back(){
     if(seekPreview.active()){seekPreview.cancel();return true;}
+    if(postPlay.isOpen()){postPlay.dismiss();return true;}
     if(segments.dismiss()){hideControls();return true;}
     if(!stats.hidden){stats.hidden=true;screen.classList.remove('stats-visible');chrome.info.setAttribute('aria-pressed','false');return true;}
     if(chrome.more.getAttribute('aria-expanded')==='true'){chrome.setMore(false);reveal();chrome.more.focus();return true;}
     if(screen.classList.contains('controls-visible')){hideControls();return true;}return false;
   },key(key, e) {
+    if(postPlay.isOpen())return postPlay.key(key,e);
     if(pauseOverlay.isOpen())return pauseOverlay.key(key,e);
     pauseOverlay.interaction();
     if (upNext.isOpen()) { if (['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)) { e.preventDefault(); return true; } return false; }
@@ -921,7 +948,7 @@ function showPlayer(context) {
     if(chrome.key(key,hideControls)){e.preventDefault();return true;}
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   const controlSize=new ResizeObserver(()=>screen.style.setProperty('--subtitle-control-clearance',`${controls.offsetHeight+8}px`));controlSize.observe(controls);
   const disposeBase=cleanupPlayer;cleanupPlayer=()=>{controlSize.disconnect();disposeBase();};
   const artworkSignal=request.signal;
@@ -929,7 +956,7 @@ function showPlayer(context) {
     if(disposed || artworkSignal.aborted || document.hidden)return;
     const update=extra=>{if(disposed || artworkSignal.aborted || document.hidden)return;enrichPlayerMetadata(context.meta,extra);if(!people(context.meta).length && people(extra).length)context.meta.castMembers=people(extra);chrome.updateIdentity();pauseOverlay.update();};
     if(metadata.configured()){
-      try {const data=await metadata.detail(context.meta,artworkSignal);if(data)update(data.meta);}catch {}
+      try {const data=await metadata.detail(context.meta,artworkSignal);if(data){if(data.recommendations?.length)postPlayCandidates=data.recommendations;update(data.meta);}}catch {}
     }
     if(disposed || artworkSignal.aborted || document.hidden || artworkURL(context.meta.logo))return;
     const seen=new Set();

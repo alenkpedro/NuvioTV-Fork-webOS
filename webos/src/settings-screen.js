@@ -3,7 +3,7 @@
 // detail pane made of group cards. Category order, subtitles and the option
 // wording come from the fork's pt-BR strings; rows whose Android dependency has
 // no webOS equivalent stay visible, disabled and marked as pending.
-import { readPlayback } from './core/playback.js';
+import { readPlayback, postPlayThresholdRange } from './core/playback.js';
 import { themes, settingsStyles, readAppearance } from './core/appearance.js';
 export const settingsCategories = Object.freeze([
   { id: 'account', title: 'Conta', subtitle: 'Conta e status de sincronização', icon: 'profile' },
@@ -58,6 +58,13 @@ export function settingsScreen(context) {
   const header = (title, subtitle) => el('header', { class: 'settings-header' }, el('h1', {}, title), el('span', { class: 'settings-header-bar', 'aria-hidden': true }), subtitle ? el('p', { class: 'muted' }, subtitle) : null);
   const chip = (label, selected, action, description) => button([el('span', { class: 'chip-dot', 'aria-hidden': true }), el('span', {}, label)], action, { class: 'settings-choice', 'aria-label': label, 'aria-pressed': String(selected), 'aria-description': description || null });
   const card = (label, value) => el('div', { class: 'settings-status-card' }, el('small', { class: 'muted' }, label), el('strong', {}, value));
+  // PlayerSettings SliderSettingsItem: the movie recommendation threshold, 80–100%.
+  const threshold = (label, delta) => button(delta < 0 ? '−' : '+', () => {
+    const prefs = play(), next = Math.max(postPlayThresholdRange[0], Math.min(postPlayThresholdRange[1], prefs.postPlayMovieThreshold + delta));
+    if (next === prefs.postPlayMovieThreshold) return;
+    updatePlayback({ postPlayMovieThreshold: next });
+    redraw(`button[aria-label="${label}"]`);
+  }, { class: 'settings-threshold-step', 'aria-label': label, disabled: delta < 0 ? play().postPlayMovieThreshold <= postPlayThresholdRange[0] : play().postPlayMovieThreshold >= postPlayThresholdRange[1] });
   // Create-outside-the-detail-pane dialogs: the fork's confirmation and text dialogs.
   function confirm(title, message, confirmLabel, onConfirm) {
     const previous = document.activeElement;
@@ -116,7 +123,7 @@ export function settingsScreen(context) {
     function paintStyles() { const chosen = appearance().style; settingsStyles.forEach((style, index) => { const selected = style.id === chosen; styleChips[index].setAttribute('aria-pressed', String(selected)); styleChips[index].classList.toggle('selected-choice', selected); }); }
     return [
       group('Tema de Cores', 'Escolha a cor de destaque usada no aplicativo', swatches,
-        toggle('Modo AMOLED', 'Usar preto puro no plano de fundo do aplicativo', () => appearance().amoled, value => { updateAppearance({ amoled: value }); redraw('settings-amoled'); }, { 'data-focus': 'settings-amoled' }),
+        toggle('Modo AMOLED', 'Usar preto puro no plano de fundo do aplicativo', () => appearance().amoled, value => { updateAppearance({ amoled: value }); redraw('button[aria-label="Modo AMOLED"]'); }),
         prefs.amoled ? toggle('Superfícies em Preto Puro', 'Também aplica preto puro em cartões, painéis e menus', () => appearance().amoledSurfaces, value => updateAppearance({ amoledSurfaces: value })) : null),
       group('Estilo das Configurações', 'Escolha como deseja visualizar as telas de configuração', el('div', { class: 'settings-choices' }, ...styleChips)),
       group('Fonte e Idioma', 'Escolha o tipo de letra e o idioma usado em todo o app',
@@ -163,7 +170,7 @@ export function settingsScreen(context) {
         toggle('Informações ao pausar', 'Detalhes após 5s de pausa', () => play().pauseOverlay, value => updatePlayback({ pauseOverlay: value })),
         toggle('Miniaturas ao buscar', 'Prévia dos trechos já reproduzidos em fontes compatíveis.', () => play().seekThumbnails, value => updatePlayback({ seekThumbnails: value })),
         toggle('Pular introduções', 'Usar introdb.app para detectar aberturas e resumos', () => play().skipSegments, value => updatePlayback({ skipSegments: value })),
-        pending('Avisos de conteúdo', 'Exibir aviso de classificação indicativa ao iniciar a reprodução.', 'O guia parental lê as classificações do Android e ainda não foi portado.')),
+        toggle('Avisos de conteúdo', 'Exibir aviso de classificação indicativa ao iniciar a reprodução.', () => play().parentalGuide, value => updatePlayback({ parentalGuide: value }))),
       group('Pular automaticamente', 'Escolha quais trechos pular automaticamente', ...segmentTypes.map(([type, title, description]) => toggle(title, description, () => play().autoSkipTypes.includes(type), value => { const list = new Set(play().autoSkipTypes); value ? list.add(type) : list.delete(type); updatePlayback({ autoSkipTypes: [...list] }); }))),
       group('Player e Seleção de Fontes', 'Preferência, reprodução e filtros',
         row('Idiomas e próximo episódio', 'Áudio, legendas e continuidade de séries', () => navigate({ name: 'playback-settings' }), { leading: 'play' }),
@@ -172,9 +179,15 @@ export function settingsScreen(context) {
         row('Aparência das legendas', 'Tamanho, cores, contorno e posição', () => navigate({ name: 'subtitle-appearance' })),
         pending('Renderização avançada', 'Usar libass para ASS/SSA', 'ASS/SSA com libass depende do decodificador Android; o webOS renderiza SRT e WebVTT.')),
       group('Reprodução automática', 'Fila, maratona e recomendações',
+        toggle('Recomendações após assistir', 'Recomendar filmes e séries depois que assistir.', () => play().postPlayRecommendations, value => { updatePlayback({ postPlayRecommendations: value }); redraw('button[aria-label="Recomendações após assistir"]'); }),
+        play().postPlayRecommendations ? el('div', { class: 'settings-threshold' },
+          el('span', { class: 'grow' }, el('strong', {}, 'Quando mostrar as recomendações de filmes'), el('small', { class: 'muted' }, 'Episódios seguem o limite do próximo episódio.')),
+          threshold('Diminuir limite de recomendações', -1, () => play().postPlayMovieThreshold <= postPlayThresholdRange[0]),
+          el('span', { class: 'settings-threshold-value' }, `${play().postPlayMovieThreshold}%`),
+          threshold('Aumentar limite de recomendações', 1, () => play().postPlayMovieThreshold >= postPlayThresholdRange[1])) : null,
         pending('Seleção automática de fonte', 'Reproduzir automaticamente a primeira fonte', 'A escolha da fonte usa o ranking do fork nesta TV; a seleção por palavra-chave ainda não existe.'),
         pending('Reutilizar último link', 'Use o último link válido se o cache estiver ativo.', 'O cache de links do fork é um serviço Android em segundo plano.'),
-        pending('Recomendações após assistir', 'Recomendar filmes e séries depois que assistir.', 'A tela de pós-reprodução do fork ainda não foi portada.'))
+        pending('Trailer automático após assistir', 'Reproduzir trailer da recomendação', 'O trailer interno usa uma segunda instância do player no Android; o port abre trailers no YouTube pelo detalhe do título.'))
     ];
   }
   const sourceLabels = { TRAKT: 'Trakt', SIMKL: 'Simkl', MDBLIST: 'MDBList', NUVIO_SYNC: 'Nuvio Sync' };
@@ -237,7 +250,7 @@ export function settingsScreen(context) {
     content.scrollTop = 0;
   }
   // Rebuilds only the detail pane, so a change that adds or removes rows keeps focus.
-  function redraw(focusKey) { select(current); if (focusKey) content.querySelector(`[data-focus="${focusKey}"]`)?.focus({ preventScroll: true }); }
+  function redraw(selector) { select(current); if (selector) content.querySelector(selector)?.focus({ preventScroll: true }); }
   main.append(workspace);
   select(current);
 }

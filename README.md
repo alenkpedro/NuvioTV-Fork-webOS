@@ -15,7 +15,23 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.20.0
+## Estado: prévia 0.21.0
+
+A 0.21.0 acrescenta o **guia parental** e a **pós-reprodução** do fork. Com
+**Ajustes → Reprodução → Avisos de conteúdo** ligado (padrão), a reprodução
+começa com as categorias de classificação indicativa do título — Nudez, Violência,
+Linguagem Imprópria, Drogas/Álcool e Conteúdo Assustador — em ordem de gravidade,
+com a linha de destaque animada e saída automática após 5 segundos. O overlay não
+recebe foco e não interfere nos controles. A consulta é direta (a API do guia
+responde com CORS liberado), sem serviço local, e falha em silêncio sem rede.
+
+**Recomendações após assistir** é opcional (padrão desligado). Em filmes, ao
+passar do limite configurado (80–100%, padrão 90%) o player abre a janela do fork
+com sugestões do TMDB, contador, **Assistir**, **Recomendação anterior**,
+**Próxima recomendação** e **Voltar para o player**. As setas trocam de sugestão
+em ciclo; fechar vale para aquela reprodução. Em séries, o cartão do próximo
+episódio continua sendo a pós-reprodução (os dois nunca aparecem juntos).
+[Uso, diferenças e limites](webos/PARENTAL_POST_PLAY.md).
 
 A 0.20.0 reconstrói a tela de Ajustes como o workspace do fork: rail com as dez
 categorias (Conta, Perfis, Aparência, Layout, Conteúdo e Descoberta, Integrações,
@@ -25,9 +41,8 @@ fork. **Aparência** passa a oferecer as doze paletas de `AppTheme` — Branco �
 padrão e mantém o visual anterior —, Modo AMOLED, superfícies em preto puro e os
 estilos Padrão, Minimalista e Barra Superior. O editor de legendas do player
 também abre em **Ajustes → Reprodução → Aparência das legendas**. Linhas que
-dependem do Android (guia parental, libass, plugins, Direct Debrid, buffer/AFR e
-recomendações pós-reprodução) ficam visíveis e marcadas como pendentes, com o
-motivo. [Estrutura e limites](webos/SETTINGS_PARITY.md).
+dependem do Android (libass, plugins, Direct Debrid, buffer/AFR) ficam visíveis e
+marcadas como pendentes, com o motivo. [Estrutura e limites](webos/SETTINGS_PARITY.md).
 
 A 0.19.0 acrescenta pular abertura/recapitulação/créditos via IntroDB, com serviço
 local incluído no IPK, e personalização de legendas mantendo Netflix Sans fixa.

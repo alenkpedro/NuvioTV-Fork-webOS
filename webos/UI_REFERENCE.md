@@ -33,6 +33,8 @@ Caminhos relativos a `app/src/main/java/com/nuvio/tv/`.
 | Fontes | Colunas 40/60, identidade centrada, margem 48, filtros acima da lista | `ui/screens/stream/StreamScreen.kt` |
 | Ajustes | Workspace com raio 28, padding 20, rail 220, itens 56, gap 16, grupo com raio 16 e padding 14; dez categorias, subtítulos e cartões conforme `SettingsUiStyle` | `ui/screens/settings/SettingsScreen.kt`, `SettingsDesignSystem.kt` |
 | Temas | Doze paletas de `AppTheme` (fundo, cartões, foco e destaque); Branco é o padrão e reproduz os literais anteriores | `ui/theme/ThemeColors.kt`, `SupporterThemeColors.kt`, `PrimitiveTokens.kt`, `ThemeDataStore.kt` |
+| Guia parental | Linha 3×altura das linhas, deslocamento 32/24 do topo, linha 18, intervalo 2, texto 11 | `ui/screens/player/ParentalGuideOverlay.kt` |
+| Pós-reprodução | Arte 200×113, coluna de ações 240, motivo 12/16, título 28/36, sinopse 14/20 em até 3 linhas | `ui/screens/player/PostPlayRecommendationOverlay.kt`, `PostPlayOverlay.kt` |
 | Addons | Margens 36/28, bloco de instalação com padding 20 | `ui/screens/addon/AddonManagerScreen.kt` |
 
 Fonte, wordmark e SVGs de busca/biblioteca/ajustes são copiados **sem alteração**;

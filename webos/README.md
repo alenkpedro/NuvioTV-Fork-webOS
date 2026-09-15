@@ -27,6 +27,22 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Guia parental e pós-reprodução (0.21)
+
+**Avisos de conteúdo** vêm ligados: ao começar a reprodução, o port consulta o
+guia do título e mostra as categorias do fork (Nudez, Violência, Linguagem
+Imprópria, Drogas/Álcool e Conteúdo Assustador) em ordem de gravidade, com linha
+de destaque animada, 5 segundos na tela e saída suave. Não recebe foco e sai da
+frente quando um painel abre. Sem rede, a TV simplesmente não avisa.
+
+**Recomendações após assistir** é opcional. Ligado, um filme oferece uma
+recomendação do TMDB ao passar do limite definido (80–100%, padrão 90%), com
+**Assistir**, **Recomendação anterior**, **Próxima recomendação** e **Voltar para
+o player**. Fechar vale para aquela reprodução; painéis apenas suspendem a janela.
+Em séries, o cartão do próximo episódio continua sendo a pós-reprodução.
+
+[Comportamento, diferenças e limites](PARENTAL_POST_PLAY.md).
+
 ## Ajustes alinhados ao fork (0.20)
 
 A tela de Ajustes passou a ser o workspace do fork: rail com as dez categorias

@@ -191,3 +191,14 @@ e `AboutScreen.kt` guiam os grupos e a redação de cada categoria. O editor de
 legendas do player passou a ser acessível também em Ajustes. Linhas sem
 equivalente webOS permanecem visíveis, marcadas como pendentes.
 Ver [SETTINGS_PARITY.md](SETTINGS_PARITY.md).
+
+## Entrega 0.21 — guia parental e pós-reprodução
+
+`ParentalGuideRepository.kt` e `ParentalGuideOverlay.kt` orientam a consulta de
+avisos de conteúdo, a regra de severidade dominante e a animação de entrada/saída;
+`ParentalGuideApi.kt` e `NetworkModule.kt` fixam o endereço base (que responde com
+CORS liberado, permitindo a chamada direta na TV). `PostPlayRecommendationTiming.kt`
+define os limiares, `PostPlayRecommendationController.kt` o ciclo de vida das
+recomendações e `PostPlayRecommendationOverlay.kt`/`PostPlayOverlay.kt` o layout.
+`PlayerSettingsDataStore.kt` fornece os padrões e a faixa de 80–100% do limite.
+Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).

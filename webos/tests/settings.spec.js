@@ -94,8 +94,8 @@ test('playback groups follow the fork, keep the port toggles working and mark An
   await expect(skip).toHaveAttribute('aria-checked', 'false');
   await page.getByRole('switch', { name: 'Créditos', exact: true }).click();
   await expect(page.getByRole('switch', { name: 'Aberturas', exact: true })).toHaveAttribute('aria-checked', 'true');
-  // Rows without a webOS equivalent stay visible, marked and inert.
-  await expect(page.getByRole('button', { name: /^Avisos de conteúdo/ })).toContainText('Pendente');
+  // Avisos de conteúdo is a real switch now; the Android-only rows stay marked.
+  await expect(page.getByRole('switch', { name: 'Avisos de conteúdo', exact: true })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByRole('button', { name: /^Reutilizar último link/ })).toContainText('Pendente');
   await page.screenshot({ path: 'test-results/settings-playback-1920.png' });
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).settings.playback);
@@ -115,6 +115,38 @@ test('playback groups follow the fork, keep the port toggles working and mark An
   await expect(page.locator('.subtitle-style-editor')).toContainText('110%');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).settings.subtitleStyle.size)).toBe(110);
   await page.screenshot({ path: 'test-results/settings-subtitle-appearance-1920.png' });
+});
+test('parental guide and post-play recommendations are real settings with a bounded threshold', async ({ page }) => {
+  await install(page);
+  await settings(page, 'Reprodução');
+  // PlayerSettings.parentalGuideEnabled defaults to true in the fork.
+  const parental = page.getByRole('switch', { name: 'Avisos de conteúdo', exact: true });
+  await expect(parental).toHaveAttribute('aria-checked', 'true');
+  await parental.click();
+  await expect(parental).toHaveAttribute('aria-checked', 'false');
+  const postPlay = page.getByRole('switch', { name: 'Recomendações após assistir', exact: true });
+  await expect(postPlay).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('.settings-threshold')).toHaveCount(0);
+  await postPlay.click();
+  await expect(postPlay).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.settings-threshold-value')).toHaveText('90%');
+  const slower = page.getByRole('button', { name: 'Diminuir limite de recomendações', exact: true });
+  const faster = page.getByRole('button', { name: 'Aumentar limite de recomendações', exact: true });
+  for (let i = 0; i < 10; i++) await slower.click(); // 90 → 80
+  await expect(page.locator('.settings-threshold-value')).toHaveText('80%');
+  await expect(slower).toBeDisabled();
+  for (let i = 0; i < 20; i++) await faster.click(); // 80 → 100
+  await expect(page.locator('.settings-threshold-value')).toHaveText('100%');
+  await expect(faster).toBeDisabled();
+  // The rebuilt pane keeps focus on the step that is still usable.
+  await slower.click();
+  await expect(page.locator('.settings-threshold-value')).toHaveText('99%');
+  await expect(slower).toBeFocused();
+  await page.screenshot({ path: 'test-results/settings-post-play-1920.png' });
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).settings.playback);
+  expect(stored.parentalGuide).toBe(false);
+  expect(stored.postPlayRecommendations).toBe(true);
+  expect(stored.postPlayMovieThreshold).toBe(99);
 });
 test('layout, discovery, integration, tracking and about expose the fork rows without losing reachability', async ({ page }) => {
   await install(page);

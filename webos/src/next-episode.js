@@ -80,5 +80,5 @@ export function installNextEpisode({screen,video,context,settings,el,button,load
     loadMeta().then(meta=>{ if (!disposed) { next = followingEpisode(meta,context.id); context.meta = meta; update(); } }).catch(()=>{});
   }
   update();
-  return {isOpen:()=>Boolean(prompt),refresh:update,focused:()=>!card.hidden && card.contains(document.activeElement),dispose(){disposed=true;stopTimer();closePrompt();for(const [event,fn] of Object.entries(events))video.removeEventListener(event,fn);document.removeEventListener('visibilitychange',visibility);card.remove();shortcut.remove();}};
+  return {isOpen:()=>Boolean(prompt),hasNext:()=>Boolean(next?.hasAired) && !committed,refresh:update,focused:()=>!card.hidden && card.contains(document.activeElement),dispose(){disposed=true;stopTimer();closePrompt();for(const [event,fn] of Object.entries(events))video.removeEventListener(event,fn);document.removeEventListener('visibilitychange',visibility);card.remove();shortcut.remove();}};
 }
