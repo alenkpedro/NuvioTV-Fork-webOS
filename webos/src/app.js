@@ -41,7 +41,7 @@ import {createRatingsClient,readRatingsSettings} from './core/ratings.js';
 import {ratingsSettingsScreen} from './ratings-screen.js';
 import { detailExtras,personScreen,metadataSettingsScreen,launchTrailer} from './metadata-screen.js';
 import { collectionsScreen, collectionEditorScreen } from './collections-screen.js';
-import { collectionRails, describeSource, readCollections } from './core/collections.js';
+import { collectionRails, describeSource, isPlayableSource, parseAccountCollections, readCollections, toAccountCollections } from './core/collections.js';
 import { parseCatalogPage } from './core/discovery.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
@@ -70,7 +70,7 @@ if (!account.hasSession) activateProfile(state, null);
 state.addons = state.addons.filter(a => !a.accountOwner || a.accountOwner === account.user?.id);
 if (state.accountSync?.userId !== account.user?.id) delete state.accountSync;
 let route = { name: 'home' }, stack = [], request = null, player = null, cleanupPlayer = null;
-let toastTimer, persistWarning = false, heroTimer, heroRequest, pillTimer, drawerOpen = false, contentFocus = null;
+let toastTimer, persistWarning = false, heroTimer, heroRequest, pillTimer, drawerOpen = false, contentFocus = null, collectionsPushTimer;
 let pointerFocus = false;
 document.addEventListener('pointerdown', () => { pointerFocus = true; }, true);
 document.addEventListener('pointerup', () => { pointerFocus = false; }, true);
@@ -280,7 +280,30 @@ function card(meta, addon, progress, rowKey = '', {portrait=false} = {}) {
     }
   });
   if (progress) node.querySelector('.art').append(el('progress', { max: progress.duration, value: progress.time, 'aria-label': 'Progresso assistido' }));
+  // Long press on a Continue Watching card: resume, or take the title out of the row.
+  if (progress) {
+    node.setAttribute('data-longpress', 'continue');
+    node.addEventListener('longpress', () => continueDialog(meta, progress, addon));
+  }
   return node;
+}
+// Not from the Android fork (it declares the gesture but never wires it): holding OK on a
+// Continue Watching card offers the two actions the row exists for.
+function continueDialog(meta, progress, addon) {
+  const previous = document.activeElement;
+  const type = text(meta.type || progress.type || 'movie');
+  const dialog = el('div', { class: 'app-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': meta.name || 'Continuar assistindo' });
+  const close = () => { dialog.remove(); previous?.focus({ preventScroll: true }); };
+  const resume = button('Retomar', () => { close(); navigate({ name: 'streams', meta: { ...meta, type }, addon, type: progress.type, id: progress.id, episode: progress.episode }); }, { class: 'primary' });
+  const remove = button('Remover do histórico', () => {
+    delete state.progress[progressKey(type, progress.id)];
+    try { markWatched(state, { ...meta, type }, false); } catch { /* já não estava marcado */ }
+    persist(); close(); render(); toast('Removido do histórico desta TV.');
+  });
+  dialog.append(el('section', { class: 'dialog-panel' }, el('h2', {}, meta.name || 'Continuar assistindo'),
+    el('p', { class: 'dialog-copy' }, `Retomar em ${clock(progress.time)} ou remover este título do histórico desta TV.`),
+    el('div', { class: 'toolbar' }, resume, remove, button('Cancelar', close, { 'data-dismiss': true }))));
+  root.append(dialog); resume.focus({ preventScroll: true });
 }
 function catalogSection(main, title, metas, addon, more, rowKey = title) {
   const section = el('section', { class: 'catalog-section' }, el('div', { class: 'section-head' }, el('h2', {}, title), layout.catalogAddonName && addon ? el('span', { class: 'catalog-addon muted' }, addon.manifest.name) : null), el('div', { class: 'rail' }, metas.slice(0, 16).map(m => card(m, addon, null, rowKey))));
@@ -706,7 +729,7 @@ async function showStreams(main, signal) {
     }
   };
   const toggle = button(view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas', () => { view.showAll = !view.showAll; toggle.textContent = view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas'; display(); }, { 'data-focus': 'source-filters' });
-  const chips = el('div', { class: 'stream-chips' }, button('Atualizar', () => { view.rows = null; route.restoreFocus = 'source-refresh'; render(); }, { 'data-focus': 'source-refresh', 'aria-label': 'Atualizar fontes' }));
+  const chips = el('div', { class: 'stream-chips' }, button('Voltar', () => back(), { 'data-focus': 'source-back', 'aria-label': 'Voltar para os detalhes' }), button('Atualizar', () => { view.rows = null; route.restoreFocus = 'source-refresh'; render(); }, { 'data-focus': 'source-refresh', 'aria-label': 'Atualizar fontes' }));
   for (const provider of [null, ...providers.map((_, i) => i)]) chips.append(button(provider === null ? 'Todos' : providers[provider].manifest.name, () => {
     view.provider = provider; [...chips.querySelectorAll('[data-provider]')].forEach(b => b.classList.toggle('selected', b.dataset.provider === String(provider))); display();
   }, { class: provider === view.provider ? 'selected' : '', 'data-provider': String(provider), 'data-focus': `source-addon-${provider}` }));
@@ -772,6 +795,37 @@ async function syncHistory(signal) {
   if(signal.aborted || access!==profileAccess || account.user?.id!==access.userId)throw new DOMException('Cancelado','AbortError');
   mergeHistory(state,snapshot,{profileId:access.id,sourcePreference:snapshot.sourcePreference});persist();return state.historySync;
 }
+// CollectionSyncService.pullFromRemote: collections built in another client (the Android
+// app, for example) live in the profile blob, so the TV reads them instead of starting empty.
+async function syncCollections(signal) {
+  const access = profileAccess;
+  if (!access) throw Error('Selecione um perfil para carregar as coleções.');
+  const remote = await account.collections(access.id, signal);
+  if (signal.aborted || access !== profileAccess || account.user?.id !== access.userId) throw new DOMException('Cancelado', 'AbortError');
+  if (!remote.present || !remote.collections.length) return { collections: (state.collections || []).length, imported: 0 };
+  const parsed = parseAccountCollections(remote.collections);
+  if (!parsed.length) return { collections: (state.collections || []).length, imported: 0 };
+  state.collections = parsed;
+  state.collectionsSync = { at: Date.now(), collections: parsed.length, source: 'account' };
+  persist();
+  return { collections: parsed.length, imported: parsed.length };
+}
+// CollectionSyncService.triggerPush, debounced: edits made here travel back to the account
+// so the other client keeps seeing the same collections.
+function scheduleCollectionsPush() {
+  if (!profileAccess || !account.user) return;
+  clearTimeout(collectionsPushTimer);
+  collectionsPushTimer = setTimeout(async () => {
+    const access = profileAccess;
+    if (!access || !account.user) return;
+    try {
+      await account.pushCollections(access.id, toAccountCollections(state.collections || []), state.syncClientId, undefined);
+      state.collectionsSync = { ...(state.collectionsSync || {}), pushedAt: Date.now() };
+      persist();
+    } catch (error) { toast(`Coleções: ${error.message}`); }
+  }, 900);
+}
+
 async function signOutProfiles() {
   stopSync();
   const signedOutUser = account.user?.id;
@@ -791,7 +845,7 @@ async function showProfiles(main, signal) {
       activateProfile(state, account.user.id, profile);
       profileAccess = { ...profile, userId: account.user.id }; state.guestMode = false;
       initializeHistory(state);initializeOutbox(state);persist();
-      const results = await Promise.allSettled([syncAccount(signal), syncLibrary(signal), syncHistory(signal)]);
+      const results = await Promise.allSettled([syncAccount(signal), syncLibrary(signal), syncHistory(signal), syncCollections(signal)]);
       if (signal.aborted) return;
       if (!account.user) { profileAccess = null; leaveAccountProfiles(state); persist(); navigate({ name: 'welcome' }, true); return; }
       const addonResult = results[0], libraryResult = results[1];
@@ -799,6 +853,11 @@ async function showProfiles(main, signal) {
       if (addonResult.status === 'rejected') messages.push(addonResult.reason.message);
       if (libraryResult.status === 'rejected') messages.push(`Biblioteca: ${libraryResult.reason.message}`);
       if (results[2].status === 'rejected') messages.push(`Histórico: ${results[2].reason.message}`);
+      // A coleção que não carregou fica registrada para a tela de Coleções: o login não
+      // vira uma pilha de mensagens por causa de um blob secundário.
+      state.collectionsSync = results[3].status === 'rejected'
+        ? { ...(state.collectionsSync || {}), error: results[3].reason.message }
+        : { ...(state.collectionsSync || {}), error: '' };
       const failedAddons = addonResult.status === 'rejected' || addonResult.value.failed;
       // Entrar na conta leva para a Home: uma falha de addon vira mensagem, e a nova
       // tentativa continua disponível em Ajustes → Conta.
@@ -881,7 +940,11 @@ function showSettings(main, signal) { settingsScreen(settingsContext(main, signa
 // CollectionsDataStore + CollectionManagementScreen/CollectionEditorScreen: the extra
 // rows of the Home, built from add-on catalogs and TMDB sources, edited on the TV.
 function collectionsContext(main, signal) {
-  return { main, signal, el, button, icon, state, persist, navigate, toast, route };
+  return { main, signal, el, button, icon, state, persist, navigate, toast, route,
+    account: account.user ? { email: account.user.email } : null,
+    pushCollections: () => scheduleCollectionsPush(),
+    syncCollections: () => syncCollections(signal),
+    syncStatus: () => state.collectionsSync || null };
 }
 function showCollections(main, signal) { collectionsScreen(collectionsContext(main, signal)); }
 function showCollectionEditor(main, signal) { collectionEditorScreen(collectionsContext(main, signal)); }
@@ -918,8 +981,8 @@ async function fetchCollectionSource(source, signal) {
     const data = await metadata.source(source, signal);
     return { title: data.title, items: data.items, addon: null };
   }
-  const addon = state.addons.find(entry => entry.url === source?.addonUrl);
-  if (!addon) throw Error('O add-on desta coleção não está instalado nesta TV.');
+  const addon = state.addons.find(entry => (source?.addonId && entry.manifest.id === source.addonId) || (source?.addonUrl && entry.url === source.addonUrl));
+  if (!addon) throw Error(source?.addonId ? `O add-on “${source.addonId}” desta coleção não está instalado nesta TV.` : 'O add-on desta coleção não está instalado nesta TV.');
   const data = parseCatalogPage(await cachedMetaJSON(resourceURL(addon, 'catalog', source.type, source.catalogId, source.genre ? { genre: source.genre } : {}), signal), source.type);
   return { title: source.catalogName || source.catalogId, items: data.items.map(item => ({ ...item, type: item.type || source.type })), addon, catalog: { id: source.catalogId, type: source.type, name: source.catalogName }, genre: source.genre };
 }
@@ -1007,7 +1070,7 @@ function showPlayer(context) {
   function hideControls(){manuallyHidden=true;clearTimeout(hideTimer);controls.classList.add('faded');controls.inert=true;screen.classList.remove('controls-visible');}
   function reveal() { manuallyHidden=false; pauseOverlay?.interaction(); postPlay?.refresh(); if (pauseOverlay?.isOpen() || postPlay?.isOpen() || tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); controls.inert=false; screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen() && !seekPreview.active()) hideTimer = setTimeout(() => { controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); }, 4500); }
   const overlayBlocked=()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || Boolean(pauseOverlay?.isOpen()) || !stats.hidden;
-  thumbnails=installThumbnails({screen,video,context,settings:state.settings,el,blocked:overlayBlocked});
+  thumbnails=installThumbnails({screen,video,context,settings:state.settings,el,blocked:overlayBlocked,onUnavailable:message=>toast(message)});
   seekPreview=installSeek({video,timeline,update:updateTimeline,reveal,thumbnails});
   segments=installSegments({screen,video,context,settings:state.settings,el,button,blocked:()=>overlayBlocked() || seekPreview.active() || upNext.focused(),onIntervals:items=>{context.skipIntervals=items;upNext.refresh();},seek:seekTo,restore:()=>{if(screen.classList.contains('controls-visible'))pause.focus();else document.activeElement?.blur();}});
   pauseOverlay=installPauseOverlay({screen,video,context,settings:state.settings,el,button,blocked:()=>tracks.isOpen() || upNext.isOpen() || episodes.isOpen() || seekPreview.active() || !stats.hidden || chrome.more.getAttribute('aria-expanded')==='true',onOpen:()=>{hideControls();upNext.refresh();},onClose:()=>{reveal();pause.focus();upNext.refresh();},resume:play});
@@ -1054,7 +1117,7 @@ function showPlayer(context) {
     const q = video.getVideoPlaybackQuality?.();
     stats.textContent = `Resolução decodificada: ${video.videoWidth || '—'} × ${video.videoHeight || '—'}\nBuffer disponível: ${buffered.toFixed(1)} s\nFrames perdidos: ${q?.droppedVideoFrames ?? 'indisponível'}\nFonte: ${context.stream.addonName || 'direta'}\nHDR e saída de áudio: não medidos\nTransporte: player nativo / HTTP(S)`;
   }
-  on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; if (pendingStart) { const target = pendingStart; pendingStart = 0; (async () => { try { await waitBuffer(target); } catch { return; } if (!disposed && !pauseOverlay?.isOpen()) play(); })(); } });
+  on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; if (pendingStart) { const target = pendingStart; pendingStart = 0; (async () => { try { await waitBuffer(target); } catch { return; } if (!disposed) await beginPlayback(); })(); } });
   // Buffer e Rede: the visual series needs the initial play, not a stall before it started.
   on('playing', () => { hasStarted = true; status.hidden = true; chrome.setPlaying(true); reveal(); });
   // Buffer e Rede: with the custom buffer on, the TV waits for the configured amount of
@@ -1100,12 +1163,24 @@ function showPlayer(context) {
   document.addEventListener('visibilitychange', visibility);
   screen.addEventListener('mousemove', reveal); screen.addEventListener('focusin',()=>{if(!segments.focused())reveal();});
   const issue = playbackIssue(context.stream, state.settings.avoidDvOnly);
+  // Playback starts after the subtitle preparation (bounded) and, when the custom buffer
+  // is on, after the initial buffer: the first frame already arrives with subtitles ready.
+  async function beginPlayback() {
+    if (disposed) return;
+    if (tracks?.prepareSubtitles) {
+      status.hidden = false; status.textContent = 'Preparando legendas…';
+      try { await tracks.prepareSubtitles(); } catch { /* segue sem legenda */ }
+      if (disposed) return;
+      status.hidden = true;
+    }
+    if (!pauseOverlay?.isOpen()) play();
+  }
   if (issue) status.textContent = issue;
   else {
     video.src = context.stream.url;
-    // The start waits for the initial buffer only when the custom buffer is on.
     pendingStart = initialTarget(playbackPrefs());
-    if (!pendingStart) play();
+    if (pendingStart) { tracks?.prepareSubtitles?.().catch(() => {}); } // prepara junto com a espera de buffer
+    else beginPlayback();
   }
   player = { back(){
     if(seekPreview.active()){seekPreview.cancel();return true;}
@@ -1192,11 +1267,29 @@ function layoutKey(key, event) {
     event.preventDefault(); return true;
   }
   if (key === 'ArrowLeft' && root.querySelector('.sidebar') && !/INPUT|TEXTAREA|SELECT/.test(active?.tagName)) {
-    if (active?.tagName === 'MAIN' || active?.closest('.settings-rail') || !root.querySelector('main button,main input')) { event.preventDefault(); setDrawer(true); return true; }
+    // A tela com a própria coluna da esquerda (o rail dos Ajustes) é o fim da linha: o
+    // menu abre no Início ou com Voltar, nunca no meio de um ajuste.
+    const focusable = root.querySelector('main button:not(:disabled), main input, main select, main textarea, main [data-focusable]');
+    if (active?.tagName === 'MAIN' || !focusable) { event.preventDefault(); setDrawer(true); return true; }
   }
   return false;
 }
-installRemote({ root, back, playerKey: (key, event) => (player?.key(key, event) ?? false) || layoutKey(key, event), boundaryLeft: () => setDrawer(true) });
+installRemote({ root, back, playerKey: (key, event) => (player?.key(key, event) ?? false) || layoutKey(key, event),
+  onLeftColumn: active => {
+    // Settings: the pane's leftmost column steps to the selected category, and the rail
+    // itself is the end of the line (no menu popping open in the middle of an edit).
+    const pane = active?.closest?.('.settings-content');
+    if (route.name !== 'settings' || !pane) return null;
+    const paneLeft = pane.getBoundingClientRect().left + 8;
+    if (active.getBoundingClientRect().left > paneLeft + 40) return null;
+    return root.querySelector('.settings-rail .settings-tab.selected');
+  },
+  boundaryLeft: () => {
+  // Esquerda abre o menu somente no Início. Dentro de uma tela, a coluna da esquerda
+  // pertence à própria tela (o rail dos Ajustes, por exemplo).
+  if (drawerOpen || route.name !== 'home') return;
+  setDrawer(true);
+} });
 window.addEventListener('online',()=>{syncDelay=3000;scheduleSync();});
 window.addEventListener('offline',stopSync);
 window.addEventListener('pagehide', () => {cleanupPlayer?.();stopSync();});

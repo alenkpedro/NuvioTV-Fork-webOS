@@ -319,9 +319,21 @@ export function installTrackControls({ screen, video, context, addons, settings,
     tracksChanged();
   }
   const ready = () => { metadataReady = true; if (desiredSpeed !== 1) chooseSpeed(desiredSpeed,false); bindTracks(); };
+  // The user asked for subtitles to be ready before the first frame, so the player awaits
+  // this bounded preparation (loadedmetadata + the automatic choice, including an external
+  // add-on subtitle download) instead of starting playback and fixing the track later.
+  async function prepareSubtitles(timeout = 3500) {
+    if (disposed) return 'skipped';
+    const deadline = Date.now() + timeout;
+    while (!disposed && !metadataReady && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
+    if (disposed || !metadataReady) return 'skipped';
+    await Promise.race([automatic().catch(() => {}), new Promise(resolve => setTimeout(resolve, Math.max(0, deadline - Date.now())))]);
+    return disposed ? 'skipped' : 'ready';
+  }
   video.addEventListener('loadedmetadata', ready); bindTracks();
   return {
     openSpeed: () => open('speed'), openAudio: () => open('audio'), openSubtitles: () => open('subtitles'), isOpen: () => Boolean(dialog),
+    prepareSubtitles,
     key(key,event) {
       if (!dialog || !['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)) return false;
       event.preventDefault();

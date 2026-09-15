@@ -15,7 +15,17 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.24.1
+## Estado: prévia 0.25.0
+
+A 0.25.0 corrige o que a primeira validação na TV (webOS 25) apontou: navegação e
+foco dos Ajustes (Esquerda não abre mais o menu no meio de um ajuste, a rolagem
+não volta para o topo e o rail não é recortado), **Voltar** visível na lista de
+fontes, **segurar o OK** em Continuar assistindo (Retomar/Remover do histórico), o
+aviso de conteúdo fora da frente das informações do player, o campo da chave do
+TMDB aceitando os 32 caracteres, **legendas prontas antes do primeiro quadro**,
+2× sem travar, miniaturas que avisam quando a TV não permite capturar o quadro — e
+as **coleções criadas em outro cliente Nuvio (Android/Xperience)** passam a
+aparecer e a voltar pela conta. Ver [webos/VALIDATION.md](webos/VALIDATION.md).
 
 A 0.24.1 corrige o cabeçalho do editor de coleção, que mostrava contadores
 congelados depois de adicionar pasta ou fonte.

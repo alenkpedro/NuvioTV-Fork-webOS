@@ -7,7 +7,7 @@ if (tag !== `webos-v${app.version}`) throw Error('Tag must match package version
 const filename = `${app.id}_${app.version}_all.ipk`, file = `packages/${filename}`;
 const manifest = {
   id: app.id, version: app.version, type: app.type, title: app.title,
-  appDescription: 'Coleções na Home a partir de catálogos e do TMDB, buffer e medição de fonte.',
+  appDescription: 'Correções da validação na TV, coleções da conta e legendas antes do vídeo.',
   iconUri: `https://raw.githubusercontent.com/${repo}/${tag}/webos/public/assets/icon.png`,
   sourceUrl: `https://github.com/${repo}/tree/${tag}`,
   rootRequired: false,
@@ -15,7 +15,7 @@ const manifest = {
   ipkHash: { sha256: createHash('sha256').update(readFileSync(file)).digest('hex') },
   ipkSize: statSync(file).size,
 };
-const index = { paging: { page: 1, count: 1, maxPage: 1, itemsTotal: 1 }, packages: [{ id: app.id, title: app.title, iconUri: manifest.iconUri, manifest, pool: 'main', shortDescription: 'Player do fork com coleções, buffer, reprodução automática e legendas para LG webOS 24.' }] };
+const index = { paging: { page: 1, count: 1, maxPage: 1, itemsTotal: 1 }, packages: [{ id: app.id, title: app.title, iconUri: manifest.iconUri, manifest, pool: 'main', shortDescription: 'Player do fork com coleções sincronizadas, ajustes corrigidos e legendas prontas antes do vídeo.' }] };
 writeFileSync('../apps.json', JSON.stringify(index, null, 2) + '\n');
 writeFileSync(`packages/${app.id}.manifest.json`, JSON.stringify(manifest, null, 2) + '\n');
 console.log(JSON.stringify({ file, bytes: manifest.ipkSize, sha256: manifest.ipkHash.sha256 }));

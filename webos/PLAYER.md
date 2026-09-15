@@ -78,7 +78,7 @@ suspensão, sessões longas e 4K/HDR no aparelho.
 ## Referências verificadas
 
 - [LG: seleção de áudio por audioTracks](https://forum.webostv.developer.lge.com/t/video-multi-audio/24156).
-- [LG: formatos webOS 24, WebVTT](https://webostv.developer.lge.com/develop/specifications/video-audio-240).
+- [LG: formatos webOS 25, WebVTT](https://webostv.developer.lge.com/develop/specifications/video-audio-240).
 - [LG: limitações de legendas internas](https://forum.webostv.developer.lge.com/t/multi-subtitles-in-video-url/1297).
 - [LG: protocolos de streaming](https://webostv.developer.lge.com/develop/specifications/streaming-protocol-drm).
 - Contrato dos addons: `data/repository/SubtitleRepositoryImpl.kt` e

@@ -246,7 +246,7 @@ Veja [COLLECTIONS_RATINGS.md](COLLECTIONS_RATINGS.md).
 
 ## Alvo e otimização
 
-LG 55UT8050PSA, com webOS 24 / Chromium 108 como baseline. A interface é
+LG 55UT8050PSA, com webOS 25 / Chromium 108 como baseline. A interface é
 renderizada em 1920×1080; essa resolução de UI não reduz a resolução do vídeo.
 A compatibilidade real de 4K/HDR/áudio precisa de testes no aparelho.
 

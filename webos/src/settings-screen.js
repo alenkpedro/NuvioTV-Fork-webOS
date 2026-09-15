@@ -287,7 +287,8 @@ export function settingsScreen(context) {
           delayStep('Diminuir atraso do trailer', -1),
           el('span', { class: 'settings-threshold-value' }, `${play().trailerDelay}s`),
           delayStep('Aumentar atraso do trailer', 1)) : null,
-        play().trailerAutoPlay ? note('No webOS o trailer abre no aplicativo do YouTube da TV, não dentro do Nuvio. Sem trailer no TMDB, a janela de recomendações continua igual.') : null)
+        play().trailerAutoPlay ? note('No webOS o trailer abre no aplicativo do YouTube da TV, não dentro do Nuvio. Sem trailer no TMDB, a janela de recomendações continua igual.') : null,
+        play().postPlayRecommendations && !metadata.configured() ? note('As recomendações após assistir vêm do TMDB: salve sua chave em Integrações → TMDB para que a janela apareça no fim do filme.') : null)
     ];
   }
   const sourceLabels = { TRAKT: 'Trakt', SIMKL: 'Simkl', MDBLIST: 'MDBList', NUVIO_SYNC: 'Nuvio Sync' };
@@ -330,7 +331,7 @@ export function settingsScreen(context) {
         pending('Rolagem de foco Nuvio', 'Usa animação de foco personalizada do Nuvio', 'A animação de foco do fork é desenhada pelo Compose.'),
         pending('Lembrar último perfil selecionado', 'Abre com o último perfil usado ao iniciar o app', 'A escolha de perfil nesta TV passa pela conta Nuvio e continua exigindo confirmação.')),
       group('Diagnóstico', 'Versão e dados desta instalação',
-        row('Versão do app', 'Pacote instalado nesta TV', () => textDialog('Versão do app', `Nuvio Fork para webOS ${version}\n${base}\nAlvo: LG 55UT8050 / webOS 24`), { value: version }),
+        row('Versão do app', 'Pacote instalado nesta TV', () => textDialog('Versão do app', `Nuvio Fork para webOS ${version}\n${base}\nAlvo: LG 55UT8050 / webOS 25`), { value: version }),
         row('Addons instalados', 'Add-ons desta TV', () => textDialog('Addons instalados', state.addons.map(addon => `${addon.manifest.name} · ${new URL(addon.url).hostname}`).join('\n') || 'Nenhum add-on instalado.'), { value: String(state.addons.length) }),
         row('Teste de velocidade', 'Mede a fonte real pelo mesmo transporte do player', () => textDialog('Teste de velocidade', 'Abra um título, entre em Assistir e use “Testar velocidade” na lista de fontes. A medição roda sobre a fonte HTTP(S) real, com um orçamento de poucos MB por fonte, e não altera a ordem da lista nem a escolha automática.'), { value: 'Na lista de fontes' })),
       group('Cache', 'Apaga dados carregados nesta sessão',
@@ -350,7 +351,14 @@ export function settingsScreen(context) {
     content.scrollTop = 0;
   }
   // Rebuilds only the detail pane, so a change that adds or removes rows keeps focus.
-  function redraw(selector) { select(current); if (selector) content.querySelector(selector)?.focus({ preventScroll: true }); }
+  // Rebuilds only the detail pane, so a change that adds or removes rows keeps focus and
+  // the reader's place: resetting scrollTop here threw the user back to the first group.
+  function redraw(selector) {
+    const scroll = content.scrollTop;
+    select(current);
+    content.scrollTop = scroll;
+    if (selector) content.querySelector(selector)?.focus({ preventScroll: true });
+  }
   main.append(workspace);
   select(current);
 }

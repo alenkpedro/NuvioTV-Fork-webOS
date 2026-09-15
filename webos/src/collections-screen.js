@@ -36,10 +36,28 @@ function choiceDialog(el, button, { title, description, options, onPick, onCance
   sheet.querySelector('.collection-choice')?.focus();
 }
 export function collectionsScreen(context) {
-  const { main, el, button, state, persist, navigate, toast } = context;
+  const { main, el, button, state, persist, navigate, toast, account, pushCollections, syncCollections, syncStatus } = context;
   const collections = () => state.collections || (state.collections = []);
-  const save = patch => { state.collections = patch(collections()); persist(); draw(); };
+  const save = patch => { state.collections = patch(collections()); persist(); pushCollections?.(); draw(); };
   const host = el('div', { class: 'collections-body' });
+  const status = el('p', { class: 'settings-note muted', role: 'status' }, '');
+  const sync = button('Sincronizar coleções da conta', async () => {
+    if (!account) { toast('Entre com a conta Nuvio em Ajustes → Conta para sincronizar as coleções.'); return; }
+    sync.disabled = true; status.textContent = 'Lendo as coleções da conta…';
+    try {
+      const result = await syncCollections();
+      if (result.imported) { status.textContent = `${result.imported} coleção(ões) da conta carregada(s).`; draw(); }
+      else status.textContent = 'A conta não tem coleções salvas para este perfil; as desta TV foram mantidas.';
+    } catch (error) { status.textContent = error.message; }
+    finally { sync.disabled = false; }
+  }, { class: 'collection-action', 'aria-label': 'Sincronizar coleções da conta' });
+  function paintStatus() {
+    const info = syncStatus?.();
+    if (info?.error) { status.textContent = `As coleções da conta não carregaram: ${info.error}`; return; }
+    status.textContent = !account ? 'As coleções desta TV ficam neste perfil; entre na conta para sincronizá-las.'
+      : info?.at ? `${info.collections} coleção(ões) da conta${info.pushedAt ? ' · envio mais recente feito' : ''}.`
+      : 'Nenhuma coleção carregada da conta ainda.';
+  }
   function draw() {
     const list = collections();
     if (!list.length) { host.replaceChildren(el('p', { class: 'notice', role: 'status' }, 'Nenhuma coleção ainda. Crie uma para organizar suas fileiras na Home.')); return; }
@@ -63,9 +81,11 @@ export function collectionsScreen(context) {
   main.append(el('div', { class: 'screen-collections' },
     el('div', { class: 'collections-head' }, el('h1', {}, 'Coleções'),
       el('p', { class: 'muted' }, 'Fileiras extras na Home a partir de catálogos de add-ons e do TMDB. Cada pasta com ao menos uma fonte vira uma fileira.'),
-      el('div', { class: 'toolbar' }, create, button('Voltar', () => navigate({ name: 'settings', category: 'discovery' }), { class: 'collection-action', 'aria-label': 'Voltar aos ajustes' }))),
+      el('div', { class: 'toolbar' }, create, sync, button('Voltar', () => navigate({ name: 'settings', category: 'discovery' }), { class: 'collection-action', 'aria-label': 'Voltar aos ajustes' }))),
+    status,
     host,
-    el('p', { class: 'notice' }, 'As coleções ficam nesta TV, por perfil: a sincronização com a conta ainda não inclui as coleções, e listas do Trakt continuam pendentes.')));
+    el('p', { class: 'notice' }, 'As coleções ficam neste perfil: as criadas em outro cliente Nuvio aparecem aqui depois de sincronizar, e as suas são enviadas de volta à conta.')));
+  paintStatus();
   draw();
 }
 
@@ -73,7 +93,7 @@ export function collectionEditorScreen(context) {
   const { main, el, button, state, persist, navigate, toast, route, signal } = context;
   const collections = () => state.collections || (state.collections = []);
   const current = () => collections().find(collection => collection.id === route.collectionId);
-  const save = patch => { state.collections = patch(collections()); persist(); draw(); };
+  const save = patch => { state.collections = patch(collections()); persist(); context.pushCollections?.(); draw(); };
   const host = el('div', { class: 'collection-editor-body' });
   if (!current()) { main.append(el('p', { class: 'notice' }, 'Esta coleção não existe mais.'), button('Voltar para Coleções', () => navigate({ name: 'collections' }))); return; }
   // The fork's editor walks add-on -> catalog -> genre, or TMDB type -> id -> media type
@@ -95,7 +115,7 @@ export function collectionEditorScreen(context) {
     choiceDialog(el, button, { title: addon.manifest.name, description: 'Escolha o catálogo desta fileira.',
       options: entries.map(entry => ({ entry, label: `${entry.catalog.name || entry.catalog.id} · ${entry.catalog.type}` })),
       onPick: option => {
-        const source = { kind: 'catalog', addonUrl: addon.url, addonName: addon.manifest.name, type: option.entry.catalog.type, catalogId: option.entry.catalog.id, catalogName: option.entry.catalog.name || option.entry.catalog.id };
+        const source = { kind: 'catalog', addonId: addon.manifest.id || '', addonUrl: addon.url, addonName: addon.manifest.name, type: option.entry.catalog.type, catalogId: option.entry.catalog.id, catalogName: option.entry.catalog.name || option.entry.catalog.id };
         if (!option.entry.genres.length) { add(collection, folder, source); return; }
         choiceDialog(el, button, { title: 'Gênero', description: 'Opcional: fixe um gênero nesta fileira.',
           options: [{ label: 'Todos os gêneros' }, ...option.entry.genres.map(value => ({ label: value, genre: value }))],

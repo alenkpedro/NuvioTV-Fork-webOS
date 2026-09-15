@@ -36,7 +36,7 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
    cinco cenários de `StreamQualityRankTrashTest.kt`, além de cenários de tamanho,
    requisitos, limites e compatibilidade. Não houve execução diferencial de toda
    a suíte Kotlin e não se afirma paridade integral do aplicativo.
-5. Esta versão prioriza um alvo recente (webOS 24) e não declara compatibilidade
+5. Esta versão prioriza um alvo recente (webOS 25) e não declara compatibilidade
    com TVs LG antigas. JavaScript é compilado para Chromium 108.
 6. O cache do último link é consultado antes de pedir as fontes aos add-ons; o
    fork pede a lista e depois decide. Desligar o ajuste apaga os links guardados,
@@ -50,10 +50,21 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 9. A medição de velocidade reporta taxa e latência por fonte sem reordenar a
    lista: o `StreamSweepEngine` do fork escolhe uma configuração de rede, o que um
    aplicativo web não faz.
-10. As coleções são locais por perfil: o blob de coleções do
-   `CollectionSyncService` ainda não é enviado à conta. Ficam de fora as listas do
-   Trakt, a importação/exportação JSON e a aparência da fileira (capa, GIF, emoji,
-   formato e modo de exibição).
+10. As coleções vão e voltam pela conta (`sync_pull_collections` e
+   `sync_push_collections`), no mesmo blob do app Android. Provedores que a TV não
+   abre — listas do Trakt — são preservados no formato original, para que editar
+   aqui nunca apague uma lista criada em outro cliente. Aparência da fileira
+   (capa, GIF, emoji, formato e modo de exibição) e a importação/exportação JSON
+   continuam fora.
+11. Long press não existe no fork Android (o gesto é declarado, nunca conectado).
+   O port implementa o gesto e o usa em Continuar assistindo, onde ele abre
+   Retomar/Remover do histórico.
+12. O campo da chave do TMDB é texto aberto com contador, não mascarado: o teclado
+   do webOS entrega o texto de forma incompleta em campos de senha.
+13. Legendas: o player espera até 3,5 s pela escolha automática da faixa (inclusive
+   legenda externa de add-on) antes de iniciar, para que o primeiro quadro já
+   apareça legendado. Acima de 1× a correção de tom é desligada para aliviar o
+   decodificador da TV.
 
 ## Próximos marcos
 

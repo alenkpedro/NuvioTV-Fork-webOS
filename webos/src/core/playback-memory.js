@@ -16,11 +16,22 @@ export function readSpeed(state,meta) { const speed = state.playbackSpeeds?.[tra
 export function saveSpeed(state,meta,speed) { if (playbackSpeeds.includes(speed)) remember(state,'playbackSpeeds',trackMemoryKey(meta),speed,1); }
 export function readDelay(state,context) { const delay = state.subtitleDelays?.[videoKey(context)]; return Number.isFinite(delay) && Math.abs(delay)<=SUBTITLE_DELAY_LIMIT ? clampSubtitleDelay(delay) : 0; }
 export function saveDelay(state,context,delay) { if (Number.isFinite(delay) && Math.abs(delay)<=SUBTITLE_DELAY_LIMIT) remember(state,'subtitleDelays',videoKey(context),clampSubtitleDelay(delay),0); }
+// PlaybackSpeedAwareAudioSink territory on Android. On the TV the media element keeps
+// pitch by default, and that resampling is what makes 2× stutter on the SoC: above
+// normal speed the port asks the element to play the audio as-is.
+export function applyPitchPolicy(video, speed) {
+  const preserve = !(speed > 1.001);
+  for (const property of ['preservesPitch', 'webkitPreservesPitch', 'mozPreservesPitch']) {
+    try { if (property in video) video[property] = preserve; } catch { /* readonly on some builds */ }
+  }
+  return preserve;
+}
 export function setPlaybackSpeed(video,speed) {
   if (!playbackSpeeds.includes(speed)) throw Error('Velocidade inválida.');
   if (!Number.isFinite(video.duration) || video.duration <= 0) throw Error('Aguarde o vídeo carregar. Velocidade disponível para vídeos com duração definida.');
   const previous = video.playbackRate;
   try {
+    applyPitchPolicy(video, speed);
     video.playbackRate = speed;
     if (!Number.isFinite(video.playbackRate) || Math.abs(video.playbackRate-speed)>0.001) throw Error();
   } catch {

@@ -189,6 +189,21 @@ export function createAccountClient({ storage, fetcher = globalThis.fetch, confi
       }
       throw new AccountError('Não foi possível concluir a importação do histórico.');
     },
+    async collections(profileId, signal) {
+      if (!Number.isInteger(profileId) || profileId < 1 || profileId > 6) throw new AccountError('Perfil inválido.');
+      const rows = await authorized('/rest/v1/rpc/sync_pull_collections', { p_profile_id: profileId }, signal);
+      if (!Array.isArray(rows)) throw new AccountError('A conta retornou coleções inválidas.');
+      const blob = rows.find(row => row && typeof row === 'object');
+      // No row means this profile never stored collections; the local copy is kept.
+      return { present: Boolean(blob), collections: blob && Array.isArray(blob.collections_json) ? blob.collections_json : [], updatedAt: blob?.updated_at || null };
+    },
+    async pushCollections(profileId, collections, clientId, signal) {
+      if (!Number.isInteger(profileId) || profileId < 1 || profileId > 6) throw new AccountError('Perfil inválido para enviar coleções.');
+      if (!/^[a-zA-Z0-9_-]{16,96}$/.test(clientId)) throw new AccountError('Identificador de sincronização inválido.');
+      if (!Array.isArray(collections)) throw new AccountError('Coleções inválidas para enviar.');
+      await authorized('/rest/v1/rpc/sync_push_collections', { p_profile_id: profileId, p_collections_json: collections, p_origin_client_id: clientId }, signal);
+      return { collections: collections.length };
+    },
     async mutate(profileId, op, clientId, signal, expectedUserId) {
       if (!Number.isInteger(profileId) || profileId<1 || profileId>6 || session?.user.id!==expectedUserId) throw new AccountError('Perfil ou conta inválidos para envio.');
       if (!/^[a-zA-Z0-9_-]{16,96}$/.test(clientId)) throw new AccountError('Identificador de sincronização inválido.');

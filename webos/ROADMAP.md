@@ -1,7 +1,7 @@
 # Etapas para completar o fork no webOS
 
 Referência única: `ysosrs123/NuvioTV-Fork@45e0984` (código Android preservado nesta árvore).
-Alvo: LG 55UT8050, webOS 24. NuvioTVSmart não é a base deste projeto.
+Alvo: LG 55UT8050, webOS 25. NuvioTVSmart não é a base deste projeto.
 
 ## Como continuar este trabalho
 
@@ -90,6 +90,7 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    **Buffer e Rede 0.23:** buffer inicial (5 s) e após travamento (3 s) com os padrões do fork, tempo limite de espera e o teste de velocidade real sobre a fonte, pelo mesmo transporte do player. Ver [NETWORK.md](NETWORK.md).
    **Coleções 0.24:** coleções com pastas e fontes (catálogo de add-on e TMDB: coleção, lista, produtora, emissora, pessoa, direção e descobrir), fileiras extras na Home com fixar no topo, gerenciamento e editor pelo controle, e entrar na conta levando direto para a Home. Ver [COLLECTIONS.md](COLLECTIONS.md).
    **Correção 0.24.1:** o cabeçalho do editor de coleção acompanha os contadores de pastas e fontes e o rótulo de fixação a cada mudança.
+   **Correções da validação na TV 0.25:** Esquerda não abre o menu dentro dos ajustes, a rolagem/foco do painel de Ajustes fica no lugar, o rail não é mais recortado, a lista de fontes tem Voltar visível, segurar o OK em Continuar assistindo abre Retomar/Remover, o aviso de conteúdo sai da frente das informações do player, a chave do TMDB entra inteira com contador, as legendas ficam prontas antes do primeiro quadro, 2× para de travar, as miniaturas avisam quando a TV não permite capturar o quadro e as **coleções criadas em outro cliente Nuvio** (Android/Xperience) aparecem e voltam pela conta. Detalhes e o que continua pendente em [VALIDATION.md](VALIDATION.md) e nas notas da versão.
    **Próxima prioridade:** validação na LG, sincronização das coleções com a conta, avaliação do dispositivo e as integrações que ainda dependem de serviço Android. A tabela de paridade mantém os recursos pendentes.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que

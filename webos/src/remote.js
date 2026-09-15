@@ -1,8 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-only
-export function installRemote({ root, back, playerKey, boundaryLeft }) {
+export function installRemote({ root, back, playerKey, boundaryLeft, onLeftColumn }) {
   const mapping = { 37: 'ArrowLeft', 38: 'ArrowUp', 39: 'ArrowRight', 40: 'ArrowDown', 13: 'Enter', 461: 'Escape', 415: 'MediaPlay', 19: 'MediaPause', 413: 'MediaStop', 412: 'MediaRewind', 417: 'MediaFastForward' };
+  // Long press: the Android fork declares the gesture but never wires it, so the port
+  // adds it where it helps — holding OK on an element marked [data-longpress] opens the
+  // short-press action on release and the extra action from the 'longpress' event.
+  const longPressMs = 600;
+  let hold = null;
+  const longPressTarget = () => document.activeElement?.closest?.('[data-longpress]') || null;
   document.addEventListener('keydown', e => {
     const key = mapping[e.keyCode] ?? e.key;
+    if (key === 'Enter' && !e.repeat) {
+      const target = longPressTarget();
+      if (target) {
+        e.preventDefault();
+        const timer = setTimeout(() => { const node = hold?.target; hold = null; node?.dispatchEvent(new CustomEvent('longpress', { bubbles: true })); }, longPressMs);
+        hold = { target, timer };
+        return;
+      }
+    }
     if (key === 'Escape' || (key === 'Backspace' && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName))) { e.preventDefault(); back(); return; }
     if (playerKey(key, e)) return;
     if (!key.startsWith('Arrow') && key !== 'Tab') return;
@@ -15,6 +30,12 @@ export function installRemote({ root, back, playerKey, boundaryLeft }) {
       const index = all.indexOf(active); all[(index + (e.shiftKey ? -1 : 1) + all.length) % all.length].focus(); return;
     }
     if (!all.includes(active)) { all[0].focus(); return; }
+    // A screen with its own left column (the Settings rail) receives the focus itself
+    // instead of letting the geometry pick a random neighbour.
+    if (key === 'ArrowLeft') {
+      const column = onLeftColumn?.(active);
+      if (column) { e.preventDefault(); column.focus({ preventScroll: true }); column.scrollIntoView({ block: 'nearest', behavior: 'auto' }); return; }
+    }
     const a = active.getBoundingClientRect(), cx = a.x + a.width / 2, cy = a.y + a.height / 2;
     const horizontal = key === 'ArrowLeft' || key === 'ArrowRight', sign = key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1;
     let best = null, score = Infinity;
@@ -30,4 +51,12 @@ export function installRemote({ root, back, playerKey, boundaryLeft }) {
     if (!best && key === 'ArrowLeft') boundaryLeft?.();
     if (best) { best.focus({ preventScroll: true }); best.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' }); }
   });
+  document.addEventListener('keyup', e => {
+    const key = mapping[e.keyCode] ?? e.key;
+    if (key !== 'Enter' || !hold) return;
+    clearTimeout(hold.timer);
+    const node = hold.target; hold = null;
+    if (node?.isConnected && document.activeElement === node) node.click();
+  });
+  document.addEventListener('blur', () => { if (hold) { clearTimeout(hold.timer); hold = null; } });
 }

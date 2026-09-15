@@ -27,6 +27,28 @@ Descoberta → Coleções**, por perfil.
 - Um título vindo do TMDB abre a tela de detalhes normalmente e a busca de
   fontes usa os add-ons instalados: a coleção não exige add-on próprio.
 
+## Sincronização com a conta
+
+As coleções vivem no blob de perfil da conta (`sync_pull_collections` /
+`sync_push_collections`), o mesmo que o app Android usa pelo `CollectionSyncService`.
+Isso significa que:
+
+- ao entrar na conta (ou ao usar **Sincronizar coleções da conta**), o port lê o blob do
+  perfil e traz as coleções criadas em outro cliente Nuvio — a Home passa a mostrar as
+  mesmas fileiras;
+- editar uma coleção na TV (criar, renomear, mover, fixar, excluir, adicionar ou remover
+  fonte) envia o blob de volta, no formato que o app Android lê, com um atraso curto para
+  agrupar mudanças seguidas;
+- uma coleção vazia na conta **não** apaga a cópia local: o port só adota o que veio quando
+  o blob tem conteúdo;
+- falha nessa sincronização aparece no texto de estado da tela de Coleções, sem transformar
+  o login em uma pilha de mensagens.
+
+O que a TV não consegue abrir continua viagem de ida e volta: **listas do Trakt** (e
+qualquer provedor futuro) ficam guardadas no formato original, aparecem marcadas como não
+suportadas nesta TV e são devolvidas intactas no envio — editar coleções aqui nunca apaga
+uma lista que você criou em outro app.
+
 ## O que ainda não existe
 
 - **Listas do Trakt** como fonte: o port não tem login OAuth do Trakt.

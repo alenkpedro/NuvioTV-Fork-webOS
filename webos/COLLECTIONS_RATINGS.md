@@ -1,7 +1,7 @@
 # Coleções de filmes e avaliações — 0.11.0
 
 Referência: `ysosrs123/NuvioTV-Fork@45e0984`, mantido nesta árvore. Alvo LG
-55UT8050 / webOS 24. Esta entrega acrescenta franquias TMDB nos detalhes e notas
+55UT8050 / webOS 25. Esta entrega acrescenta franquias TMDB nos detalhes e notas
 agregadas MDBList. Coleções pessoais, listas externas, avaliação pessoal e
 rastreamento MDBList continuam pendentes.
 

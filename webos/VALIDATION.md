@@ -1,9 +1,12 @@
-# Checklist de validação na LG 55UT8050 — versão 0.24.1
+# Checklist de validação na LG 55UT8050 — versão 0.25.0
 
-Documento para uso na frente da TV. Cada item diz **o que fazer** e **o que deve
-acontecer**; a validação física é a única coisa que os testes de navegador não
-substituem. Veja também as pendências conhecidas no fim: elas já estão
-documentadas e não são falhas novas.
+Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
+deve acontecer**; a validação física é a única coisa que os testes de navegador não
+substituem. Veja também as pendências conhecidas no fim: elas já estão documentadas e não
+são falhas novas.
+
+> Esta versão nasceu da sua primeira rodada na TV: o **Bloco R** lista exatamente o que foi
+> corrigido a partir do seu relato, para conferência rápida.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -35,13 +38,58 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
    de teste você está usando.
 
 
+## Bloco R — correções da 0.25.0 (do seu relato)
+
+Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R1. Ajustes: rolagem, foco e recorte
+- [ ] Abrir **Ajustes → Reprodução**, rolar até o fim e alternar um ajuste que abre linhas
+      (**Trailer automático após assistir**, por exemplo). Esperado: o valor muda e a tela
+      **fica onde estava** — não volta mais para o topo.
+- [ ] Com o foco em um ajuste do painel, apertar **Esquerda**: esperado ir para a categoria
+      atual no rail. Apertar **Esquerda** de novo: esperado **não** abrir o menu.
+- [ ] No **Início**, apertar Esquerda a partir do primeiro cartão: esperado abrir o menu.
+- [ ] Olhar o rail com o foco em **Conta** (primeiro item): esperado sem corte no topo nem na
+      lateral, e o mesmo nos demais itens.
+
+### R2. Voltar das fontes e segurar o OK
+- [ ] Abrir um título → **Assistir** → na lista de fontes usar o botão **Voltar** (o primeiro
+      da barra de chips). Esperado: voltar aos detalhes do título.
+- [ ] Segurar **OK** (cerca de 1 segundo) em um cartão de **Continuar assistindo**. Esperado:
+      a janela com **Retomar** e **Remover do histórico**. Toque curto continua abrindo a
+      reprodução.
+
+### R3. Legendas, velocidade e avisos no player
+- [ ] Reproduzir um título com legenda escolhida e observar o começo. Esperado: aparece
+      "Preparando legendas…" por instantes e o vídeo começa **já com a legenda**.
+- [ ] Painel **Mais → Velocidade**: escolher **2×**. Esperado: sem travar como antes; se a
+      fonte não acompanhar, testar **1,5×**.
+- [ ] Iniciar uma reprodução com **Avisos de conteúdo** ligado. Esperado: o aviso aparece na
+      lateral esquerda, **abaixo** da linha de resolução/relógio, sem sobrepor.
+- [ ] Ajustes → Reprodução → **Miniaturas ao buscar**: ligar, reproduzir e usar as setas na
+      linha do tempo. Esperado: prévia dos quadros quando a fonte permitir; se a TV não
+      permitir capturar, aparece um aviso único e a reprodução segue normal.
+- [ ] Ajustes → **Recomendações após assistir** ligado: esperado, se o TMDB ainda não tiver
+      chave, a nota avisando que a janela depende do TMDB (veja R4).
+
+### R4. Chave do TMDB e coleções da conta
+- [ ] Ajustes → Integrações → **TMDB**: colar a chave de 32 caracteres. Esperado: o campo
+      aceita o texto inteiro e o contador mostra **32/32**. Salvar: esperado "TMDB conectado".
+- [ ] Com a conta conectada, abrir **Ajustes → Conteúdo e Descoberta → Coleções**. Esperado:
+      as coleções criadas em outro cliente Nuvio aparecem na lista e na Home, e o texto de
+      estado diz quantas vieram da conta. Usar **Sincronizar coleções da conta** para forçar
+      a leitura.
+- [ ] Uma coleção com **lista do Trakt** aparece com a fonte marcada como não suportada
+      nesta TV — ela continua guardada e é devolvida à conta quando você edita aqui.
+
 ## Bloco A — essencial
 
 ### A1. Abrir e navegar
 - [ ] Abrir **Nuvio Fork**. Esperado: sem tela preta e sem erro; abre a Home (ou a
       tela de boas-vindas, se não houver conta nesta TV).
-- [ ] Tecla **Voltar** (ou **Esquerda**) abre o menu lateral: **Início, Busca,
+- [ ] Tecla **Voltar** (ou **Esquerda** no Início) abre o menu lateral: **Início, Busca,
       Biblioteca, Ajustes**. As setas andam entre os itens e o foco é visível.
+- [ ] Dentro dos Ajustes, **Esquerda** vai para a categoria atual no rail e não abre o menu.
 - [ ] **Ajustes**: o rail mostra as dez categorias (Conta, Perfis, Aparência,
       Layout, Conteúdo e Descoberta, Integrações, Reprodução, Rastreamento, Sobre,
       Avançado); ↑/↓ troca de categoria e a lista da direita rola até o fim.
@@ -238,6 +286,7 @@ tabela de suporte real do port.
 | D8 | **Legenda externa** de add-on | Igual a D7 e sem descaracterização de acentos |
 | D9 | Vídeo 23,976/24 fps | Se o movimento parece constante (o port **não** muda a frequência da tela; AFR está fora de escopo) |
 | D10 | Reprodução longa (30+ min) | Sem travar, sem perda de sincronia de legenda, sem esquentar demais |
+| D11 | **Velocidade 2×** em uma fonte pesada | Comparar com a 1,5×: se a 2× ainda engasgar, é o limite do decodificador da TV |
 
 Para D1–D6, o overlay **Informações de reprodução** mostra resolução decodificada,
 buffer e frames perdidos. Ele não mede HDR nem a saída de áudio: essas conclusões
@@ -251,12 +300,22 @@ documentos de cada versão:
 - **Renderização ASS/SSA com libass**, AFR (taxa de quadros automática), janelas de
   buffer em bytes, orçamento de memória do ExoPlayer, cache de VOD em disco,
   conexões paralelas/HTTP-2 e plugins Android: sem equivalente nesta plataforma.
-- **Listas do Trakt** como fonte de coleção e **sincronização das coleções** com a
-  conta: ainda não implementadas.
+- **Listas do Trakt** como fonte de coleção: a fonte fica visível, marcada como não
+  suportada nesta TV, e é preservada ao enviar as coleções de volta à conta.
+- **Sincronização das coleções** com a conta: existe (leitura e envio); o que ainda não vem
+  são os campos de aparência da fileira (capa, GIF, emoji, formato e modo de exibição).
 - **Login Trakt/Simkl** (OAuth) e **Direct Debrid/torrents**: pendentes.
 - **Fonte do app e idioma**: fixos (Inter e português do Brasil) nesta versão.
 - **Trailer interno**: o webOS não reproduz YouTube dentro do app; o trailer abre
-  no aplicativo da TV, como descrito em [AUTO_PLAY.md](AUTO_PLAY.md).
+  no aplicativo da TV, como descrito em [AUTO_PLAY.md](AUTO_PLAY.md). Ao voltar do
+  YouTube, o sistema pode relançar o app no Início — é o ciclo de vida do webOS, não
+  uma ação do port.
+- **Miniaturas de busca**: dependem de a TV permitir capturar o quadro da fonte
+  (conteúdo até 1080p, sem HDR/DV e com origem que autoriza leitura). Quando não
+  permite, o port avisa uma vez em vez de falhar em silêncio.
+- **AFR**: um aplicativo web no webOS não troca a frequência do painel.
+- **Velocidade 2×**: o port desliga a correção de tom acima de 1× para aliviar o
+  decodificador; se a fonte for muito pesada, 1,5× é o limite prático da TV.
 
 ## Como reportar
 
@@ -264,7 +323,7 @@ Para cada item com problema, mande uma linha neste formato:
 
 ```text
 Item: B1 (fileira de coleção não aparece)
-Versão: 0.24.1   Firmware: webOS 24.x.y
+Versão: 0.24.1   Firmware: webOS 25.x.y
 O que fiz: criei a coleção, adicionei catálogo 'X', fui para Início
 O que aconteceu: a Home mostrou 'Nenhum conteúdo encontrado'
 O que esperava: a fileira 'Clássicos' com os títulos

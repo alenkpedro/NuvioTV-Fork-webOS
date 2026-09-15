@@ -154,7 +154,7 @@ const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><tit
   <div class="eyebrow">Nuvio Fork para LG webOS</div>
   <h1>${inline(title)}</h1>
   <div class="meta">
-    <span class="chip">LG 55UT8050 · webOS 24</span>
+    <span class="chip">LG 55UT8050 · webOS 25</span>
     <span class="chip">Pacote 0.24.1</span>
     <span class="chip">${new Date().toLocaleDateString('pt-BR')}</span>
     <span class="chip">Início rápido: A1 → A2 → A3</span>
