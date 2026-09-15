@@ -87,3 +87,8 @@ Embedded copyright: Copyright (c) 2018. Netflix, Inc. and its affiliates. All ri
 Embedded license URL: http://www.daltonmaag.com/eula
 No license text accompanied the supplied archive. This font is not covered by
 the application's GPL or Inter's OFL. No Netflix affiliation is implied.
+
+Player controls: `assets/icons/player/{play,pause,episodes,aspect_ratio}.svg` are
+unmodified copies of `app/src/main/res/raw/ic_player_*.svg` in the selected fork.
+Their embedded provenance comments are preserved. Layout and remote scrub rules
+are derived from PlayerScreen.kt, SpacingTokens.kt, Type.kt and PlayerScrubRates.kt.

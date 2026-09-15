@@ -80,7 +80,8 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    **Episódios e proporção entregues na 0.15:** ver [EPISODES_ASPECT.md](EPISODES_ASPECT.md).
    **Correção 0.15.1:** Netflix Sans nas internas com texto acessível, prévia e estado da fonte; ver [SUBTITLE_FONT.md](SUBTITLE_FONT.md).
    **Estilo 0.15.2:** Netflix Sans Medium como preset fixo, sem prévia/diagnóstico de fonte no menu.
-   **Próxima etapa sugerida:** painel de fontes do vídeo atual e ocultação de spoilers.
+   **Player 0.16:** barra de controles da referência, Mais inline, Reiniciar, fontes do vídeo atual, relógio e busca acelerada. Ver [PLAYER_PARITY.md](PLAYER_PARITY.md).
+   **Prioridade do usuário:** continuar os painéis de áudio/legendas, sincronização por fala e tela de pausa antes das demais áreas. A tabela de paridade mantém os recursos pendentes.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

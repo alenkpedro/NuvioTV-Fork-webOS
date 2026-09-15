@@ -11,6 +11,8 @@ import { playbackSettingsScreen } from './playback-settings.js';
 import { installNextEpisode } from './next-episode.js';
 import { installAspect } from './core/aspect.js';
 import { installEpisodePanel } from './player-episodes.js';
+import { playerUI } from './player-ui.js';
+import { installSeek } from './core/player-seek.js';
 import { installTrackControls } from './player-tracks.js';
 import { initializeProfiles, activateProfile, leaveAccountProfiles, mergeLibrary, setLibraryItem } from './core/profiles.js';
 import { initializeHistory, mergeHistory, markWatched, isWatched, continueHistory, progressWithWatched, historySummary, resolveHistoryConflict } from './core/history.js';
@@ -148,9 +150,10 @@ function navigate(next, replace = false) {
   if (!replace) stack.push({ route, focus: document.activeElement?.dataset.focus });
   route = next; render();
 }
-function back() {
+function back(force = false) {
   const dialog = root.querySelector('[role=dialog]');
   if (dialog) { (dialog.querySelector('[data-dismiss]') || dialog.querySelector('button'))?.click(); return; }
+  if(force!==true && player?.back?.())return;
   if(route.name==='discover' && document.activeElement?.closest('.discover-grid')) {root.querySelector('[data-picker]')?.focus();root.querySelector('main').scrollTop=0;return;}
   if(route.name==='search' && document.activeElement?.closest('.search-results')) {root.querySelector('input[type=search]')?.focus();root.querySelector('main').scrollTop=0;return;}
   if (route.name === 'profiles') { toast('Escolha um perfil para continuar.'); return; }
@@ -840,7 +843,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.15.2'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.16.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -877,25 +880,22 @@ function bytes(n) { return Number.isFinite(n) && n > 0 ? `${(n / 1024 ** 3).toFi
 function showPlayer(context) {
   root.replaceChildren();
   const video = el('video', { autoplay: true, playsinline: true, preload: 'metadata' });
-  const title = context.episode ? `${context.meta.name} · T${context.episode.season} E${context.episode.episode}` : context.meta.name;
   const status = el('p', { class: 'player-status', role: 'status' }, 'Abrindo vídeo…');
-  const timeline = el('input', { type: 'range', class: 'player-timeline', min: 0, max: 1, value: 0, step: 5, disabled: true, 'aria-label': 'Posição do vídeo', onchange: e => seekTo(Number(e.target.value)) });
-  const time = el('span', { class: 'player-time' }, '00:00');
   const stats = el('pre', { class: 'stats', hidden: true });
-  const pause = button('Pausar', toggle);
-  const controls = el('div', { class: 'player-controls' }, el('div', { class: 'section-head' }, el('h1', {}, title), time), timeline, el('div', { class: 'toolbar' }, button('Voltar às fontes', back), button('−30 s', () => seek(-30)), pause, button('+30 s', () => seek(30)), button('Áudio', () => tracks.openAudio()), button('Legendas', () => tracks.openSubtitles()), context.type==='series' ? button('Episódios',()=>episodes.open()) : null, button('Mais',()=>tracks.openMore())));
-  const screen = el('div', { class: 'player-screen controls-visible' }, video, status, stats, controls); root.append(screen);
-  let disposed = false, hideTimer, savedAt = 0, resumeApplied = false, episodes;
+  const chrome=playerUI({el,button,context,video,toggle,restart:()=>{seekTo(0);play();},audio:()=>tracks.openAudio(),subtitles:()=>tracks.openSubtitles(),sources:()=>episodes.openCurrent(),episodes:()=>episodes.open(),speed:()=>tracks.openSpeed(),aspect:()=>aspect.cycle(),stats:()=>{stats.hidden=!stats.hidden;screen.classList.toggle('stats-visible',!stats.hidden);chrome.info.setAttribute('aria-pressed',String(!stats.hidden));updateStats();}});
+  const {controls,timeline,pause}=chrome;
+  const screen = el('div', { class: 'player-screen controls-visible' }, video, chrome.top, status, stats, controls); root.append(screen);
+  let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview;
   const aspect=installAspect({video,settings:state.settings,persist,notify:toast});
   const listeners = [];
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
   const resume = state.progress[progressKey(context.type, context.id)];
-  const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, memoryState:state, persist, el, button, extraActions:{aspectLabel:aspect.label,cycleAspect:aspect.cycle,diagnostics:()=>{stats.hidden=!stats.hidden;updateStats();}},
-    onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); upNext.refresh(); }, onClose: ()=>{reveal();upNext.refresh();} });
+  const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, memoryState:state, persist, el, button,
+    onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); upNext.refresh(); }, onClose: ()=>{reveal();upNext.refresh();} });
   const upNext = installNextEpisode({screen,video,context,settings:state.settings,el,button,
     loadMeta:async()=> (await loadMeta(context.meta,context.addon,request.signal)).meta,
-    modalOpen:()=>tracks.isOpen() || Boolean(episodes?.isOpen()), restoreFocus:()=>{reveal();pause.focus();},
-    stopPlayback:()=>back(),
+    modalOpen:()=>tracks.isOpen() || Boolean(episodes?.isOpen()) || Boolean(seekPreview?.active()), restoreFocus:()=>{reveal();pause.focus();},
+    stopPlayback:()=>back(true),
     advance:(episode,auto,count)=>{
       // Drop earlier episode routes so binge playback cannot grow navigation indefinitely.
       while (['player','streams'].includes(stack.at(-1)?.route.name)) stack.pop();
@@ -904,8 +904,9 @@ function showPlayer(context) {
         nextPlayback:{auto,count,bingeGroup:context.stream.behaviorHints?.bingeGroup || null}},true);
     }});
   episodes=installEpisodePanel({screen,context,state,el,button,poster,sourceCard,
+    playCurrent:stream=>{save();navigate({...context,stream,nextPlayback:{...context.nextPlayback,auto:false,count:0}},true);},
     loadMeta:async signal=>(await loadMeta(context.meta,context.addon,signal))?.meta,
-    onOpen:()=>{clearTimeout(hideTimer);controls.classList.add('faded');screen.classList.remove('controls-visible');upNext.refresh();},
+    onOpen:()=>{clearTimeout(hideTimer);controls.classList.add('faded');controls.inert=true;screen.classList.remove('controls-visible');upNext.refresh();},
     onClose:()=>{reveal();upNext.refresh();},
     play:(episode,stream,meta)=>{
       while(['player','streams'].includes(stack.at(-1)?.route.name))stack.pop();
@@ -913,10 +914,13 @@ function showPlayer(context) {
       stack.push({route:target,focus:stream.sourceKey});navigate({...target,name:'player',stream},true);
     }});
   function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
-  function reveal() { if (tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen()) hideTimer = setTimeout(() => { controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, 4500); }
+  function hideControls(){manuallyHidden=true;clearTimeout(hideTimer);controls.classList.add('faded');controls.inert=true;screen.classList.remove('controls-visible');}
+  function reveal() { manuallyHidden=false; if (tracks.isOpen() || upNext.isOpen() || episodes?.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); controls.inert=false; screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen() && !seekPreview.active()) hideTimer = setTimeout(() => { controls.classList.add('faded'); controls.inert=true; screen.classList.remove('controls-visible'); }, 4500); }
+  seekPreview=installSeek({video,timeline,update:updateTimeline,reveal});
+  const clockTimer=setInterval(()=>{if(!document.hidden && screen.classList.contains('controls-visible'))chrome.updateClock();},1000);
+  chrome.updateClock();
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
-  function seek(delta) { seekTo(video.currentTime + delta); }
-  async function play() { try { await video.play(); } catch { if (!disposed) { status.hidden = false; status.textContent = 'Pressione Reproduzir para iniciar.'; pause.textContent = 'Reproduzir'; } } }
+  async function play() { try { await video.play(); } catch { if (!disposed) { status.hidden = false; status.textContent = 'Pressione Reproduzir para iniciar.'; chrome.setPlaying(false); } } }
   function toggle() { video.paused ? play() : video.pause(); reveal(); }
   function updateStats() {
     if (stats.hidden) return;
@@ -926,30 +930,48 @@ function showPlayer(context) {
     stats.textContent = `Resolução decodificada: ${video.videoWidth || '—'} × ${video.videoHeight || '—'}\nBuffer disponível: ${buffered.toFixed(1)} s\nFrames perdidos: ${q?.droppedVideoFrames ?? 'indisponível'}\nFonte: ${context.stream.addonName || 'direta'}\nHDR e saída de áudio: não medidos\nTransporte: player nativo / HTTP(S)`;
   }
   on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; });
-  on('playing', () => { status.hidden = true; pause.textContent = 'Pausar'; reveal(); });
+  on('playing', () => { status.hidden = true; chrome.setPlaying(true); reveal(); });
   on('waiting', () => { status.hidden = false; status.textContent = 'Carregando vídeo…'; });
-  on('pause', () => { pause.textContent = 'Reproduzir'; reveal(); save(); });
-  on('timeupdate', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = Number.isFinite(video.duration) ? video.duration : 1; timeline.value = video.currentTime; timeline.setAttribute('aria-valuetext', clock(video.currentTime)); time.textContent = `${clock(video.currentTime)} / ${Number.isFinite(video.duration) ? clock(video.duration) : 'Ao vivo'}`; updateStats(); if (Date.now() - savedAt > 10000) { save(); savedAt = Date.now(); } });
+  on('pause', () => { chrome.setPlaying(false); if(!manuallyHidden)reveal(); save(); });
+  function updateTimeline() {
+    const duration=video.duration,position=seekPreview.position();
+    timeline.disabled=!Number.isFinite(duration)||duration<=0;timeline.max=timeline.disabled?1:duration;timeline.value=position;
+    const elapsed=clock(position),remaining=timeline.disabled?'Ao vivo':`-${clock(Math.max(0,duration-position))}`;timeline.setAttribute('aria-valuetext',elapsed);if(chrome.elapsed.textContent!==elapsed)chrome.elapsed.textContent=elapsed;if(chrome.remaining.textContent!==remaining)chrome.remaining.textContent=remaining;
+    let buffered=0;for(let i=0;i<video.buffered.length;i++)if(video.buffered.start(i)<=video.currentTime && video.buffered.end(i)>=video.currentTime)buffered=video.buffered.end(i);
+    timeline.style.setProperty('--played',`${timeline.disabled?0:Math.min(100,position/duration*100)}%`);timeline.style.setProperty('--buffered',`${timeline.disabled?0:Math.min(100,buffered/duration*100)}%`);chrome.updateClock();
+  }
+  function updateMetadata(){const chips=[];if(video.videoWidth&&video.videoHeight)chips.push(`${video.videoWidth} × ${video.videoHeight}`);const size=sizeBytes(context.stream);if(size>0)chips.push(size>=1024**3?`${(size/1024**3).toFixed(1)} GB`:`${Math.round(size/1024**2)} MB`);chrome.meta.replaceChildren(...chips.map(text=>el('span',{},text)));updateTimeline();}
+  on('loadedmetadata',updateMetadata);on('resize',updateMetadata);on('progress',updateTimeline);on('durationchange',updateTimeline);on('ratechange',()=>chrome.updateClock());
+  on('timeupdate', () => {updateTimeline();updateStats();if(Date.now()-savedAt>10000){save();savedAt=Date.now();}});
   on('ended', () => { save(); status.hidden = false; status.textContent = 'Reprodução concluída.'; reveal(); });
-  on('error', () => { status.hidden = false; status.textContent = 'Não foi possível reproduzir esta fonte. O link pode ter expirado ou o formato não ser compatível. Volte e escolha outra fonte.'; controls.classList.remove('faded'); clearTimeout(hideTimer); });
+  on('error', () => { status.hidden = false; status.textContent = 'Não foi possível reproduzir esta fonte. O link pode ter expirado ou o formato não ser compatível. Volte e escolha outra fonte.'; controls.classList.remove('faded'); controls.inert=false; clearTimeout(hideTimer); });
   const visibility = () => { if (document.hidden) { video.pause(); save(); } };
   document.addEventListener('visibilitychange', visibility);
   screen.addEventListener('mousemove', reveal); screen.addEventListener('focusin', reveal);
   const issue = playbackIssue(context.stream, state.settings.avoidDvOnly);
   if (issue) status.textContent = issue;
   else { video.src = context.stream.url; play(); }
-  player = { key(key, e) {
+  player = { back(){
+    if(seekPreview.active()){seekPreview.cancel();return true;}
+    if(!stats.hidden){stats.hidden=true;screen.classList.remove('stats-visible');chrome.info.setAttribute('aria-pressed','false');return true;}
+    if(chrome.more.getAttribute('aria-expanded')==='true'){chrome.setMore(false);reveal();chrome.more.focus();return true;}
+    if(screen.classList.contains('controls-visible')){hideControls();return true;}return false;
+  },key(key, e) {
     if (upNext.isOpen()) { if (['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)) { e.preventDefault(); return true; } return false; }
     if (episodes.isOpen()) { if(episodes.key(key,e))return true; if(['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)){e.preventDefault();return true;}return false; }
     if (tracks.isOpen()) return false;
     if (['MediaPlay', 'MediaPause', 'MediaStop', 'MediaRewind', 'MediaFastForward', ' '].includes(key)) {
-      e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') video.pause(); else if (key === 'MediaStop') back(); else if (key === 'MediaRewind') seek(-30); else if (key === 'MediaFastForward') seek(30); else toggle(); return true;
+      e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') video.pause(); else if (key === 'MediaStop') back(true); else if (key === 'MediaRewind' || key === 'MediaFastForward') seekPreview.key(key==='MediaRewind'?'ArrowLeft':'ArrowRight',e); else toggle(); return true;
     }
+    if(!upNext.focused() && controls.classList.contains('faded') && ['ArrowLeft','ArrowRight'].includes(key)){reveal();timeline.focus();return seekPreview.key(key,e);}
     if (!upNext.focused() && controls.classList.contains('faded') && ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) { e.preventDefault(); reveal(); pause.focus(); return true; }
-    if (document.activeElement === timeline && ['ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); seek(key === 'ArrowLeft' ? -10 : 10); return true; }
+    if(document.activeElement===timeline && seekPreview.key(key,e))return true;
+    if(chrome.key(key,hideControls)){e.preventDefault();return true;}
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; save(); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  const controlSize=new ResizeObserver(()=>screen.style.setProperty('--subtitle-control-clearance',`${controls.offsetHeight+8}px`));controlSize.observe(controls);
+  const disposeBase=cleanupPlayer;cleanupPlayer=()=>{controlSize.disconnect();disposeBase();};
   pause.focus();
 }
 function layoutKey(key, event) {

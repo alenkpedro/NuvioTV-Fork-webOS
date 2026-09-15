@@ -6,15 +6,15 @@ import { filterAndSort, rankStreams, playbackIssue } from './core/ranking.js';
 import { progressKey } from './core/storage.js';
 import { isWatched } from './core/history.js';
 const PAGE_SIZE=50;
-export function installEpisodePanel({screen,context,state,el,button,poster,sourceCard,loadMeta,play,onOpen,onClose}) {
-  let dialog,returnFocus,disposed=false,controller,episodes=[],season,page=0,selected,rows=[],providers=[],provider=null,showAll=false,loading=false,error='',failed=0,mode='episodes';
+export function installEpisodePanel({screen,context,state,el,button,poster,sourceCard,loadMeta,play,playCurrent,onOpen,onClose}) {
+  let dialog,returnFocus,disposed=false,controller,episodes=[],season,page=0,selected,rows=[],providers=[],provider=null,showAll=false,loading=false,error='',failed=0,mode='episodes',currentOnly=false;
   function cancelRequest() { controller?.abort();controller=null;loading=false; }
   function close() { if(!dialog)return;cancelRequest();dialog.remove();dialog=null;rows=[];providers=[];screen.classList.remove('episodes-open');onClose();if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true}); }
   function backToEpisodes() { cancelRequest();rows=[];providers=[];mode='episodes';error='';draw(`episode-${selected.id}`); }
   function changeSeason(value,focusEpisode=false) { season=value;page=0;draw(focusEpisode ? 'first-episode' : `season-${season}`); }
   function choose(episode,stream) {
     if(disposed || !dialog || document.hidden || playbackIssue(stream,state.settings.avoidDvOnly))return;
-    cancelRequest();play(episode,stream,context.meta);
+    cancelRequest();if(currentOnly)playCurrent(stream);else play(episode,stream,context.meta);
   }
   async function sources(episode) {
     if(Date.parse(episode.released)>Date.now())return;
@@ -28,7 +28,7 @@ export function installEpisodePanel({screen,context,state,el,button,poster,sourc
     },request.signal);
     if(disposed || !dialog || request.signal.aborted || controller!==request)return;
     rows=results.flatMap(r=>r?.value || []);failed=results.filter(r=>r?.error).length;loading=false;controller=null;
-    const focus=dialog.querySelector('[data-panel-key="sources-back"]')===document.activeElement ? 'first-source' : null;
+    const focus=dialog.querySelector(currentOnly?'[data-panel-key="close"]':'[data-panel-key="sources-back"]')===document.activeElement ? 'first-source' : null;
     draw(focus);
   }
   async function metadata() {
@@ -46,8 +46,8 @@ export function installEpisodePanel({screen,context,state,el,button,poster,sourc
     if(!dialog || disposed)return;
     const oldKey=dialog.contains(document.activeElement) ? document.activeElement.dataset.panelKey : null;
     const oldScroll=dialog.querySelector('.episode-panel-list')?.scrollTop || 0;
-    const panel=el('section',{class:'episode-panel'});
-    panel.append(el('div',{class:'episode-panel-heading'},el('h2',{},mode==='episodes'?'Episódios':'Fontes'),button('Fechar',close,{'data-panel-key':'close',...(mode==='episodes'?{'data-dismiss':true}:{})})));
+    const panel=el('section',{class:`episode-panel${currentOnly?' current-source-panel':''}`});
+    panel.append(el('div',{class:'episode-panel-heading'},el('h2',{},mode==='episodes'?'Episódios':'Fontes'),button('Fechar',close,{'data-panel-key':'close',...(mode==='episodes'||currentOnly?{'data-dismiss':true}:{})})));
     const list=el('div',{class:'episode-panel-list'});
     if(mode==='episodes') {
       const seasons=[...new Set(episodes.map(v=>v.season))];
@@ -74,8 +74,9 @@ export function installEpisodePanel({screen,context,state,el,button,poster,sourc
       else if(error)list.append(el('p',{role:'alert'},error),button('Tentar novamente',metadata));
       else if(!episodes.length)list.append(el('p',{role:'status'},'Nenhum episódio disponível para esta série.'));
     } else {
-      panel.append(el('div',{class:'episode-sources-heading'},button('Voltar aos episódios',backToEpisodes,{'data-dismiss':true,'data-panel-key':'sources-back'}),el('strong',{},`T${selected.season} E${selected.episode} · ${selected.title || 'Episódio'}`)));
-      const chips=el('div',{class:'stream-chips'},button('Atualizar',()=>sources(selected),{'aria-label':'Atualizar fontes do episódio','data-panel-key':'refresh'}));
+      if(!currentOnly)panel.append(el('div',{class:'episode-sources-heading'},button('Voltar aos episódios',backToEpisodes,{'data-dismiss':true,'data-panel-key':'sources-back'}),el('strong',{},`T${selected.season} E${selected.episode} · ${selected.title || 'Episódio'}`)));
+      if(currentOnly)panel.append(el('p',{class:'current-source-title'},context.episode?`T${context.episode.season} E${context.episode.episode} • ${context.episode.title || context.meta.name}`:context.meta.name));
+      const chips=el('div',{class:'stream-chips'},button('Atualizar',()=>sources(selected),{'aria-label':currentOnly?'Atualizar fontes':'Atualizar fontes do episódio','data-panel-key':'refresh'}));
       for(const index of [null,...providers.map((_,i)=>i)])chips.append(button(index===null?'Todos':providers[index].manifest.name,()=>{provider=index;draw(`provider-${index}`);},{class:index===provider?'selected':'','data-panel-key':`provider-${index}`}));
       panel.append(chips);
       if(loading)list.append(el('p',{role:'status'},'Buscando fontes…'));
@@ -99,9 +100,15 @@ export function installEpisodePanel({screen,context,state,el,button,poster,sourc
   }
   function open() {
     if(disposed || dialog || context.type!=='series')return;
-    returnFocus=document.activeElement;mode='episodes';rows=[];error='';episodes=episodeList(context.meta).slice(0,10000);selectInitial();
+    returnFocus=document.activeElement;currentOnly=false;mode='episodes';rows=[];error='';episodes=episodeList(context.meta).slice(0,10000);selectInitial();
     dialog=el('div',{class:'player-episode-dialog',role:'dialog','aria-modal':'true','aria-label':'Episódios e fontes'});screen.append(dialog);screen.classList.add('episodes-open');onOpen();
     if(Array.isArray(context.meta.videos))draw('initial');else metadata();
   }
-  return {open,isOpen:()=>Boolean(dialog),key(key,event){if(!dialog || mode!=='episodes' || !document.activeElement?.matches('.episode-panel-item') || !['ArrowLeft','ArrowRight'].includes(key))return false;const seasons=[...new Set(episodes.map(v=>v.season))],index=seasons.indexOf(season)+(key==='ArrowLeft'?-1:1);if(seasons[index]!==undefined)changeSeason(seasons[index],true);event.preventDefault();return true;},dispose(){disposed=true;cancelRequest();dialog?.remove();dialog=null;rows=[];episodes=[];screen.classList.remove('episodes-open');}};
+  function openCurrent() {
+    if(disposed || dialog)return;
+    returnFocus=document.activeElement;currentOnly=true;
+    dialog=el('div',{class:'player-episode-dialog player-source-dialog',role:'dialog','aria-modal':'true','aria-label':'Fontes'});screen.append(dialog);screen.classList.add('episodes-open');onOpen();
+    sources({id:context.id,...context.episode});
+  }
+  return {open,openCurrent,isOpen:()=>Boolean(dialog),key(key,event){if(!dialog || mode!=='episodes' || !document.activeElement?.matches('.episode-panel-item') || !['ArrowLeft','ArrowRight'].includes(key))return false;const seasons=[...new Set(episodes.map(v=>v.season))],index=seasons.indexOf(season)+(key==='ArrowLeft'?-1:1);if(seasons[index]!==undefined)changeSeason(seasons[index],true);event.preventDefault();return true;},dispose(){disposed=true;cancelRequest();dialog?.remove();dialog=null;rows=[];episodes=[];screen.classList.remove('episodes-open');}};
 }

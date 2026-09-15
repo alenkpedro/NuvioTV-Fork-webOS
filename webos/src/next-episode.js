@@ -11,7 +11,7 @@ export function installNextEpisode({screen,video,context,settings,el,button,load
   const start = button([thumbnail,el('span',{class:'grow'},el('small',{},'Próximo episódio'),label,status),el('span',{'aria-hidden':'true'},'▶')],()=>proceed(false),{'aria-label':'Reproduzir próximo episódio',class:'next-episode-play'});
   const cancel = button('Continuar neste episódio',dismiss,{class:'next-episode-cancel'});
   const card = el('section',{class:'next-episode',hidden:true,'aria-label':'Próximo episódio'},start,cancel);
-  const shortcut = button('Próximo episódio',()=>proceed(),{hidden:true,'aria-label':'Ir para o próximo episódio'});
+  const shortcut = button([el('span',{class:'player-icon player-icon-next','aria-hidden':'true'}),el('span',{},'Próximo episódio')],()=>proceed(),{hidden:true,class:'player-pill','aria-label':'Ir para o próximo episódio'});
   screen.querySelector('.player-controls .toolbar').append(shortcut); screen.append(card);
   function stopTimer() { clearInterval(timer); timer = null; lastTick = 0; }
   function dismiss() { dismissed = true; stopTimer(); card.hidden = true; restoreFocus(); }

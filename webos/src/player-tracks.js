@@ -6,7 +6,7 @@ import { readPlayback, preferredLanguages, languageScore, languageCode } from '.
 import { languageName, mediaTracks, selectAudioTrack } from './core/media-tracks.js';
 import { nativeSubtitles } from './core/native-subtitles.js';
 
-export function installTrackControls({ screen, video, context, addons, settings, memoryState = {}, persist, el, button, extraActions, onOpen, onClose }) {
+export function installTrackControls({ screen, video, context, addons, settings, memoryState = {}, persist, el, button, onOpen, onClose }) {
   let dialog, panelKind, returnFocus, editor = false, discovery, download, downloading = '', error = '', info = '', found = false;
   let external = normalizeSubtitles(context.stream.subtitles, context.stream.addonName || 'Fonte');
   let selected = null, cues = [], delay = readDelay(memoryState,context), timer, disposed = false;
@@ -15,7 +15,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
   const device = navigator.languages?.length ? navigator.languages : [navigator.language];
   const profileKey = memoryState.profileStore?.activeKey;
   let desiredSpeed = readSpeed(memoryState,context.meta);
-  const panelTitle = kind => ({audio:'Áudio',subtitles:'Legendas',speed:'Velocidade',more:'Mais opções'}[kind]);
+  const panelTitle = kind => ({audio:'Áudio',subtitles:'Legendas',speed:'Velocidade'}[kind]);
   function persistSpeed(speed) { if (!disposed && profileKey === memoryState.profileStore?.activeKey) { saveSpeed(memoryState,context.meta,speed); persist(); } }
   function chooseSpeed(speed,manual = true) {
     try { setPlaybackSpeed(video,speed); desiredSpeed=speed; error=''; if (manual) persistSpeed(speed); }
@@ -134,10 +134,6 @@ export function installTrackControls({ screen, video, context, addons, settings,
         manualAudio = true;
         try { selectAudioTrack(video, entry.track); error = ''; remember('audio',{language:entry.track.language}); scheduleAutomatic(); } catch (failure) { error = failure.message; } draw();
       }, `audio-${entry.index}`, entry.selected));
-    } else if (panelKind === 'more') {
-      list.append(row('Velocidade','',()=>open('speed'),'speed-menu'));
-      list.append(row('Proporção da imagem',extraActions.aspectLabel(),()=>{extraActions.cycleAspect();draw();},'aspect'));
-      list.append(row('Diagnóstico','',()=>{close();extraActions.diagnostics();},'diagnostics'));
     } else if (panelKind === 'speed') {
       for (const speed of playbackSpeeds) list.append(row(`${speed}×`, speed===1 ? 'Normal' : '',()=>chooseSpeed(speed),`speed-${speed}`,Math.abs(video.playbackRate-speed)<0.001));
       list.append(el('p',{class:'track-notice'},'Velocidade lembrada para este título neste perfil. A disponibilidade depende da fonte e do player da TV.'));
@@ -178,7 +174,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
   function open(kind) {
     if (dialog) close();
     returnFocus = document.activeElement; panelKind = kind; editor = false; error = '';
-    dialog = el('div', { class: `player-track-dialog${['speed','more'].includes(kind) ? ' player-speed-dialog' : ''}`, role: 'dialog', 'aria-modal': true, 'aria-label': panelTitle(kind) });
+    dialog = el('div', { class: `player-track-dialog${kind==='speed' ? ' player-speed-dialog' : ''}`, role: 'dialog', 'aria-modal': true, 'aria-label': panelTitle(kind) });
     screen.append(dialog); onOpen(); draw();
     (dialog.querySelector('.track-list .selected-track') || dialog.querySelector('.track-list button') || dialog.querySelector('[data-dismiss]'))?.focus();
     if (kind === 'subtitles' && !found) discover();
@@ -241,7 +237,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
   const ready = () => { metadataReady = true; if (desiredSpeed !== 1) chooseSpeed(desiredSpeed,false); bindTracks(); };
   video.addEventListener('loadedmetadata', ready); bindTracks();
   return {
-    openMore: () => open('more'), openSpeed: () => open('speed'), openAudio: () => open('audio'), openSubtitles: () => open('subtitles'), isOpen: () => Boolean(dialog),
+    openSpeed: () => open('speed'), openAudio: () => open('audio'), openSubtitles: () => open('subtitles'), isOpen: () => Boolean(dialog),
     dispose() {
       disposed = true; native.dispose(); stopDownload(); discovery?.abort(); clearTimeout(timer); dialog?.remove(); overlay.remove();
       videoEvents.forEach(name => video.removeEventListener(name, renderCue)); video.removeEventListener('loadedmetadata', ready); video.removeEventListener('ratechange',rateChanged);

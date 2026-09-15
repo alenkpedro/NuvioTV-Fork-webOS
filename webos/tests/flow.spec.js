@@ -30,6 +30,10 @@ async function navigation(page, title) {
   if (!await page.locator('#app').evaluate(e => e.classList.contains('drawer-open'))) await page.keyboard.press('Escape');
   await page.getByRole('button', { name: title, exact: true }).click();
 }
+async function leavePlayer(page) {
+  for(let i=0;i<5 && await page.locator('video').count();i++)await page.keyboard.press('Escape');
+  await expect(page.locator('video')).toHaveCount(0);
+}
 async function openAddons(page) {
   await navigation(page, 'Ajustes');
   await page.getByRole('button', { name: 'Conteúdo e Descoberta', exact: true }).click();
@@ -56,7 +60,7 @@ test('install → home → movie → ranked streams → video → resume, using 
   await expect.poll(() => page.locator('video').evaluate(v => v.readyState)).toBeGreaterThanOrEqual(2);
   await page.locator('video').evaluate(v => { v.currentTime = 25; v.pause(); });
   await expect.poll(() => page.locator('video').evaluate(v => v.currentTime)).toBeGreaterThanOrEqual(24);
-  await page.getByRole('button', { name: 'Voltar às fontes' }).click();
+  await leavePlayer(page);
   await expect(page.locator('video')).toHaveCount(0);
   await page.getByRole('button', { name: 'Reproduzir melhor fonte' }).click();
   await expect.poll(() => page.locator('video').evaluate(v => v.currentTime)).toBeGreaterThanOrEqual(24);
@@ -395,10 +399,10 @@ test('source refresh, addon filter, best-source scope and Back selection are pre
   await page.getByRole('button',{name:'Segunda fonte',exact:true}).click();
   await expect(page.locator('.source')).toHaveCount(1);
   await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
-  await page.getByRole('button',{name:'Mais',exact:true}).click();await page.getByRole('button',{name:'Diagnóstico',exact:true}).click();await expect(page.locator('.stats')).toContainText('Fonte: Segunda fonte');
-  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Informações de reprodução',exact:true}).click();await expect(page.locator('.stats')).toContainText('Fonte: Segunda fonte');
+  await leavePlayer(page);
   await expect(page.getByRole('button',{name:'Segunda fonte',exact:true})).toHaveClass(/selected/);
-  await page.locator('.source').click();await page.keyboard.press('Escape');
+  await page.locator('.source').click();await leavePlayer(page);
   await expect(page.locator('.source')).toBeFocused();
   await page.getByRole('button',{name:'Atualizar fontes',exact:true}).click();
   await expect(page.locator('.source')).toHaveCount(1);await expect(page.getByRole('button',{name:'Atualizar fontes',exact:true})).toBeFocused();
@@ -462,7 +466,7 @@ test('next episode card uses fresh episode sources and Back returns without a pl
   await expect(page.getByText('Temporada 2 · Episódio 1',{exact:true})).toBeVisible();expect(ids.at(-1)).toContain('ttshow:2:1.json');
   await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveCount(1);
   await expect(page.getByRole('button',{name:'Ir para o próximo episódio'})).toHaveCount(0);
-  await page.keyboard.press('Escape');await expect(page.locator('.source')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('.detail-title')).toBeVisible();
+  await leavePlayer(page);await expect(page.locator('.source')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('.detail-title')).toBeVisible();
 });
 test('automatic next waits while paused or in track menu, can be cancelled, and survives a backward seek',async({page})=>{
   await startSeriesForNext(page,{autoNext:true});
@@ -477,10 +481,10 @@ test('automatic next resolves the same binge group, advances once, and does not 
   const ids=[];await page.route('**/stream/series/**',r=>{ids.push(decodeURIComponent(r.request().url()));return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',behaviorHints:{bingeGroup:'fixture-binge'}}]}});});
   await startSeriesForNext(page,{autoNext:true});
   await page.locator('video').evaluate(v=>{Object.defineProperty(v,'ended',{get:()=>true});v.dispatchEvent(new Event('ended'));});
-  await page.clock.runFor(6500);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T2 E1');
+  await page.clock.runFor(6500);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T2 E1');
   await page.locator('video').evaluate(v=>v.pause());expect(ids).toHaveLength(2);
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')));expect(state.progress[JSON.stringify(['series','ttshow:2:1'])]?.complete).not.toBe(true);
-  await page.keyboard.press('Escape');await expect(page.locator('.source')).toBeVisible();
+  await leavePlayer(page);await expect(page.locator('.source')).toBeVisible();
 });
 test('playback preferences persist without resetting source preferences',async({page})=>{
   await install(page);await navigation(page,'Ajustes');await page.getByRole('button',{name:'Reprodução',exact:true}).click();await page.getByRole('button',{name:/Idiomas e próximo episódio/}).click();
@@ -494,13 +498,13 @@ test('unaired successor is visible but cannot start automatically or via the rem
   await startSeriesForNext(page,{autoNext:true},{released:'2999-01-01'});
   await expect(page.locator('.next-episode')).toContainText('ainda não foi lançado');await expect(page.locator('.next-episode-play')).toBeDisabled();
   await page.locator('video').evaluate(v=>{Object.defineProperty(v,'ended',{get:()=>true});v.dispatchEvent(new Event('ended'));});await page.clock.runFor(8000);
-  await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E1');
+  await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E1');
 });
 test('missing binge group with fallback disabled leaves a usable source list without autoplay on Back',async({page})=>{
   await page.route('**/stream/series/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',behaviorHints:{bingeGroup:decodeURIComponent(r.request().url()).includes('ttshow:1:1')?'first':'other'}}]}}));
   await startSeriesForNext(page,{autoNext:true,nextFallback:false});await page.locator('.next-episode-play').click();
   await expect(page.locator('.source')).toBeVisible();await expect(page.locator('video')).toHaveCount(0);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveCount(1);
-  await page.keyboard.press('Escape');await expect(page.locator('.source')).toBeVisible();await expect(page.locator('video')).toHaveCount(0);
+  await leavePlayer(page);await expect(page.locator('.source')).toBeVisible();await expect(page.locator('video')).toHaveCount(0);
 });
 test('native preferred subtitles select late tracks and Off disables them without a change-event loop',async({page})=>{
   await playbackPrefs(page,{subtitles:'pt-br',secondarySubtitles:'en'});await startFixtureVideo(page);
@@ -570,7 +574,7 @@ test('remembered Off persists across reopening the title and clearing it restore
   await playbackPrefs(page,{subtitles:'pt'});
   await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Português',lang:'por',url:origin+'/remember.srt'}]}]}}));
   let downloads=0;await page.route('**/remember.srt',r=>{downloads++;return r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nPreferred subtitle'});});
-  await startFixtureVideo(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await startFixtureVideo(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await leavePlayer(page);
   await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>v.pause());await expect(page.locator('.subtitle-overlay')).toBeHidden();expect(downloads).toBe(1);
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Usar idiomas dos ajustes/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Preferred subtitle');expect(downloads).toBe(2);
 });
@@ -611,7 +615,7 @@ test('Netflix Sans loads locally, subtitle delay survives reopening and reset re
   await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
   await page.screenshot({animations:'disabled',path:'test-results/player-netflix-sans-1920.png'});
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,5 s',exact:true}).click();
-  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
+  await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
   await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=30.2;});
   await expect(page.locator('.subtitle-overlay')).toContainText('A próxima história');
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: +0.5 s');
@@ -624,7 +628,7 @@ test('speed menu uses actual rate, remembers title on reopen and preserves the p
   await expect.poll(()=>page.locator('video').evaluate(v=>v.playbackRate)).toBe(1.25);
   await expect(dialog.getByRole('button',{name:'1.25×',exact:true})).toHaveAttribute('aria-pressed','true');
   await page.screenshot({animations:'disabled',path:'test-results/player-speed-1920.png'});
-  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Mais',exact:true})).toBeFocused();await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Velocidade',exact:true})).toBeFocused();await leavePlayer(page);
   await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.playbackRate)).toBe(1.25);
   await page.locator('video').evaluate(v=>{v.pause();const descriptor=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,'playbackRate');Object.defineProperty(v,'playbackRate',{configurable:true,get(){return descriptor.get.call(this);},set(value){if(value===2)return;descriptor.set.call(this,value);}});});
   await openPlayerSpeed(page);await dialog.getByRole('button',{name:'2×',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('não aceitou');
@@ -644,15 +648,15 @@ async function endBingeEpisode(page) {
 }
 test('still watching counts automatic transitions, pauses media keys and confirmation resets the session',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));await startBinge(page);
-  expect(await page.locator('.player-controls .toolbar').evaluate(bar=>new Set([...bar.children].filter(b=>!b.hidden).map(b=>Math.round(b.getBoundingClientRect().top))).size)).toBe(1);
-  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E2');
-  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E3');
+  expect(await page.locator('.player-controls .toolbar').evaluate(bar=>new Set([...bar.children].filter(b=>!b.hidden).map(b=>b.offsetTop)).size)).toBe(1);
+  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E2');
+  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E3');
   await endBingeEpisode(page);const dialog=page.getByRole('dialog',{name:'Ainda assistindo?'});await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button',{name:'Continuar assistindo',exact:true})).toBeFocused();expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);
   await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:415,bubbles:true})));expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);
   await page.screenshot({animations:'disabled',path:'test-results/player-still-watching-1920.png'});
-  await dialog.getByRole('button',{name:'Continuar assistindo',exact:true}).click();await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E4');
-  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E5');await expect(dialog).toHaveCount(0);expect(errors).toEqual([]);
+  await dialog.getByRole('button',{name:'Continuar assistindo',exact:true}).click();await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E4');
+  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E5');await expect(dialog).toHaveCount(0);expect(errors).toEqual([]);
 });
 test('still watching timeout waits while hidden, exits to sources and never restarts by itself',async({page})=>{
   await startBinge(page);await endBingeEpisode(page);await endBingeEpisode(page);await endBingeEpisode(page);
@@ -670,10 +674,10 @@ test('LG Back dismisses still watching by stopping playback and cancels its time
 });
 
 test('manual next episode resets the binge count even when automatic source selection is enabled',async({page})=>{
-  await startBinge(page);await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E2');
-  await page.locator('video').evaluate(v=>v.pause());await page.getByRole('button',{name:'Ir para o próximo episódio'}).click();await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E3');
-  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E4');
-  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E5');await expect(page.getByRole('dialog',{name:'Ainda assistindo?'})).toHaveCount(0);
+  await startBinge(page);await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E2');
+  await page.locator('video').evaluate(v=>v.pause());await page.getByRole('button',{name:'Ir para o próximo episódio'}).click();await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E3');
+  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E4');
+  await endBingeEpisode(page);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E5');await expect(page.getByRole('dialog',{name:'Ainda assistindo?'})).toHaveCount(0);
   await endBingeEpisode(page);await expect(page.getByRole('dialog',{name:'Ainda assistindo?'})).toBeVisible();
 });
 
@@ -698,15 +702,15 @@ test('in-player episodes retain current video, navigate seasons by remote, show 
 test('selecting an episode source replaces video only on selection, preserves old progress and Back shows selected episode sources',async({page})=>{
   await startSeriesForNext(page);await page.locator('video').evaluate(v=>{v.currentTime=25;v.fixtureOld=true;});
   await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect(dialog.locator('.source').first()).toBeVisible();
-  await dialog.locator('.source:not([aria-disabled="true"])').first().click();await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T2 E1');expect(await page.locator('video').evaluate(v=>Boolean(v.fixtureOld))).toBe(false);
+  await dialog.locator('.source:not([aria-disabled="true"])').first().click();await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T2 E1');expect(await page.locator('video').evaluate(v=>Boolean(v.fixtureOld))).toBe(false);
   const previous=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).progress['["series","ttshow:1:1"]']);expect(previous.time).toBeCloseTo(25,0);
-  await page.keyboard.press('Escape');await expect(page.locator('video')).toHaveCount(0);await expect(page.getByRole('button',{name:'Reproduzir melhor fonte'})).toBeVisible();await page.clock.runFor(7000);await expect(page.locator('video')).toHaveCount(0);
+  await leavePlayer(page);await expect(page.locator('video')).toHaveCount(0);await expect(page.getByRole('button',{name:'Reproduzir melhor fonte'})).toBeVisible();await page.clock.runFor(7000);await expect(page.locator('video')).toHaveCount(0);
 });
 test('episode source requests cancel on LG Back, late results never navigate and reopening can retry',async({page})=>{
   let release,started=false;const gate=new Promise(r=>release=r);
   await page.route('**/stream/series/**',async r=>{if(decodeURIComponent(r.request().url()).includes('ttshow:2:1')){started=true;await gate;}await r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4'}]}}).catch(()=>{});});
   await startSeriesForNext(page);await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect.poll(()=>started).toBe(true);
-  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:461,bubbles:true})));await expect(dialog.locator('[data-episode-id="ttshow:2:1"]')).toBeFocused();await page.keyboard.press('Escape');release();await page.clock.runFor(1000);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E1');
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:461,bubbles:true})));await expect(dialog.locator('[data-episode-id="ttshow:2:1"]')).toBeFocused();await page.keyboard.press('Escape');release();await page.clock.runFor(1000);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T1 E1');
   await page.getByRole('button',{name:'Episódios',exact:true}).click();await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect(dialog.locator('.source')).toHaveCount(1);
 });
 test('episode source failures can refresh without replacing the active video',async({page})=>{
@@ -720,14 +724,14 @@ test('future episodes remain visible but cannot query or select sources from the
 test('all seven aspect modes affect only video, persist across playback and adapt to a new video size',async({page})=>{
   await startFixtureVideo(page);await expect(page.getByRole('button',{name:'Episódios',exact:true})).toHaveCount(0);
   await page.locator('video').evaluate(v=>{Object.defineProperty(v,'videoWidth',{configurable:true,get:()=>400});Object.defineProperty(v,'videoHeight',{configurable:true,get:()=>300});v.fixtureOriginal=true;v.dispatchEvent(new Event('resize'));});
-  await page.getByRole('button',{name:'Mais',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Mais opções'});const option=dialog.getByRole('button',{name:/Proporção da imagem/});
+  await page.getByRole('button',{name:'Mais',exact:true}).click();const option=page.getByRole('button',{name:'Proporção da imagem',exact:true});
   const modes=['FULL_SCREEN','STRETCH','SLIGHT_ZOOM','CINEMA_ZOOM','VERTICAL_STRETCH','HORIZONTAL_STRETCH','ORIGINAL'];
   for(const mode of modes){await option.click();await expect(page.locator('video')).toHaveAttribute('data-aspect-mode',mode);expect(await page.locator('video').evaluate(v=>v.fixtureOriginal)).toBe(true);}
   await option.click();await expect(page.locator('video')).toHaveCSS('transform','matrix(1.33333, 0, 0, 1.33333, 0, 0)');
   await page.locator('video').evaluate(v=>{Object.defineProperty(v,'videoWidth',{configurable:true,get:()=>1920});Object.defineProperty(v,'videoHeight',{configurable:true,get:()=>1080});v.dispatchEvent(new Event('resize'));});await expect(page.locator('video')).toHaveCSS('transform','matrix(1, 0, 0, 1, 0, 0)');
   await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
   await page.screenshot({animations:'disabled',path:'test-results/player-aspect-1920.png'});
-  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Mais',exact:true})).toBeFocused();await page.keyboard.press('Escape');await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveAttribute('data-aspect-mode','FULL_SCREEN');
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Mais',exact:true})).toBeFocused();await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveAttribute('data-aspect-mode','FULL_SCREEN');
 });
 
 test('episode panel pages long seasons without dropping late episodes or growing the rendered list',async({page})=>{
@@ -741,7 +745,7 @@ test('episode source addon filter and best source use only the chosen addon',asy
   await page.route('**/stream/series/**',r=>r.fulfill({json:{streams:[{name:r.request().url().includes('/second/')?'Segunda opção 1080p WEB-DL':'Primeira opção 1080p WEB-DL',url:origin+'/clip.mp4'}]}}));
   await startSeriesForNext(page);await page.getByRole('button',{name:'Episódios',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Episódios e fontes'});await dialog.getByRole('button',{name:'Temporada 2',exact:true}).click();await dialog.locator('[data-episode-id="ttshow:2:1"]').click();await expect(dialog.locator('.source')).toHaveCount(2);
   await dialog.getByRole('button',{name:'Segundo addon',exact:true}).click();await expect(dialog.locator('.source')).toHaveCount(1);await expect(dialog.locator('.source')).toContainText('Segunda opção');await dialog.getByRole('button',{name:'Reproduzir melhor fonte',exact:true}).click();
-  await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T2 E1');await page.getByRole('button',{name:'Mais',exact:true}).click();await page.getByRole('button',{name:'Diagnóstico',exact:true}).click();await expect(page.locator('.stats')).toContainText('Fonte: Segundo addon');
+  await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T2 E1');await page.getByRole('button',{name:'Informações de reprodução',exact:true}).click();await expect(page.locator('.stats')).toContainText('Fonte: Segundo addon');
 });
 
 test('Netflix Sans renders internal text cues, retains selected menu and follows seeking and off',async({page})=>{
@@ -802,4 +806,59 @@ test('fixed subtitle preset survives old preferences and scales correctly at 108
   await page.setViewportSize({width:1920,height:1080});await page.mouse.move(400,300);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();
   await expect(page.getByRole('dialog')).not.toContainText('Netflix');await expect(page.getByRole('button',{name:/^Tamanho|^Fundo da legenda/})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Atrasar 0,5 s',exact:true})).toBeVisible();
+});
+
+test('reference player geometry, icon expansion, restart and remote focus follow the fork',async({page})=>{
+  await page.clock.install();await startFixtureVideo(page);await page.clock.runFor(6000);
+  const controls=page.locator('.player-controls'),timeline=page.getByRole('slider',{name:'Posição do vídeo'});
+  const geometry=await controls.evaluate(node=>{const r=node.getBoundingClientRect(),s=getComputedStyle(node),bar=node.querySelector('.player-timeline').getBoundingClientRect(),head=node.querySelector('.player-title-actions').getBoundingClientRect(),pills=node.querySelector('.player-pill-actions').getBoundingClientRect();return {padding:s.padding,headBottom:head.bottom,barTop:bar.top,barBottom:bar.bottom,pillsTop:pills.top,bottom:r.bottom,icon:getComputedStyle(node.querySelector('.player-icon-button')).width};});
+  expect(geometry.padding).toBe('24px 32px 48px');expect(geometry.icon).toBe('48px');expect(geometry.headBottom).toBeLessThan(geometry.barTop);expect(geometry.barBottom).toBeLessThan(geometry.pillsTop);
+  await expect(page.locator('.player-time-row')).toContainText('-');await expect(page.locator('.player-clock')).toContainText('Termina às');
+  await expect(page.getByRole('button',{name:'Voltar às fontes',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'−30 s',exact:true})).toHaveCount(0);
+  await page.screenshot({animations:'disabled',path:'test-results/reference-player-controls-1920.png'});
+  await page.getByRole('button',{name:'Reproduzir',exact:true}).focus();await page.keyboard.press('ArrowUp');await expect(timeline).toBeFocused();await page.keyboard.press('ArrowUp');await expect(page.getByRole('button',{name:'Informações de reprodução',exact:true})).toBeFocused();
+  await page.getByRole('button',{name:'Mais',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:'Velocidade',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Proporção da imagem',exact:true})).toBeVisible();await page.screenshot({animations:'disabled',path:'test-results/reference-player-expanded-1920.png'});
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Mais',exact:true})).toHaveAttribute('aria-expanded','false');await expect(page.locator('video')).toHaveCount(1);
+  await page.getByRole('button',{name:'Reiniciar',exact:true}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeLessThan(3);await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(false);
+  await page.locator('video').evaluate(v=>v.pause());await expect(page.getByRole('button',{name:'Reproduzir',exact:true})).toBeVisible();await page.keyboard.press('Escape');await page.clock.runFor(200);await expect(controls).toHaveCSS('opacity','0');await expect(page.locator('video')).toHaveCount(1);await page.keyboard.press('Enter');await expect(page.getByRole('button',{name:'Reproduzir',exact:true})).toBeFocused();
+  await page.keyboard.press('ArrowDown');await page.clock.runFor(200);await expect(controls).toHaveCSS('opacity','0');await page.keyboard.press('Escape');await expect(page.locator('video')).toHaveCount(0);
+});
+test('remote seek previews once, accelerates after 3s and Back cancels without moving media',async({page})=>{
+  await page.clock.install();await startFixtureVideo(page);const timeline=page.getByRole('slider',{name:'Posição do vídeo'});await timeline.focus();
+  await page.keyboard.down('ArrowRight');expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(25);await expect(timeline).toHaveValue('35');
+  await page.clock.runFor(3100);await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',repeat:true,bubbles:true})));await expect(timeline).toHaveValue('55');expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(25);
+  await page.keyboard.up('ArrowRight');await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeCloseTo(55,0);
+  await page.keyboard.down('ArrowLeft');await expect(timeline).toHaveValue('45');await page.keyboard.press('Escape');await page.keyboard.up('ArrowLeft');expect(await page.locator('video').evaluate(v=>v.currentTime)).toBeCloseTo(55,0);
+});
+test('current movie sources open inside player, preserve media until selection and restore progress',async({page})=>{
+  await startFixtureVideo(page);await page.locator('video').evaluate(v=>v.fixtureRetained=true);
+  await page.getByRole('button',{name:'Fontes',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Fontes'});
+  await expect(dialog.locator('.current-source-panel')).toHaveCSS('width','440px');await expect(dialog.locator('.source')).toHaveCount(2);expect(await page.locator('video').evaluate(v=>v.fixtureRetained)).toBe(true);
+  await expect(dialog.getByRole('button',{name:'Voltar aos episódios',exact:true})).toHaveCount(0);await page.screenshot({animations:'disabled',path:'test-results/reference-player-current-sources-1920.png'});
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Fontes',exact:true})).toBeFocused();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(25);
+  await page.getByRole('button',{name:'Fontes',exact:true}).click();await dialog.locator('.source:not([aria-disabled="true"])').first().click();await expect(page.locator('video')).toHaveCount(1);await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThanOrEqual(24);
+  expect(await page.locator('video').evaluate(v=>Boolean(v.fixtureRetained))).toBe(false);await leavePlayer(page);await expect(page.locator('.source')).toHaveCount(2);
+});
+test('current sources cancel late results and handle retry without replacing playback',async({page})=>{
+  await startFixtureVideo(page);let release;const gate=new Promise(resolve=>release=resolve);
+  await page.route('**/stream/movie/**',async r=>{await gate;await r.fulfill({json:{streams:[{name:'Tardia',url:origin+'/clip.mp4'}]}}).catch(()=>{});});
+  await page.getByRole('button',{name:'Fontes',exact:true}).click();await page.keyboard.press('Escape');release();await expect(page.getByRole('dialog')).toHaveCount(0);expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(25);
+  await page.route('**/stream/movie/**',r=>r.fulfill({status:503,body:'unavailable'}));await page.getByRole('button',{name:'Fontes',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Fontes'});await expect(dialog).toContainText('não responderam');
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'Fonte recuperada 1080p WEB-DL-FLUX',url:origin+'/clip.mp4'}]}}));await dialog.getByRole('button',{name:'Atualizar fontes',exact:true}).click();await expect(dialog.locator('.source')).toContainText('Fonte recuperada');expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(25);
+});
+test('player title uses reference logo bounds and falls back to text when the logo fails',async({page})=>{
+  await page.route('**/meta/movie/**',r=>r.fulfill({json:{meta:{...movie,logo:origin+'/player-logo.svg'}}}));
+  await page.route('**/player-logo.svg',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="600" height="100"><text x="0" y="70" fill="white" font-size="70">Horizonte</text></svg>'}));
+  await startFixtureVideo(page);await expect(page.locator('.player-title-logo')).toBeVisible();await expect(page.locator('.player-controls h1')).toBeHidden();
+  const bounds=await page.locator('.player-title-logo').evaluate(n=>({w:n.offsetWidth,h:n.offsetHeight}));expect(bounds.w).toBeLessThanOrEqual(340);expect(bounds.h).toBeLessThanOrEqual(72);
+  await page.route('**/player-logo.svg?missing',r=>r.fulfill({status:404,body:'missing'}));await page.locator('.player-title-logo').evaluate(n=>{n.src+='?missing';});await expect(page.locator('.player-controls h1')).toBeVisible();await expect(page.locator('.player-title-logo')).toHaveCount(0);
+});
+
+test('hidden-control arrows and LG media keys share the fork seek ramp',async({page})=>{
+  await startFixtureVideo(page);await page.keyboard.press('Escape');await expect(page.locator('.player-controls')).toHaveClass(/faded/);
+  await page.keyboard.down('ArrowRight');await expect(page.getByRole('slider',{name:'Posição do vídeo'})).toHaveValue('35');expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(25);await page.keyboard.up('ArrowRight');
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBe(35);
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:412,bubbles:true})));expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(35);
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keyup',{keyCode:412,bubbles:true})));await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBe(25);
 });

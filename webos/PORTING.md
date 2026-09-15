@@ -144,3 +144,11 @@ inferior 6,5% com controles recolhidos. Preset fixo substitui tamanho/fundo
 antigos e remove prévia, informações da fonte e controles de aparência.
 É uma personalização explícita solicitada pelo usuário, aplicada sobre o port.
 Seleção de faixa, SDH e atraso continuam; limites das faixas opacas permanecem.
+
+## Entrega 0.16 — reconstrução da barra do player
+
+[PLAYER_PARITY.md](PLAYER_PARITY.md) rastreia medidas, assets, navegação e funções
+contra PlayerScreen.kt, PlayerScrubRates.kt e StreamSourcesSidePanel.kt. A barra
+anterior foi substituída. Painel de fontes do vídeo atual inclui filmes e
+preserva progresso na troca. APIs de motores Android não foram simuladas.
+A revisão integral do player permanece prioritária; veja as diferenças no mapa.

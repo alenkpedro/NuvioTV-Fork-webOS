@@ -8,7 +8,7 @@ Base: `ysosrs123/NuvioTV-Fork@45e0984`, especialmente `TrackPreferenceDataStore`
 
 - **Player → Mais → Velocidade (desde a 0.15):** 0,25× / 0,5× / 0,75× / 1× / 1,25× / 1,5× / 1,75× / 2×.
   A escolha confirmada é lembrada para o filme ou série, no perfil atual.
-  Voltar restaura o foco ao botão. 1× remove a preferência daquele título.
+  Voltar restaura o foco ao botão Velocidade, na fileira expandida da 0.16. 1× remove a preferência daquele título.
   Usa `HTMLMediaElement.playbackRate` e verifica o valor retornado. Uma rejeição
   mantém a velocidade anterior e informa a falha, sem salvar a escolha recusada.
   Uma alteração posterior pelo player é refletida no menu e limpa a preferência,

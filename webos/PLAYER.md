@@ -1,4 +1,8 @@
-# Fontes, áudio e legendas — 0.5.0
+# Fontes, áudio e legendas — histórico 0.5.0
+
+Para o estado atual do player, consulte [PLAYER_PARITY.md](PLAYER_PARITY.md).
+O estilo fixo das legendas está em [SUBTITLE_FONT.md](SUBTITLE_FONT.md).
+As opções de tamanho/fundo e a barra descritas abaixo foram substituídas.
 
 Referência: `ysosrs123/NuvioTV-Fork@45e0984`. O player é reimplementado para webOS;
 Media3, MPV e as bibliotecas Android não são executados na TV LG.

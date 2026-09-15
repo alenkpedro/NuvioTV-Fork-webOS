@@ -27,11 +27,19 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Player do fork (0.16)
+
+Barra com título/logo, ícones à direita e Mais expansível, linha do tempo,
+relógio/término e cápsulas Reproduzir/Pausar, Reiniciar, Episódios e Próximo.
+Fontes abre o painel do vídeo atual sem interromper a reprodução. Informação
+fica no ícone à esquerda de Áudio. Voltar recolhe controles antes de sair.
+[Mapa de fidelidade e diferenças ainda abertas](PLAYER_PARITY.md).
+
 ## Episódios e imagem (0.15)
 
 O player de séries inclui Episódios, com temporadas, assistidos e fontes dentro
 do painel lateral. Mais reúne Velocidade, Proporção da imagem (sete modos do
-fork) e Diagnóstico. [Uso, geometria e limites](EPISODES_ASPECT.md).
+fork); desde a 0.16, informações de reprodução ficam no ícone de informações. [Uso, geometria e limites](EPISODES_ASPECT.md).
 
 ## Velocidade, legenda e continuidade (0.14)
 

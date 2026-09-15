@@ -15,7 +15,16 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.15.2
+## Estado: prévia 0.16.0
+
+A 0.16.0 substitui a barra simplificada pelo layout do `PlayerControlsOverlay`
+do fork: título/logo, ícones à direita, Mais expansível, linha do tempo,
+tempo restante e cápsulas Reproduzir/Pausar, Reiniciar, Episódios e Próximo.
+Inclui fontes do vídeo atual para filmes/séries, retomada na troca, relógio,
+buffer, busca acelerada e navegação/Voltar do controle.
+[Mapa de fidelidade, diferenças e próxima etapa](webos/PLAYER_PARITY.md).
+O player completo ainda não é idêntico: funções avançadas e painéis continuam
+em revisão. Motores e integrações exclusivos do Android não são simulados.
 
 A 0.15.2 define o **estilo padrão de legendas solicitado**: Netflix Sans Medium
 (500), branco, sombras curtas, sem caixa de fundo, tamanho proporcional e
@@ -85,7 +94,7 @@ Validação: testes de regras, conta e navegação com dados sintéticos; instal
 
 ## Próxima etapa
 
-**Player:** validar a fonte na TV, depois avançar no painel de fontes do vídeo atual e na ocultação de spoilers. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Player:** continuar a revisão dos painéis de áudio/legendas e implementar sincronização por fala, depois tela de pausa e recursos de intro/miniaturas. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 
