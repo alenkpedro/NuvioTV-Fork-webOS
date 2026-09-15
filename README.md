@@ -15,7 +15,19 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.19.0
+## Estado: prévia 0.20.0
+
+A 0.20.0 reconstrói a tela de Ajustes como o workspace do fork: rail com as dez
+categorias (Conta, Perfis, Aparência, Layout, Conteúdo e Descoberta, Integrações,
+Reprodução, Rastreamento, Sobre e Avançado), cabeçalho com título e subtítulo e
+cartões de grupo com linhas de alternância e de ação, nos textos em português do
+fork. **Aparência** passa a oferecer as doze paletas de `AppTheme` — Branco é o
+padrão e mantém o visual anterior —, Modo AMOLED, superfícies em preto puro e os
+estilos Padrão, Minimalista e Barra Superior. O editor de legendas do player
+também abre em **Ajustes → Reprodução → Aparência das legendas**. Linhas que
+dependem do Android (guia parental, libass, plugins, Direct Debrid, buffer/AFR e
+recomendações pós-reprodução) ficam visíveis e marcadas como pendentes, com o
+motivo. [Estrutura e limites](webos/SETTINGS_PARITY.md).
 
 A 0.19.0 acrescenta pular abertura/recapitulação/créditos via IntroDB, com serviço
 local incluído no IPK, e personalização de legendas mantendo Netflix Sans fixa.
