@@ -123,6 +123,9 @@ test('Reprodução automática exposes the fork modes, the cache duration and th
   await expect(slower).toBeDisabled();
   await page.getByRole('button', { name: 'Aumentar atraso do trailer', exact: true }).click();
   await expect(page.locator('.settings-threshold-value')).toHaveText('4s');
+  // The screenshot shows the whole group, not just the top of the pane.
+  await page.locator('[aria-label="Seleção automática de fonte"]').evaluate(node => node.scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(250);
   await page.screenshot({ path: 'test-results/settings-autoplay-1920.png' });
   const saved = (await stored(page)).settings.playback;
   expect(saved.autoPlayMode).toBe('regex');
@@ -237,6 +240,7 @@ test('the post-play window counts the last five seconds and starts the trailer a
   await expect(overlay).toBeVisible();
   // Before the end the countdown is informational: nothing is launched yet.
   await expect(overlay.locator('.post-play-countdown')).toHaveText(/Trailer em \d+s/);
+  await page.waitForTimeout(400); // real time: the window fades in
   await page.screenshot({ path: 'test-results/player-post-play-trailer-1920.png' });
   expect(await page.evaluate(() => window.__luna)).toEqual([]);
   // Playback ends: five seconds later the recommendation's trailer opens on the TV.
