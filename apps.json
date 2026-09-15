@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.14.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.15.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.14.0",
+        "version": "0.15.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Netflix Sans nas legendas externas, velocidade, atraso por episódio e confirmação Ainda assistindo.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.14.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.14.0",
+        "appDescription": "Episódios e fontes dentro do player, sete modos de imagem e legendas Netflix Sans.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.15.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.15.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.14.0/org.nuviofork.webos_0.14.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.15.0/org.nuviofork.webos_0.15.0_all.ipk",
         "ipkHash": {
-          "sha256": "dd4ef051b711353825170f16a7d7b145609b62f3191a1605844bcf6d07bc4216"
+          "sha256": "5809ec89f6398c42d47d6f655f4d2439d8c62d8e89e5f1357743602fb416be92"
         },
-        "ipkSize": 793362
+        "ipkSize": 798020
       },
       "pool": "main",
-      "shortDescription": "Player e legendas Netflix Sans para LG webOS 24."
+      "shortDescription": "Painel de episódios e proporção da imagem para LG webOS 24."
     }
   ]
 }
