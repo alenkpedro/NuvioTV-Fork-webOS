@@ -5,6 +5,11 @@ acontecer**; a validação física é a única coisa que os testes de navegador 
 substituem. Veja também as pendências conhecidas no fim: elas já estão
 documentadas e não são falhas novas.
 
+> Versão para imprimir/levar para a TV: gere o PDF bonito com
+> `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
+> `--png` para também gerar prévias em PNG). Este Markdown é a fonte única: o
+> script lê este arquivo, então edite aqui e gere o PDF de novo.
+
 ## Como usar
 
 - **Bloco A (essencial, ~10 min):** o que, se quebrar, quebra o resto.

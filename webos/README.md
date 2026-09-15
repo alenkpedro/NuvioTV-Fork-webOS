@@ -306,6 +306,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
+npm run checklist:pdf
 node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.15.0
 ```
 

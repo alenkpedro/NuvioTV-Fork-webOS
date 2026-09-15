@@ -10,7 +10,8 @@
     "start": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:ui": "playwright test",
-    "package:webos": "npm run build && node scripts/package.mjs"
+    "package:webos": "npm run build && node scripts/package.mjs",
+    "checklist:pdf": "node scripts/checklist-pdf.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
