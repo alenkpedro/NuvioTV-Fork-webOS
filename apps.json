@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.15.1/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.15.2/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.15.1",
+        "version": "0.15.2",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Netflix Sans nas legendas externas e internas de texto acessível, com prévia e verificação da fonte.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.15.1/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.15.1",
+        "appDescription": "Legendas com Netflix Sans Medium, branco e sombra curta, como padrão do aplicativo.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.15.2/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.15.2",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.15.1/org.nuviofork.webos_0.15.1_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.15.2/org.nuviofork.webos_0.15.2_all.ipk",
         "ipkHash": {
-          "sha256": "641fe244fe3d3440160544f449f7cd9b1348ff33dc984f4340317294cb3e120a"
+          "sha256": "3de3aea3853d6f39d75aaeebe982a9fd9687c228faa7fc27847d7f3785a3785a"
         },
-        "ipkSize": 798906
+        "ipkSize": 799788
       },
       "pool": "main",
-      "shortDescription": "Correção da fonte das legendas para LG webOS 24."
+      "shortDescription": "Estilo padrão de legendas com Netflix Sans Medium para LG webOS 24."
     }
   ]
 }
