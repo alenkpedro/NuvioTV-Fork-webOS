@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.13.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.14.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.13.0",
+        "version": "0.14.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Legendas forçadas/SDH, filtro por idioma e memória de áudio e legendas por título e perfil.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.13.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.13.0",
+        "appDescription": "Netflix Sans nas legendas externas, velocidade, atraso por episódio e confirmação Ainda assistindo.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.14.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.14.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.13.0/org.nuviofork.webos_0.13.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.14.0/org.nuviofork.webos_0.14.0_all.ipk",
         "ipkHash": {
-          "sha256": "59690927dfc25b7d523d97b4a93df66047403d99f293bfa583397f40c5f6c60c"
+          "sha256": "dd4ef051b711353825170f16a7d7b145609b62f3191a1605844bcf6d07bc4216"
         },
-        "ipkSize": 708708
+        "ipkSize": 793362
       },
       "pool": "main",
-      "shortDescription": "Legendas e memória de faixas para LG webOS 24."
+      "shortDescription": "Player e legendas Netflix Sans para LG webOS 24."
     }
   ]
 }
