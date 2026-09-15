@@ -7,14 +7,14 @@ export function languageCode(value) {
   if (!/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(code) || ['und','unk'].includes(code)) return '';
   const [base,...rest] = code.split('-'); return [aliases[base] || base,...rest].join('-');
 }
-export const playbackDefaults = Object.freeze({ audio:'device', secondaryAudio:'', subtitles:'device', secondarySubtitles:'', addonSubtitles:false, autoNext:false, preferBingeGroup:true, nextFallback:true, thresholdMode:'percentage', thresholdPercent:99, thresholdMinutes:2 });
+export const playbackDefaults = Object.freeze({ audio:'device', secondaryAudio:'', subtitles:'device', secondarySubtitles:'', addonSubtitles:false, forcedSubtitles:false, stripSdh:false, onlyPreferredSubtitles:false, rememberTracks:true, autoNext:false, preferBingeGroup:true, nextFallback:true, thresholdMode:'percentage', thresholdPercent:99, thresholdMinutes:2 });
 export function readPlayback(value = {}) {
   const result = {...playbackDefaults};
   for (const key of ['audio','secondaryAudio','subtitles','secondarySubtitles']) {
     const allowed = key === 'audio' ? ['device','default','original'] : key === 'subtitles' ? ['device','off'] : [''];
     if (typeof value?.[key] === 'string' && (allowed.includes(value[key]) || languageCode(value[key]))) result[key] = value[key];
   }
-  for (const key of ['addonSubtitles','autoNext','preferBingeGroup','nextFallback']) if (typeof value?.[key] === 'boolean') result[key] = value[key];
+  for (const key of ['forcedSubtitles','stripSdh','onlyPreferredSubtitles','rememberTracks','addonSubtitles','autoNext','preferBingeGroup','nextFallback']) if (typeof value?.[key] === 'boolean') result[key] = value[key];
   if (value?.thresholdMode === 'minutes') result.thresholdMode = 'minutes';
   for (const [key,min,max] of [['thresholdPercent',97,100],['thresholdMinutes',0,3.5]]) if (Number.isFinite(value?.[key])) result[key] = Math.max(min,Math.min(max,value[key]));
   return result;

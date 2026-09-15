@@ -27,6 +27,13 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Legendas e memória de faixas (0.13)
+
+O painel Legendas tem coluna de idiomas, filtro de preferidos e indicação de
+forçadas/SDH. A escolha manual confirmada é lembrada por título e perfil.
+Ajustes → Reprodução → Idiomas e próximo episódio permite configurar memória,
+forçadas e limpeza SDH de legendas externas. [Uso e diferenças](SUBTITLE_PREFERENCES.md).
+
 ## Idiomas e próximo episódio (0.12)
 
 Ajustes → Reprodução → Idiomas e próximo episódio configura idiomas principal e
@@ -146,7 +153,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.12.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.13.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Addon contract: SubtitleRepositoryImpl. SRT/VTT rendering is local to webOS.
+import { subtitleFlags } from './subtitle-options.js';
 import { getJSON, mapLimit, resourceURL, supports } from './addons.js';
 export const MAX_SUBTITLE_BYTES = 2 * 1024 * 1024;
 const MAX_CUES = 20000;
@@ -12,7 +13,7 @@ export function normalizeSubtitles(items, source = 'Fonte') {
     const url = subtitleURL(item?.url);
     if (!url || seen.has(url)) return [];
     seen.add(url);
-    return [{ url, id: String(item.id || index), lang: String(item.lang || item.language || 'und').slice(0, 40),
+    return [{ ...subtitleFlags(item), url, id: String(item.id || index), lang: String(item.lang || item.language || 'und').slice(0, 40),
       name: String(item.name || item.label || '').slice(0, 200), source, format: String(item.format || '').toLowerCase() }];
   });
 }

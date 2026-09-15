@@ -3,7 +3,7 @@ import { readPlayback } from './core/playback.js';
 export function playbackSettingsScreen({main,settings,persist,el}) {
   const prefs = settings.playback = readPlayback(settings.playback);
   const languages = [['pt-br','Português (Brasil)'],['pt','Português'],['en','Inglês'],['es','Espanhol'],['fr','Francês'],['de','Alemão'],['it','Italiano'],['ja','Japonês'],['ko','Coreano'],['zh','Chinês'],['ru','Russo'],['ar','Árabe'],['hi','Hindi'],['nl','Holandês']];
-  main.append(el('h1',{},'Idiomas e próximo episódio'),el('p',{class:'muted'},'Preferências salvas nesta TV. A escolha manual no player prevalece até sair da reprodução.'));
+  main.append(el('h1',{},'Idiomas e próximo episódio'),el('p',{class:'muted'},'Preferências salvas nesta TV. As escolhas lembradas no player pertencem a cada título e perfil.'));
   const select = (key,title,options) => {
     if (!options.some(([value])=>value === prefs[key])) options = [...options,[prefs[key],prefs[key]]];
     const input = el('select',{'aria-label':title,onchange:e=>{prefs[key]=e.target.value;persist();}},options.map(([value,label])=>el('option',{value,selected:value===prefs[key]},label)));
@@ -14,8 +14,12 @@ export function playbackSettingsScreen({main,settings,persist,el}) {
   select('secondaryAudio','Áudio secundário',[['','Nenhum'],...languages]);
   select('subtitles','Idioma das legendas',[['device','Idioma da TV'],['off','Desativadas'],...languages]);
   select('secondarySubtitles','Legenda secundária',[['','Nenhuma'],...languages]);
+  toggle('rememberTracks','Lembrar áudio e legendas por título');
+  toggle('forcedSubtitles','Usar legendas forçadas quando o áudio coincidir');
+  toggle('onlyPreferredSubtitles','Mostrar só idiomas preferidos no painel');
+  toggle('stripSdh','Remover descrições SDH das legendas externas');
   toggle('addonSubtitles','Buscar legendas de addons automaticamente');
-  main.append(el('p',{class:'muted'},'Sem uma faixa compatível, o áudio da fonte é mantido. Legendas de addons também podem ser buscadas manualmente no player.'));
+  main.append(el('p',{class:'muted'},'Forçadas: traduzem trechos pontuais quando o áudio já está no idioma desejado. SDH: descrições de sons e identificação de falantes. A limpeza SDH não altera legendas internas. Sem uma faixa compatível, o áudio da fonte é mantido. Legendas de addons também podem ser buscadas manualmente no player.'));
   toggle('autoNext','Reproduzir próximo episódio automaticamente');
   toggle('preferBingeGroup','Preferir o mesmo grupo de reprodução');
   toggle('nextFallback','Usar outra fonte se o grupo não estiver disponível');

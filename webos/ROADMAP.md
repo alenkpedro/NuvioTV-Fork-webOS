@@ -34,6 +34,8 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
 
 | 0.12 | Idiomas principal/secundário, legendas automáticas opcionais e próximo episódio | Pendente; mídia sintética e APIs de faixas simuladas |
 
+| 0.13 | Legendas forçadas/SDH, filtro por idioma e memória de faixas por título/perfil | Pendente; fixtures e APIs de faixas simuladas |
+
 ## Sequência proposta
 
 1. **Aparência e navegação — primeira entrega 0.4.** Menu clássico/moderno, menu
@@ -48,7 +50,7 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    internas expostas pela plataforma; legendas da fonte e de addons em SRT/VTT,
    tamanho/fundo/atraso e busca na timeline. Testes de UI/renderização no navegador;
    áudio simulado, sem confirmação no hardware. Permanecem ASS/PGS/ZIP,
-   busca manual, forced/SDH, estilos avançados, personalização
+   busca manual, SDH em faixas internas, estilos avançados, personalização
    de badges e paridade completa do player. Ver [PLAYER.md](PLAYER.md).
 3. **Biblioteca, histórico e perfis — primeira entrega 0.6.** Seleção/PIN, addons
    por perfil e leitura da biblioteca nativa Nuvio entregues. Dados locais isolados,
@@ -72,8 +74,8 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    [COLLECTIONS_RATINGS.md](COLLECTIONS_RATINGS.md). Coleções pessoais, notas por
    episódio, recomendações Trakt e trailers internos/automáticos ficam pendentes.
    **Idiomas e próximo episódio entregues na 0.12:** ver [PLAYBACK_AUTOMATION.md](PLAYBACK_AUTOMATION.md).
-   **Próxima etapa sugerida:** legendas forçadas/SDH, filtro por idioma e lembrança
-   da escolha manual entre episódios.
+   **Legendas e memória entregues na 0.13:** ver [SUBTITLE_PREFERENCES.md](SUBTITLE_PREFERENCES.md).
+   **Próxima etapa sugerida:** velocidade, atraso por episódio e “Ainda assistindo?”.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

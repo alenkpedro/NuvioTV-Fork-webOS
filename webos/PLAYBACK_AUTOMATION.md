@@ -75,3 +75,10 @@ entre temporadas, cancelar, Voltar, suspensão e retomada.
 
 Próxima etapa sugerida: legendas forçadas/SDH, filtros de idioma no painel e
 lembrança da escolha manual entre episódios, com o mesmo comportamento do fork.
+
+## Atualização 0.13
+
+A memória de idiomas, o filtro por língua, forçadas e SDH foram acrescentados
+na [0.13](SUBTITLE_PREFERENCES.md). A descrição de pendências acima documenta
+a entrega 0.12. Memória por título/perfil agora tem prioridade sobre os idiomas
+gerais; seleções manuais no vídeo atual continuam prevalecendo.

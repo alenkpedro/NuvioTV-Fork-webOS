@@ -156,3 +156,10 @@ fixtures, sem validação física na LG ou chave real do usuário.
 do player. Cartão baseado em PostPlayOverlay, 420 dp, padding 10/9, textos 11/14 sp;
 contagem cancelável adaptada ao ciclo de vida webOS. Preferências locais, idioma
 principal/secundário e prioridade para escolhas manuais. Validação física pendente.
+
+## Entrega 0.13 — legendas e memória de faixas
+
+[SUBTITLE_PREFERENCES.md](SUBTITLE_PREFERENCES.md) descreve forçadas em função do
+áudio, limpeza SDH de legendas externas, coluna/filtro de idiomas e memória por
+título e perfil. Atualiza as pendências indicadas nas entregas anteriores.
+Faixas internas, formatos e navegação física ainda exigem validação na LG.

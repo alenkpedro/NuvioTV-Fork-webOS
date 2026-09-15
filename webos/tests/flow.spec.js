@@ -518,3 +518,85 @@ test('late next-episode source response cannot start a video while the app is hi
   await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});await page.clock.runFor(6000);await expect(page.locator('video')).toHaveCount(0);
   await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveCount(1);
 });
+
+test('subtitle language rail filters without changing playback and keeps the selected nonpreferred language accessible',async({page})=>{
+  await playbackPrefs(page,{subtitles:'pt',onlyPreferredSubtitles:false});
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Português completo',lang:'por',url:origin+'/pt.srt'},{name:'English SDH',lang:'eng',url:origin+'/en.srt',sdh:true},{name:'Español forced',lang:'spa',url:origin+'/es.forced.srt'}]}]}}));
+  await page.route('**/*.srt',r=>r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nFixture captions'}));
+  await startFixtureVideo(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();
+  const dialog=page.getByRole('dialog');await dialog.locator('[data-track-key="lang-en"]').click();
+  await expect(dialog.locator('.track-list [data-track-key^="external-"]')).toHaveCount(1);await expect(dialog.locator('.track-list')).toContainText('SDH / CC');
+  await dialog.locator('[data-track-key="external-1"]').click();await expect(dialog.locator('[data-track-key="external-1"]')).toHaveAttribute('aria-pressed','true');
+  await dialog.locator('[data-track-key="preferred-only"]').click();await expect(dialog.locator('[data-track-key="lang-en"]')).toBeVisible();await expect(dialog.locator('[data-track-key="lang-es"]')).toHaveCount(0);
+  await expect(page.locator('.subtitle-overlay')).toHaveText('Fixture captions');
+  await page.locator('#toast').evaluate(e=>e.hidden=true);await page.screenshot({path:'test-results/player-subtitle-languages-1920.png'});
+  for(let i=0;i<8;i++){await page.keyboard.press('Tab');expect(await dialog.evaluate(d=>d.contains(document.activeElement))).toBe(true);}
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Legendas',exact:true})).toBeFocused();
+});
+test('forced subtitles follow audio changes, while manual subtitle choice overrides the forced policy',async({page})=>{
+  await playbackPrefs(page,{audio:'pt',subtitles:'pt',forcedSubtitles:true});
+  await page.addInitScript(()=>Object.defineProperty(HTMLMediaElement.prototype,'audioTracks',{configurable:true,get(){return this.fixtureTracks ||= [{language:'eng',label:'Original',enabled:true},{language:'por',label:'Dublado',enabled:false}];}}));
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Completa',lang:'por',url:origin+'/normal.srt'},{name:'Trechos forçados',lang:'por',url:origin+'/forced.srt',forced:true}]}]}}));
+  await page.route('**/*.srt',r=>r.fulfill({body:`1\n00:00:00,000 --> 00:02:00,000\n${r.request().url().includes('forced')?'Somente trechos':'Legenda completa'}`}));
+  await startFixtureVideo(page);await expect(page.locator('.subtitle-overlay')).toHaveText('Somente trechos');
+  await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.getByRole('button',{name:/Original/}).click();await page.keyboard.press('Escape');await expect(page.locator('.subtitle-overlay')).toHaveText('Legenda completa');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Trechos forçados/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Somente trechos');await page.keyboard.press('Escape');
+});
+test('SDH cleanup is reversible and preserves subtitle timing and Off',async({page})=>{
+  await playbackPrefs(page,{subtitles:'pt',stripSdh:true});
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Português SDH',lang:'por',url:origin+'/sdh.srt'}]}]}}));
+  await page.route('**/sdh.srt',r=>r.fulfill({body:'1\n00:00:20,000 --> 00:00:30,000\n>> JOHN: Hello!\n[Door closes]\n\n2\n00:00:30,000 --> 00:00:40,000\n[Music]'}));
+  await startFixtureVideo(page);await expect(page.locator('.subtitle-overlay')).toHaveText('Hello!');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/Remover descrições SDH/}).click();await expect(page.locator('.subtitle-overlay')).toContainText('[Door closes]');
+  await page.getByRole('button',{name:/Remover descrições SDH/}).click();await page.locator('video').evaluate(v=>v.currentTime=32);await expect(page.locator('.subtitle-overlay')).toBeHidden();await page.locator('video').evaluate(v=>v.currentTime=25);await expect(page.locator('.subtitle-overlay')).toHaveText('Hello!');
+  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toBeHidden();
+});
+test('manual audio and external subtitle choices survive next episode with reordered tracks, fresh URLs and zero delay',async({page})=>{
+  const downloads=[];
+  await page.addInitScript(()=>{let count=0;Object.defineProperty(HTMLMediaElement.prototype,'audioTracks',{configurable:true,get(){if(!this.fixtureTracks){const tracks=[{language:'eng',label:'Original',enabled:true},{language:'por',label:'Dublado',enabled:false}];this.fixtureTracks=++count===1?tracks:tracks.reverse();}return this.fixtureTracks;}});});
+  await page.route('**/stream/series/**',r=>{const next=decodeURIComponent(r.request().url()).includes('ttshow:2:1');return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{lang:'por',name:'Português manual',url:origin+`/episode-${next?2:1}.srt`}]}]}});});
+  await page.route('**/episode-*.srt',r=>{downloads.push(r.request().url());return r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nPortuguês lembrado'});});
+  await startSeriesForNext(page,{audio:'en',subtitles:'en'});
+  await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.getByRole('button',{name:/Dublado/}).click();await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Português manual/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Português lembrado');
+  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,5 s',exact:true}).click();await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Ir para o próximo episódio'}).click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>v.pause());
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.audioTracks.find(t=>t.enabled)?.language)).toBe('por');await expect(page.locator('.subtitle-overlay')).toHaveText('Português lembrado');expect(downloads).toEqual([origin+'/episode-1.srt',origin+'/episode-2.srt']);
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: 0.0 s');
+  const memory=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).trackPreferences);expect(JSON.stringify(memory)).not.toMatch(/https:|delay|trackId/);
+});
+test('remembered Off persists across reopening the title and clearing it restores preferred subtitles',async({page})=>{
+  await playbackPrefs(page,{subtitles:'pt'});
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Português',lang:'por',url:origin+'/remember.srt'}]}]}}));
+  let downloads=0;await page.route('**/remember.srt',r=>{downloads++;return r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nPreferred subtitle'});});
+  await startFixtureVideo(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>v.pause());await expect(page.locator('.subtitle-overlay')).toBeHidden();expect(downloads).toBe(1);
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Usar idiomas dos ajustes/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Preferred subtitle');expect(downloads).toBe(2);
+});
+test('failed or cancelled manual subtitles do not replace the remembered successful choice',async({page})=>{
+  await playbackPrefs(page,{subtitles:'en'});let release;const gate=new Promise(r=>release=r);
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Boa',lang:'por',url:origin+'/good.srt'},{name:'Com erro',lang:'spa',url:origin+'/failed.srt'},{name:'Lenta',lang:'fra',url:origin+'/pending.srt'}]}]}}));
+  await page.route('**/good.srt',r=>r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nBoa'}));await page.route('**/failed.srt',r=>r.fulfill({status:403,body:'expired'}));await page.route('**/pending.srt',async r=>{await gate;await r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nTardia'}).catch(()=>{});});
+  await startFixtureVideo(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/^Boa/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Boa');await page.getByRole('button',{name:/^Com erro/}).click();await expect(page.getByRole('alert')).toContainText('HTTP 403');await page.getByRole('button',{name:/^Lenta/}).click();await page.keyboard.press('Escape');release();
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).trackPreferences[JSON.stringify(['movie','ttfixture'])]);expect(saved.subtitles.language).toBe('pt');await expect(page.locator('.subtitle-overlay')).toHaveText('Boa');
+});
+test('late forced subtitle download cannot override the policy after an audio change',async({page})=>{
+  await playbackPrefs(page,{audio:'pt',subtitles:'pt',forcedSubtitles:true});let release;const gate=new Promise(r=>release=r);let started=false;
+  await page.addInitScript(()=>Object.defineProperty(HTMLMediaElement.prototype,'audioTracks',{configurable:true,get(){return this.fixtureTracks ||= [{language:'por',label:'Dublado',enabled:true},{language:'eng',label:'Original',enabled:false}];}}));
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{lang:'por',url:origin+'/late-forced.srt',forced:true},{lang:'por',url:origin+'/normal-current.srt'}]}]}}));
+  await page.route('**/late-forced.srt',async r=>{started=true;await gate;await r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nWrong forced policy'}).catch(()=>{});});
+  await page.route('**/normal-current.srt',r=>r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nCurrent full subtitle'}));
+  await startFixtureVideo(page);await expect.poll(()=>started).toBe(true);
+  await page.evaluate(()=>{window.seenSubtitles=[];new MutationObserver(()=>window.seenSubtitles.push(document.querySelector('.subtitle-overlay')?.textContent)).observe(document.querySelector('.subtitle-overlay'),{childList:true,subtree:true,characterData:true});});
+  await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.getByRole('button',{name:/Original/}).click();await page.keyboard.press('Escape');release();
+  await expect(page.locator('.subtitle-overlay')).toHaveText('Current full subtitle');expect(await page.evaluate(()=>window.seenSubtitles)).not.toContain('Wrong forced policy');
+});
+test('native forced tracks use exposed labels and never select a full subtitle as a forced fallback',async({page})=>{
+  await playbackPrefs(page,{audio:'pt',subtitles:'pt',forcedSubtitles:true});
+  await page.addInitScript(()=>Object.defineProperty(HTMLMediaElement.prototype,'audioTracks',{configurable:true,get(){return this.fixtureTracks ||= [{language:'por',enabled:true}];}}));
+  await startFixtureVideo(page);await page.locator('video').evaluate(v=>{v.addTextTrack('subtitles','Português completo','por');v.addTextTrack('captions','English SDH','eng');});
+  await expect.poll(()=>page.locator('video').evaluate(v=>Array.from(v.textTracks).filter(t=>t.mode==='showing').length)).toBe(0);
+  await page.locator('video').evaluate(v=>v.addTextTrack('subtitles','Português forced','por'));
+  await expect.poll(()=>page.locator('video').evaluate(v=>Array.from(v.textTracks,t=>t.mode))).toEqual(['disabled','disabled','showing']);
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await expect(page.locator('[data-track-key="native-2"]')).toContainText('Forçada');await expect(page.locator('[data-track-key="native-1"]')).toContainText('SDH / CC');
+});

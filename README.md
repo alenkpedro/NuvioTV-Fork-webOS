@@ -15,9 +15,13 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.12.0
+## Estado: prévia 0.13.0
 
-A 0.12.0 acrescenta seleção automática de **áudio e legendas**, idiomas principal
+A 0.13.0 acrescenta **legendas forçadas/SDH**, filtro por idioma no painel e
+**memória da escolha manual de áudio e legendas por título e perfil**. Ajustes
+em Reprodução → Idiomas e próximo episódio. [Uso e limites](webos/SUBTITLE_PREFERENCES.md).
+
+A 0.12.0 acrescentou seleção automática de **áudio e legendas**, idiomas principal
 e secundário, e **próximo episódio** com contagem cancelável. Configure em
 **Ajustes → Reprodução → Idiomas e próximo episódio**. O avanço automático vem
 desativado por padrão, como no fork. [Regras e limites](webos/PLAYBACK_AUTOMATION.md).
@@ -58,7 +62,7 @@ Validação: testes de regras, conta e navegação com dados sintéticos; instal
 
 ## Próxima etapa
 
-**Player:** legendas forçadas/SDH, filtro por idioma no painel e lembrança da escolha manual entre episódios. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Player:** velocidade de reprodução, atraso de legenda por episódio e confirmação “Ainda assistindo?” em sessões longas. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 

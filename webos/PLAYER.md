@@ -83,3 +83,10 @@ suspensão, sessões longas e 4K/HDR no aparelho.
 idiomas, busca opcional de legendas dos addons e próximo episódio. A descrição
 de busca apenas ao abrir o painel acima corresponde à configuração padrão: a
 nova opção permite buscar automaticamente. Validação na LG ainda pendente.
+
+## Entrega 0.13 — legendas e memória de faixas
+
+[SUBTITLE_PREFERENCES.md](SUBTITLE_PREFERENCES.md) descreve forçadas em função do
+áudio, limpeza SDH de legendas externas, coluna/filtro de idiomas e memória por
+título e perfil. Atualiza as pendências indicadas nas entregas anteriores.
+Faixas internas, formatos e navegação física ainda exigem validação na LG.

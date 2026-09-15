@@ -838,7 +838,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.12.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.13.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -887,7 +887,7 @@ function showPlayer(context) {
   const listeners = [];
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
   const resume = state.progress[progressKey(context.type, context.id)];
-  const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, persist, el, button,
+  const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, memoryState:state, persist, el, button,
     onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); upNext.refresh(); }, onClose: ()=>{reveal();upNext.refresh();} });
   const upNext = installNextEpisode({screen,video,context,settings:state.settings,el,button,
     loadMeta:async()=> (await loadMeta(context.meta,context.addon,request.signal)).meta,
