@@ -1,5 +1,7 @@
 # Fontes, áudio e legendas — histórico 0.5.0
 
+Para os painéis e ajustes atuais (0.17), consulte [PLAYER_TRACKS_SYNC.md](PLAYER_TRACKS_SYNC.md).
+
 Para o estado atual do player, consulte [PLAYER_PARITY.md](PLAYER_PARITY.md).
 O estilo fixo das legendas está em [SUBTITLE_FONT.md](SUBTITLE_FONT.md).
 As opções de tamanho/fundo e a barra descritas abaixo foram substituídas.

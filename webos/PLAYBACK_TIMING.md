@@ -13,14 +13,14 @@ Base: `ysosrs123/NuvioTV-Fork@45e0984`, especialmente `TrackPreferenceDataStore`
   mantém a velocidade anterior e informa a falha, sem salvar a escolha recusada.
   Uma alteração posterior pelo player é refletida no menu e limpa a preferência,
   sem tentar forçar novamente a velocidade. Ao vivo/duração desconhecida não é aceito.
-- **Player → Legendas → Ajustes de legenda:** adiantar/atrasar em passos de 0,5 s,
-  entre −10 e +10 s. Positivo atrasa a legenda. Agora o atraso fica salvo por
+- **Player → Legendas → Ajustes de legenda:** adiantar/atrasar em passos de 100 ms,
+  entre −180 e +180 s desde a 0.17. [Sincronização por fala](PLAYER_TRACKS_SYNC.md). Positivo atrasa a legenda. Agora o atraso fica salvo por
   filme/episódio e perfil, inclusive ao reabrir o player. Não passa para outro
   episódio. “Zerar atraso” apaga somente essa preferência.
   Ao trocar a versão da fonte no mesmo episódio, revise o atraso se necessário.
-- **Netflix Sans Regular:** fonte fornecida pelo usuário, incluída sem alteração
+- **Netflix Sans Medium (500), desde a 0.15.2:** fonte fornecida pelo usuário, incluída sem alteração
   no pacote e aplicada às legendas externas SRT/VTT. A interface continua com
-  Inter. Apenas o arquivo Regular necessário é incluído: 208.736 bytes antes da
+  Inter. Apenas o arquivo Medium necessário é incluído: 212.020 bytes antes da
   compressão. Não há consulta a serviços de fontes.
 - **Ajustes → Reprodução → Idiomas e próximo episódio:** ative reprodução
   automática e “Perguntar se ainda estou assistindo”. O segundo ajuste vem
@@ -58,7 +58,7 @@ confirma a aceitação da API, sem medir o ritmo real do decoder ou a saída son
 A regra CSS `video::cue` também solicita Netflix Sans para texto nativo, mas o
 motor de legendas da LG pode ignorá-la. Não é possível trocar a fonte de legendas
 em imagem/PGS. Desde a 0.15.1, texto nativo acessível usa a camada personalizada com Netflix Sans,
-tamanho, fundo e SDH; atraso continua exclusivo das externas. Ver [SUBTITLE_FONT.md](SUBTITLE_FONT.md).
+preset fixo e SDH; atraso continua exclusivo das externas. Ver [SUBTITLE_FONT.md](SUBTITLE_FONT.md).
 Não há transcodificação, download paralelo ou alteração de buffer nesta etapa.
 
 ## Validação e continuação

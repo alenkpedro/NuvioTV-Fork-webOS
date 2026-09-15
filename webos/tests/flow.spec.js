@@ -334,9 +334,9 @@ test('external subtitles render safely, survive errors, seek, adjust and close w
   await dialog.getByRole('button',{name:/Ajustes de legenda/}).click();
   await expect(dialog.getByRole('button',{name:/Tamanho|Fundo da legenda/})).toHaveCount(0);
   await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-size','19.44px');
-  await dialog.getByRole('button',{name:'Atrasar 0,5 s',exact:true}).click();
-  await expect(dialog).toContainText('Atraso: +0.5 s');
-  await page.locator('video').evaluate(v=>v.currentTime=30.2);
+  await dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();
+  await expect(dialog).toContainText('Atraso: +100 ms');
+  await page.locator('video').evaluate(v=>v.currentTime=30.05);
   await expect(page.locator('.subtitle-overlay')).toContainText('Olá mundo');
   await dialog.getByRole('button',{name:'Zerar atraso',exact:true}).click();
   await expect(page.locator('.subtitle-overlay')).toHaveText('Segundo trecho');
@@ -523,15 +523,15 @@ test('late next-episode source response cannot start a video while the app is hi
   await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveCount(1);
 });
 
-test('subtitle language rail filters without changing playback and keeps the selected nonpreferred language accessible',async({page})=>{
+test('flat subtitle panel sorts preferred languages and keeps the selected nonpreferred language accessible',async({page})=>{
   await playbackPrefs(page,{subtitles:'pt',onlyPreferredSubtitles:false});
   await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Português completo',lang:'por',url:origin+'/pt.srt'},{name:'English SDH',lang:'eng',url:origin+'/en.srt',sdh:true},{name:'Español forced',lang:'spa',url:origin+'/es.forced.srt'}]}]}}));
   await page.route('**/*.srt',r=>r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nFixture captions'}));
   await startFixtureVideo(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();
-  const dialog=page.getByRole('dialog');await dialog.locator('[data-track-key="lang-en"]').click();
-  await expect(dialog.locator('.track-list [data-track-key^="external-"]')).toHaveCount(1);await expect(dialog.locator('.track-list')).toContainText('SDH / CC');
+  const dialog=page.getByRole('dialog');await expect(dialog.locator('.subtitle-language-rail')).toHaveCount(0);
+  await expect(dialog.locator('.track-list [data-track-key^="external-"]')).toHaveCount(3);await expect(dialog.locator('.track-list')).toContainText('SDH / CC');
   await dialog.locator('[data-track-key="external-1"]').click();await expect(dialog.locator('[data-track-key="external-1"]')).toHaveAttribute('aria-pressed','true');
-  await dialog.locator('[data-track-key="preferred-only"]').click();await expect(dialog.locator('[data-track-key="lang-en"]')).toBeVisible();await expect(dialog.locator('[data-track-key="lang-es"]')).toHaveCount(0);
+  await dialog.locator('[data-track-key="style"]').click();await dialog.locator('[data-track-key="preferred-only"]').click();await dialog.locator('[data-track-key="style"]').click();await expect(dialog.locator('[data-track-key="external-1"]')).toBeVisible();await expect(dialog.locator('[data-track-key="external-2"]')).toHaveCount(0);
   await expect(page.locator('.subtitle-overlay')).toHaveText('Fixture captions');
   await page.locator('#toast').evaluate(e=>e.hidden=true);await page.screenshot({path:'test-results/player-subtitle-languages-1920.png'});
   for(let i=0;i<8;i++){await page.keyboard.press('Tab');expect(await dialog.evaluate(d=>d.contains(document.activeElement))).toBe(true);}
@@ -553,7 +553,7 @@ test('SDH cleanup is reversible and preserves subtitle timing and Off',async({pa
   await startFixtureVideo(page);await expect(page.locator('.subtitle-overlay')).toHaveText('Hello!');
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:/Remover descrições SDH/}).click();await expect(page.locator('.subtitle-overlay')).toContainText('[Door closes]');
   await page.getByRole('button',{name:/Remover descrições SDH/}).click();await page.locator('video').evaluate(v=>v.currentTime=32);await expect(page.locator('.subtitle-overlay')).toBeHidden();await page.locator('video').evaluate(v=>v.currentTime=25);await expect(page.locator('.subtitle-overlay')).toHaveText('Hello!');
-  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toBeHidden();
+  await page.getByRole('button',{name:'Voltar às faixas',exact:true}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toBeHidden();
 });
 test('manual audio and external subtitle choices survive next episode with reordered tracks, fresh URLs and zero delay',async({page})=>{
   const downloads=[];
@@ -564,10 +564,10 @@ test('manual audio and external subtitle choices survive next episode with reord
   await openPlayerSpeed(page);await page.getByRole('button',{name:'1.5×',exact:true}).click();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.getByRole('button',{name:/Dublado/}).click();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Português manual/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Português lembrado');
-  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,5 s',exact:true}).click();await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Ir para o próximo episódio'}).click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>v.pause());
   await expect.poll(()=>page.locator('video').evaluate(v=>v.audioTracks.find(t=>t.enabled)?.language)).toBe('por');expect(await page.locator('video').evaluate(v=>v.playbackRate)).toBe(1.5);await expect(page.locator('.subtitle-overlay')).toHaveText('Português lembrado');expect(downloads).toEqual([origin+'/episode-1.srt',origin+'/episode-2.srt']);
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: 0.0 s');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: 0 ms');
   const memory=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).trackPreferences);expect(JSON.stringify(memory)).not.toMatch(/https:|delay|trackId/);
 });
 test('remembered Off persists across reopening the title and clearing it restores preferred subtitles',async({page})=>{
@@ -582,7 +582,7 @@ test('failed or cancelled manual subtitles do not replace the remembered success
   await playbackPrefs(page,{subtitles:'en'});let release;const gate=new Promise(r=>release=r);
   await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Boa',lang:'por',url:origin+'/good.srt'},{name:'Com erro',lang:'spa',url:origin+'/failed.srt'},{name:'Lenta',lang:'fra',url:origin+'/pending.srt'}]}]}}));
   await page.route('**/good.srt',r=>r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nBoa'}));await page.route('**/failed.srt',r=>r.fulfill({status:403,body:'expired'}));await page.route('**/pending.srt',async r=>{await gate;await r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nTardia'}).catch(()=>{});});
-  await startFixtureVideo(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/^Boa/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Boa');await page.getByRole('button',{name:/^Com erro/}).click();await expect(page.getByRole('alert')).toContainText('HTTP 403');await page.getByRole('button',{name:/^Lenta/}).click();await page.keyboard.press('Escape');release();
+  await startFixtureVideo(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Boa/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Boa');await page.getByRole('button',{name:/Com erro/}).click();await expect(page.getByRole('alert')).toContainText('HTTP 403');await page.getByRole('button',{name:/Lenta/}).click();await page.keyboard.press('Escape');release();
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).trackPreferences[JSON.stringify(['movie','ttfixture'])]);expect(saved.subtitles.language).toBe('pt');await expect(page.locator('.subtitle-overlay')).toHaveText('Boa');
 });
 test('late forced subtitle download cannot override the policy after an audio change',async({page})=>{
@@ -614,11 +614,11 @@ test('Netflix Sans loads locally, subtitle delay survives reopening and reset re
   expect(await page.evaluate(async()=>{const fonts=await document.fonts.load('500 19.44px "Netflix Sans"');return fonts.length===1 && fonts[0].status==='loaded';})).toBe(true);
   await expect(page.locator('.subtitle-overlay')).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
   await page.screenshot({animations:'disabled',path:'test-results/player-netflix-sans-1920.png'});
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,5 s',exact:true}).click();
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await page.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();
   await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
-  await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=30.2;});
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=30.05;});
   await expect(page.locator('.subtitle-overlay')).toContainText('A próxima história');
-  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: +0.5 s');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: +100 ms');
   await page.getByRole('button',{name:'Zerar atraso',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toBeHidden();
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).subtitleDelays)).toEqual({});
 });
@@ -770,7 +770,7 @@ test('native opaque track remains usable without technical information and exter
   await startFixtureVideo(page);await page.locator('video').evaluate(v=>v.addTextTrack('subtitles','Interna sem texto','por'));
   await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.locator('[data-track-key="native-0"]').click();
   await expect(page.getByRole('dialog')).not.toContainText('player da TV');await expect(page.locator('.subtitle-overlay')).toBeHidden();
-  await page.getByRole('button',{name:/^Externa/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Texto externo');
+  await page.getByRole('button',{name:/Externa/}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Texto externo');
   await expect(page.locator('.subtitle-overlay')).toHaveAttribute('data-font-status','loaded');expect(await page.locator('video').evaluate(v=>v.textTracks[0].mode)).toBe('disabled');
 });
 test('font decoding failure keeps fallback text visible without exposing font diagnostics',async({page})=>{
@@ -805,7 +805,7 @@ test('fixed subtitle preset survives old preferences and scales correctly at 108
   }
   await page.setViewportSize({width:1920,height:1080});await page.mouse.move(400,300);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:/Ajustes de legenda/}).click();
   await expect(page.getByRole('dialog')).not.toContainText('Netflix');await expect(page.getByRole('button',{name:/^Tamanho|^Fundo da legenda/})).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'Atrasar 0,5 s',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Atrasar 0,1 s',exact:true})).toBeVisible();
 });
 
 test('reference player geometry, icon expansion, restart and remote focus follow the fork',async({page})=>{
@@ -861,4 +861,64 @@ test('hidden-control arrows and LG media keys share the fork seek ramp',async({p
   await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBe(35);
   await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:412,bubbles:true})));expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(35);
   await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keyup',{keyCode:412,bubbles:true})));await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBe(25);
+});
+
+async function syncFixture(page,body='1\n00:00:20,000 --> 00:00:30,000\nA fala que eu ouvi.\n\n2\n00:00:30,000 --> 00:00:40,000\nOutra fala.') {
+  await playbackPrefs(page,{subtitles:'pt'});
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{name:'Português',lang:'por',url:origin+'/sync.srt'}]}]}}));
+  let downloads=0;await page.route('**/sync.srt',r=>{downloads++;return r.fulfill({body});});
+  await startFixtureVideo(page);await expect(page.locator('.subtitle-overlay')).toHaveAttribute('data-renderer','external');
+  return ()=>downloads;
+}
+async function openSync(page) {
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();
+  await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();
+  await page.getByRole('button',{name:'Sincronizar por fala',exact:true}).click();
+  return page.getByRole('dialog',{name:'Sincronizar por fala',exact:true});
+}
+test('spoken-line sync uses captured time, preserves playback and persists compensated delay',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));const downloads=await syncFixture(page);
+  await page.locator('video').evaluate(v=>{v.currentTime=25.3;});const dialog=await openSync(page);
+  await expect(dialog.getByRole('button',{name:'Sincronizar',exact:true})).toBeFocused();await page.keyboard.press('Enter');await expect(dialog).toContainText('Momento marcado: 00:25');
+  await page.locator('video').evaluate(v=>{v.currentTime=35;}); // The captured anchor must remain fixed while the user chooses.
+  await dialog.getByRole('button',{name:/00:20 A fala/}).click();
+  await expect(dialog).toHaveCount(0);await expect(page.locator('.subtitle-sync-result')).toHaveText('Legenda sincronizada: +5000 ms');
+  expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);expect(await page.locator('video').evaluate(v=>v.currentTime)).toBeCloseTo(35,1);expect(downloads()).toBe(1);
+  expect(await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).subtitleDelays))).toEqual([5]);
+  await page.locator('video').evaluate(v=>{v.currentTime=30;});await expect(page.locator('.subtitle-overlay')).toHaveText('A fala que eu ouvi.');
+  await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=30;});
+  await expect(page.locator('.subtitle-overlay')).toHaveText('A fala que eu ouvi.');
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('Atraso: +5000 ms');
+  await page.getByRole('button',{name:'Zerar atraso',exact:true}).click();await expect(page.locator('.subtitle-overlay')).toHaveText('Outra fala.');expect(errors).toEqual([]);
+});
+test('spoken-line sync bounds long files, focuses nearest cue and cancels with LG Back or suspension',async({page})=>{
+  const stamp=s=>`00:${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')},000`;
+  await syncFixture(page,Array.from({length:500},(_,i)=>`${i+1}\n${stamp(i)} --> ${stamp(i+1)}\nFala ${i}`).join('\n\n'));
+  let dialog=await openSync(page);await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
+  dialog=await openSync(page);await page.keyboard.press('Enter');await expect(dialog.locator('.sync-cue')).toHaveCount(90);
+  await expect(dialog.locator('.sync-cue').filter({hasText:'00:25'})).toBeFocused();await page.keyboard.press('ArrowDown');await expect(dialog.locator('.sync-cue').filter({hasText:'00:26'})).toBeFocused();
+  await page.locator('#toast').evaluate(e=>e.hidden=true);await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await page.screenshot({path:'test-results/player-sync-lines-1920.png'});
+  await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:461,bubbles:true})));await expect(dialog).toHaveCount(0);
+  expect(await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).subtitleDelays||{}))).toEqual([]);
+  dialog=await openSync(page);await page.keyboard.press('Enter');
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});await expect(dialog).toHaveCount(0);expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);
+  expect(await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).subtitleDelays||{}))).toEqual([]);
+});
+test('sync prompt resumes playback with one player and no offset on cancel',async({page})=>{
+  await syncFixture(page);const dialog=await openSync(page);await page.locator('#toast').evaluate(e=>e.hidden=true);await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await page.screenshot({path:'test-results/player-sync-prompt-1920.png'});
+  await dialog.getByRole('button',{name:'Reproduzir vídeo',exact:true}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(false);await expect(dialog.getByRole('button',{name:'Sincronizar',exact:true})).toBeFocused();
+  await dialog.getByRole('button',{name:'Sincronizar',exact:true}).click();await expect(dialog.locator('.sync-cue').first()).toBeVisible();expect(await page.locator('video').evaluate(v=>v.paused)).toBe(false);
+  await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(page.locator('video')).toHaveCount(1);expect(await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).subtitleDelays||{}))).toEqual([]);
+});
+test('track panels follow fork dimensions and focus colors; native subtitles cannot use external timing',async({page})=>{
+  await page.addInitScript(()=>Object.defineProperty(HTMLMediaElement.prototype,'audioTracks',{configurable:true,get(){return this.fixtureTracks ||= [{label:'Português 5.1',language:'por',enabled:true},{label:'Original',language:'eng',enabled:false}];}}));
+  await startFixtureVideo(page);await page.getByRole('button',{name:'Áudio',exact:true}).click();const dialog=page.getByRole('dialog');
+  const geometry=await dialog.locator('.track-panel').evaluate(p=>{const r=p.getBoundingClientRect();return {width:p.offsetWidth,right:(innerWidth-r.right)/2,bottom:(innerHeight-r.bottom)/2};});expect(geometry).toEqual({width:320,right:44,bottom:28});
+  await expect(dialog.locator('.track-row:focus')).toHaveCSS('background-color','rgb(255, 255, 255)');await expect(dialog.locator('.track-row:focus')).toHaveCSS('color','rgb(0, 0, 0)');await expect(dialog.locator('.track-row:focus strong')).toHaveCSS('color','rgb(0, 0, 0)');await expect(dialog.locator('.track-row:focus strong')).toHaveText('Original');await expect(dialog.locator('.track-row:focus strong')).toBeVisible();await page.locator('#toast').evaluate(e=>e.hidden=true);await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await page.screenshot({path:'test-results/player-audio-panel-1920.png'});
+  await dialog.getByRole('button',{name:'Ajustes de áudio',exact:true}).click();await expect(dialog).toContainText('ainda não estão disponíveis');await page.keyboard.press('Escape');
+  await page.locator('video').evaluate(v=>{const t=v.addTextTrack('subtitles','Interna','pt');t.mode='showing';t.addCue(new VTTCue(0,100,'Legenda interna'));});
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await dialog.locator('[data-track-key="native-0"]').click();await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await page.screenshot({path:'test-results/player-subtitle-panel-1920.png'});
+  await dialog.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await expect(dialog.getByRole('button',{name:'Sincronizar por fala',exact:true})).toBeDisabled();await expect(dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true})).toBeDisabled();
+  await expect(dialog).not.toContainText('Netflix Sans');await expect(page.locator('.subtitle-overlay')).toContainText('Legenda interna');
 });

@@ -1,4 +1,4 @@
-# Fidelidade do player ao fork — 0.16.0
+# Fidelidade do player ao fork — 0.17.0
 
 Referência usada: `ysosrs123/NuvioTV-Fork@45e0984`, preservada nesta árvore.
 A barra anterior era uma adaptação com uma única fileira de botões de texto.
@@ -39,6 +39,15 @@ Esta entrega a substitui pela estrutura do `PlayerControlsOverlay`, dentro de
 - Estilo de legendas da 0.15.2 preservado conforme pedido explícito do usuário;
   a margem com controles abertos agora considera a altura real da barra.
 
+## Painéis e sincronização — 0.17
+
+Áudio/legendas usam 320 dp, margens 44/28 dp, raio 20 dp, padding 16/14 dp,
+cabeçalho em caixa alta, ações em cápsula e seleção branca conforme
+AudioSelectionOverlay, SubtitleSelectionOverlay e PanelComponents. Lista única
+substitui a coluna de idiomas antiga. Sincronização por fala e ajuste fino de
+100 ms até ±180 s seguem SubtitleTimingDialog e SubtitleDelayConfig.
+[Comportamento, limites e testes](PLAYER_TRACKS_SYNC.md).
+
 ## Diferenças que permanecem
 
 Não se declara o player integralmente idêntico ou todos os recursos concluídos.
@@ -52,7 +61,7 @@ mesmos títulos, faixas e preferências do Android.
 | Fontes, episódios, idiomas, velocidade, proporção | Operacionais; painéis precisam continuar a revisão fina contra a referência |
 | Estatísticas | Mesma posição/largura 380 dp; apenas dados reais disponíveis via APIs de mídia, conteúdo ainda simplificado |
 | Áudio e legendas sem faixas expostas | Acesso preservado para consulta/diagnóstico e addons; presença dos ícones ainda difere do gate estrito Android |
-| Sincronização por fala, atraso fino nativo e áudio | Ainda não portados; atraso externo em passos de 0,5 s continua |
+| Sincronização por fala e atraso fino | Implementados para externas SRT/VTT; atraso de faixas nativas e de áudio continuam pendentes |
 | Busca manual de legendas, ASS/PGS/libass | Ainda pendentes ou limitados pelo compositor nativo |
 | Tela de pausa com elenco, prévia de busca, intro/outro e guia parental | Ainda pendentes, incluindo origem/contratos dos dados |
 | Recomendações pós-reprodução e detalhes avançados de Up Next | Parcial; próximo episódio/contagem/“Ainda assistindo?” existentes |
@@ -62,9 +71,8 @@ mesmos títulos, faixas e preferências do Android.
 
 ## Próxima etapa do player
 
-Revisar os painéis de áudio/legendas e implementar sincronização por fala a
-partir de `SubtitleTimingDialog.kt`, seguida da tela de pausa e dos dados de
-intro/miniaturas. Manter as diferenças acima rastreáveis até serem verificadas.
+Implementar a tela de pausa com elenco da referência; depois investigar os
+contratos dos dados de intro/outro e miniaturas de busca. Manter as diferenças acima rastreáveis até serem verificadas.
 Não avançar para outras áreas enquanto esta revisão prioritária estiver ativa.
 
 ## Testes

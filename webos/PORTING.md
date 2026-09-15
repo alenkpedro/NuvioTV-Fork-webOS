@@ -152,3 +152,12 @@ contra PlayerScreen.kt, PlayerScrubRates.kt e StreamSourcesSidePanel.kt. A barra
 anterior foi substituída. Painel de fontes do vídeo atual inclui filmes e
 preserva progresso na troca. APIs de motores Android não foram simuladas.
 A revisão integral do player permanece prioritária; veja as diferenças no mapa.
+
+## Entrega 0.17 — painéis e sincronização por fala
+
+[PLAYER_TRACKS_SYNC.md](PLAYER_TRACKS_SYNC.md): geometria de AudioSelectionOverlay,
+SubtitleSelectionOverlay, PanelComponents e PlayerOverlayScaffold.
+`core/subtitle-timing.js` porta a janela de frases de SubtitleTimingDialog
+(±180 s, até 90), compensação de 300 ms de PlayerRuntimeControllerSubtitleTiming
+e limites/passos de SubtitleDelayConfig. Legendas já carregadas são reutilizadas.
+Ajustes DSP/atraso de áudio e temporização nativa continuam pendentes.

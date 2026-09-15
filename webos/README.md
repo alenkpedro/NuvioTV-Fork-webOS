@@ -27,6 +27,15 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Áudio, legendas e sincronização por fala (0.17)
+
+Painéis de 320 dp no canto inferior direito, lista única e foco branco como no
+fork. Em Legendas → Ajustes de legenda → Sincronizar por fala, marque o início
+de uma fala e escolha a frase correspondente. Requer legenda externa SRT/VTT
+já selecionada; o vídeo continua no estado em que estava. O atraso fica salvo
+por filme/episódio e perfil. Também há ajuste de 100 ms, até ±180 s.
+A aparência Netflix Sans Medium continua fixa. [Uso e limites](PLAYER_TRACKS_SYNC.md).
+
 ## Player do fork (0.16)
 
 Barra com título/logo, ícones à direita e Mais expansível, linha do tempo,
@@ -51,7 +60,7 @@ desativado por padrão, limiar de três avanços automáticos e confirmação de
 
 ## Legendas e memória de faixas (0.13)
 
-O painel Legendas tem coluna de idiomas, filtro de preferidos e indicação de
+Desde a 0.17, o painel Legendas usa lista única, filtro de preferidos e indicação de
 forçadas/SDH. A escolha manual confirmada é lembrada por título e perfil.
 Ajustes → Reprodução → Idiomas e próximo episódio permite configurar memória,
 forçadas e limpeza SDH de legendas externas. [Uso e diferenças](SUBTITLE_PREFERENCES.md).

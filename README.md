@@ -15,7 +15,13 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.16.0
+## Estado: prévia 0.17.0
+
+A 0.17.0 adapta os painéis compactos de áudio/legendas, com lista única e foco
+branco, e acrescenta sincronização por fala para legendas externas SRT/WebVTT.
+Inclui compensação de reação de 300 ms, ajuste de 100 ms até ±180 s e memória
+por vídeo/perfil. O preset Netflix Sans Medium permanece fixo.
+[Uso e limites](webos/PLAYER_TRACKS_SYNC.md).
 
 A 0.16.0 substitui a barra simplificada pelo layout do `PlayerControlsOverlay`
 do fork: título/logo, ícones à direita, Mais expansível, linha do tempo,

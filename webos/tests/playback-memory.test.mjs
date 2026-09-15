@@ -18,7 +18,7 @@ test('timing memory validates corrupted values, has bounded storage and excludes
   const state={};for(let i=0;i<120;i++){saveSpeed(state,{...meta,id:String(i)},1.5);saveDelay(state,{...episode,id:String(i)},0.5);}
   assert.equal(Object.keys(state.playbackSpeeds).length,100);assert.equal(Object.keys(state.subtitleDelays).length,100);
   assert.equal(readSpeed(state,{...meta,id:'0'}),1);assert.equal(readDelay(state,{...episode,id:'0'}),0);
-  for(const value of [NaN,Infinity,'2',null,99]){saveSpeed(state,meta,value);saveDelay(state,episode,value);}
+  for(const value of [NaN,Infinity,'2',null,999]){saveSpeed(state,meta,value);saveDelay(state,episode,value);}
   assert.equal(readSpeed(state,meta),1);assert.equal(readDelay(state,episode),0);
   saveDelay(state,{...episode,url:'https://secret.example'},-.5);assert.doesNotMatch(JSON.stringify(state),/https/);
 });

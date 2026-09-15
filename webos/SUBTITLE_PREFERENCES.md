@@ -24,11 +24,11 @@ Ajustes → Reprodução → Idiomas e próximo episódio:
   A heurística pode remover texto de diálogo; desative para ver o texto completo.
   A limpeza não altera legendas internas renderizadas pelo player da LG.
 
-No player → Legendas, a coluna de idiomas permite filtrar a lista sem mudar a
-faixa em reprodução. “Todos” mostra todos os idiomas permitidos pelo filtro de
-preferidos. Desativadas, atualizar legendas e ajustes permanecem acessíveis.
-Forçada e SDH/CC aparecem junto às faixas identificadas. O filtro de preferidos
-também pode ser alternado no próprio painel e é salvo para esta TV.
+No player → Legendas, a lista única da 0.17 ordena idiomas preferidos antes dos
+demais, preservando a legenda selecionada mesmo fora dos idiomas preferidos.
+Desativadas, atualizar legendas e ajustes permanecem acessíveis. Forçada e
+SDH/CC aparecem junto às faixas identificadas. O filtro de preferidos fica em
+Ajustes de legenda e é salvo para esta TV.
 
 Ajustes de legenda inclui a limpeza SDH, com efeito imediato e reversível.
 Não muda timestamps ou atraso; a versão original do texto permanece em memória.
@@ -68,10 +68,9 @@ Diferente da busca ampla do Android, não interpretamos nome do host ou query de
 URL como uma indicação de legenda forçada. Sem indicação, não afirmamos que a
 faixa é forçada/SDH. Idioma não é inferido de nomes de arquivos.
 
-A coluna de idiomas segue a organização do `SubtitleSelectionOverlay`; o painel
-webOS usa 520 dp (coluna de 140 dp) e preserva a navegação por setas/OK/Voltar e
-ponteiro. O editor de estilos conserva o painel de 320 dp existente. Não se
-considera esta geometria uma reprodução integral da tela Android.
+A lista compacta da 0.17 segue SubtitleSelectionOverlay com largura de 320 dp.
+A coluna de idiomas de 140 dp foi removida para acompanhar a referência.
+Ver [painéis e sincronização por fala](PLAYER_TRACKS_SYNC.md).
 
 Não há limpeza de SDH de imagem/PGS ou faixas nativas, ASS/ZIP, busca por nome de
 legenda ou tradução nesta entrega. A memória

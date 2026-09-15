@@ -4,6 +4,7 @@ import { discoverSubtitles, normalizeSubtitles, fetchSubtitles, subtitleFrame } 
 import { subtitleFlags, stripSdhText, subtitlePolicy, subtitleScoreFor, readTrackMemory, saveTrackMemory, clearTrackMemory } from './core/subtitle-options.js';
 import { readPlayback, preferredLanguages, languageScore, languageCode } from './core/playback.js';
 import { languageName, mediaTracks, selectAudioTrack } from './core/media-tracks.js';
+import { clampSubtitleDelay, SUBTITLE_DELAY_LIMIT, SUBTITLE_DELAY_STEP, syncSubtitleDelay, formatSubtitleDelay, cueTimestamp, nearestCueIndex, selectSyncCues } from './core/subtitle-timing.js';
 import { nativeSubtitles } from './core/native-subtitles.js';
 
 export function installTrackControls({ screen, video, context, addons, settings, memoryState = {}, persist, el, button, onOpen, onClose }) {
@@ -29,7 +30,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
   }
   video.addEventListener('ratechange',rateChanged);
   let remembered = preferences.rememberTracks ? readTrackMemory(memoryState,context.meta) : {};
-  let languageFilter = 'all', policyKey = '';
+  let policyKey = '', syncSession = null, syncNoticeTimer;
   const baseAudioLanguages = preferredLanguages(preferences.audio, preferences.secondaryAudio, device, context.meta.originalLanguage || context.meta.original_language);
   const subtitleLanguages = preferredLanguages(preferences.subtitles, preferences.secondarySubtitles, device);
   let audioLanguages = remembered.audio ? [remembered.audio.language,...baseAudioLanguages.filter(l=>l!==remembered.audio.language)] : baseAudioLanguages;
@@ -80,7 +81,8 @@ export function installTrackControls({ screen, video, context, addons, settings,
   function stopDownload() { download?.abort(); download = null; downloading = ''; }
   function close() {
     if (!dialog) return;
-    if (panelKind === 'subtitles') { stopDownload(); discovery?.abort(); discovery = null; }
+    if (['subtitles','timing'].includes(panelKind)) { stopDownload(); discovery?.abort(); discovery = null; }
+    syncSession = null;
     dialog.remove(); dialog = null; panelKind = null; error = '';
     onClose(); if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
   }
@@ -112,38 +114,110 @@ export function installTrackControls({ screen, video, context, addons, settings,
       const result = await discoverSubtitles(addons, context, controller.signal);
       if (disposed || controller.signal.aborted || discovery !== controller) return;
       const seen = new Set();
-      external = [...normalizeSubtitles(context.stream.subtitles, context.stream.addonName || 'Fonte'), ...result.subtitles]
+      external = [...normalizeSubtitles(context.stream.subtitles, context.stream.addonName || 'Fonte'), ...result.subtitles, ...(selected ? [selected] : [])]
         .filter(item => { if (seen.has(item.url)) return false; seen.add(item.url); return true; }).slice(0, 300);
       found = true;
       info = result.failed ? `${result.failed} addon(s) não responderam. Você pode tentar novamente.` : external.length ? `${external.length} legenda(s) externa(s) disponível(is).` : 'Nenhuma legenda externa encontrada para este título.';
     } catch (failure) { if (!controller.signal.aborted) info = failure.message; }
     finally { if (discovery === controller) { discovery = null; draw(); scheduleAutomatic(); } }
   }
+  function setDelay(value) {
+    delay = clampSubtitleDelay(value);
+    if (profileKey === memoryState.profileStore?.activeKey) { saveDelay(memoryState,context,delay); persist(); }
+    renderCue();
+  }
+  function actionRow(title, action, key) {
+    return button(title, action, {class:'track-action', 'data-track-key':key});
+  }
+  const syncNotice = el('div', {class:'subtitle-sync-result',role:'status',hidden:true}); screen.append(syncNotice);
+  function syncUnavailable() {
+    return !selected || !cues.length ? 'Selecione uma legenda externa SRT ou WebVTT para sincronizar por fala.' : '';
+  }
+  function openTiming() {
+    if (syncUnavailable()) { error=syncUnavailable(); draw(); return; }
+    // Freeze the selected file for this session. Reuse the already parsed cues;
+    // no extra download or background language selection can replace it mid-sync.
+    manualSubtitles=true; stopDownload(); discovery?.abort(); discovery=null;
+    syncSession={url:selected.url,cues,captured:null}; panelKind='timing'; error='';
+    dialog.className='player-track-dialog subtitle-timing-dialog';
+    dialog.setAttribute('aria-label','Sincronizar por fala'); draw();
+    dialog.querySelector('[data-track-key="capture"]')?.focus();
+  }
+  function applySync(cue) {
+    if (!syncSession || syncSession.captured===null || selected?.url!==syncSession.url || document.hidden || disposed) return;
+    setDelay(syncSubtitleDelay(syncSession.captured,cue.start));
+    close(); clearTimeout(syncNoticeTimer); syncNotice.textContent=`Legenda sincronizada: ${formatSubtitleDelay(delay)}`; syncNotice.hidden=false;
+    syncNoticeTimer=setTimeout(()=>{syncNotice.hidden=true;},4000);
+  }
+  function drawTiming() {
+    const session=syncSession; if (!session) return;
+    const activeKey=dialog.contains(document.activeElement) ? document.activeElement.dataset.trackKey : null;
+    const oldScroll=dialog.querySelector('.sync-cue-list')?.scrollTop || 0;
+    const captured=session.captured!==null;
+    const panel=el('section',{class:`subtitle-timing-panel${captured?' picking-line':''}`});
+    // Back uses the same dialog dismissal contract as other player overlays.
+    const dismiss=button('Cancelar sincronização',close,{'data-dismiss':true,hidden:true,tabindex:-1});
+    if (!captured) {
+      panel.append(el('h2',{},'Ao ouvir o início de uma fala, pressione Sincronizar.'),button('Sincronizar',()=>{
+        if (document.hidden || video.seeking || !Number.isFinite(video.currentTime)) { error='Aguarde o vídeo estar pronto para marcar a fala.'; draw(); return; }
+        session.captured=video.currentTime; error=''; draw();
+        const items=selectSyncCues(session.cues,session.captured);
+        const target=dialog.querySelector(`[data-track-key="cue-${nearestCueIndex(items,session.captured)}"]`);
+        target?.focus({preventScroll:true}); target?.scrollIntoView({block:'nearest'});
+      },{'data-track-key':'capture',class:'sync-capture'}));
+      if (video.paused) panel.append(actionRow('Reproduzir vídeo',()=>{video.play().catch(()=>{error='Não foi possível retomar o vídeo.';draw();});},'sync-play'));
+    } else {
+      panel.append(el('div',{class:'sync-heading'},el('span',{},`Momento marcado: ${cueTimestamp(session.captured)}`),el('small',{},languageName(selected?.lang))));
+      const list=el('div',{class:'sync-cue-list','aria-label':'Escolha a fala que você ouviu'});
+      selectSyncCues(session.cues,session.captured).forEach((cue,index)=>list.append(button([
+        el('span',{class:'sync-cue-time'},cueTimestamp(cue.start)),el('span',{class:'sync-cue-text',dir:'auto'},cue.text.replace(/\\[Nn]|\s+/g,' ').trim())
+      ],()=>applySync(cue),{class:'sync-cue','data-track-key':`cue-${index}`})));
+      panel.append(list,el('p',{class:'sync-hint'},'Escolha a fala que você ouviu. Pressione Voltar para cancelar.'));
+    }
+    if(error) panel.append(el('p',{class:'track-error',role:'alert'},error));
+    dialog.replaceChildren(dismiss,panel);
+    const list=dialog.querySelector('.sync-cue-list'); if(list)list.scrollTop=oldScroll;
+    if(activeKey) (dialog.querySelector(`[data-track-key="${activeKey}"]`) || dialog.querySelector('[data-track-key="capture"]'))?.focus({preventScroll:true});
+  }
   function draw() {
     if (!dialog || disposed) return;
+    if (panelKind==='timing') { drawTiming(); return; }
     const activeKey = dialog.contains(document.activeElement) ? document.activeElement.dataset.trackKey : null;
-    const railScroll = dialog.querySelector('.subtitle-language-rail')?.scrollTop || 0;
     const oldScroll = dialog.querySelector('.track-list')?.scrollTop || 0;
-    const panel = el('section', { class: `track-panel${panelKind === 'subtitles' && !editor ? ' subtitle-filter-panel' : ''}` }, el('div', { class: 'track-heading' }, el('h2', {}, panelTitle(panelKind)), button('Fechar', close, { class: 'track-close', 'data-dismiss': true, 'data-track-key': 'close' })));
+    const panel = el('section', { class: 'track-panel' }, el('div', { class: 'track-heading' }, el('h2', {}, panelTitle(panelKind))));
+    const dismiss=button('Fechar',close,{'data-dismiss':true,hidden:true,tabindex:-1});
     const list = el('div', { class: 'track-list' });
-    let rail;
     if (panelKind === 'audio') {
-      const tracks = mediaTracks(video, 'audio');
-      if (!tracks.length) list.append(el('p', { class: 'track-notice' }, 'Esta fonte não expôs faixas de áudio selecionáveis ao player.'));
-      for (const entry of tracks) list.append(row(entry.name, entry.language, () => {
-        manualAudio = true;
-        try { selectAudioTrack(video, entry.track); error = ''; remember('audio',{language:entry.track.language}); scheduleAutomatic(); } catch (failure) { error = failure.message; } draw();
-      }, `audio-${entry.index}`, entry.selected));
+      panel.append(actionRow(editor ? 'Voltar às faixas' : 'Ajustes de áudio',()=>{editor=!editor;draw();},'audio-adjustments'));
+      if(editor) {
+        list.append(el('p',{class:'track-notice'},'Atraso de áudio, amplificação e mixagem de voz ainda não estão disponíveis neste player webOS.'));
+      } else {
+        const tracks = mediaTracks(video, 'audio');
+        if (!tracks.length) list.append(el('p', { class: 'track-notice' }, 'Esta fonte não expôs faixas de áudio selecionáveis ao player.'));
+        for (const entry of tracks) list.append(row(entry.name, entry.language, () => {
+          manualAudio = true;
+          try { selectAudioTrack(video, entry.track); error = ''; remember('audio',{language:entry.track.language}); scheduleAutomatic(); } catch (failure) { error = failure.message; } draw();
+        }, `audio-${entry.index}`, entry.selected));
+      }
     } else if (panelKind === 'speed') {
       for (const speed of playbackSpeeds) list.append(row(`${speed}×`, speed===1 ? 'Normal' : '',()=>chooseSpeed(speed),`speed-${speed}`,Math.abs(video.playbackRate-speed)<0.001));
       list.append(el('p',{class:'track-notice'},'Velocidade lembrada para este título neste perfil. A disponibilidade depende da fonte e do player da TV.'));
     } else {
-      panel.append(row('Ajustes de legenda', editor ? 'Voltar à lista' : 'Sincronização e descrições SDH', () => { editor = !editor; draw(); }, 'style'));
+      panel.append(actionRow(editor ? 'Voltar às faixas' : 'Ajustes de legenda', () => { editor = !editor; draw(); }, 'style'));
       if (editor) {
+        const unavailable=syncUnavailable();
+        const sync=actionRow('Sincronizar por fala',openTiming,'sync'); sync.disabled=Boolean(unavailable); list.append(sync);
+        list.append(el('p',{class:'track-notice'},unavailable || 'Marque o início de uma fala e escolha a frase correspondente.'));
+        list.append(el('p', { class: 'track-notice', 'data-delay-value':true }, `Atraso: ${formatSubtitleDelay(delay)}`));
+        const stepper=el('div',{class:'subtitle-delay-stepper'});
+        for (const [key,title,change] of [['earlier','Adiantar 0,1 s',-SUBTITLE_DELAY_STEP],['later','Atrasar 0,1 s',SUBTITLE_DELAY_STEP]]) {
+          const control=button(change<0?'−':'+',()=>{setDelay(delay+change);draw();},{'aria-label':title,'data-track-key':key});
+          control.disabled=!selected || (change<0 ? delay<=-SUBTITLE_DELAY_LIMIT : delay>=SUBTITLE_DELAY_LIMIT); stepper.append(control);
+        }
+        list.append(stepper,row('Zerar atraso','',()=>{setDelay(0);draw();},'reset'));
+        list.append(el('p',{class:'track-notice'},'Ajuste de até ±180 s para legendas externas, salvo para este filme ou episódio. Valores positivos atrasam a legenda.'));
         list.append(row('Remover descrições SDH', 'Ocultar descrições de sons e identificação de falantes', () => { setPreference('stripSdh',!preferences.stripSdh); renderCue(); draw(); }, 'sdh-cleanup', preferences.stripSdh));
-        list.append(el('p', { class: 'track-notice' }, 'O atraso se aplica às legendas externas e fica salvo para este filme ou episódio.'));
-        list.append(el('p', { class: 'track-notice' }, `Atraso: ${delay > 0 ? '+' : ''}${delay.toFixed(1)} s. Valores positivos atrasam a legenda.`));
-        for (const [key, title, change] of [['earlier', 'Adiantar 0,5 s', -.5], ['later', 'Atrasar 0,5 s', .5], ['reset', 'Zerar atraso', 0]]) list.append(row(title, '', () => { delay = change ? Math.max(-10, Math.min(10, delay + change)) : 0; if (profileKey === memoryState.profileStore?.activeKey) { saveDelay(memoryState,context,delay); persist(); } renderCue(); draw(); }, key));
+        list.append(row('Mostrar só idiomas preferidos', 'O idioma em uso continua acessível',()=>{setPreference('onlyPreferredSubtitles',!preferences.onlyPreferredSubtitles);draw();},'preferred-only',preferences.onlyPreferredSubtitles));
       } else {
         const native = textTracks();
         const entries = [
@@ -151,34 +225,38 @@ export function installTrackControls({ screen, video, context, addons, settings,
           ...external.map((item,index)=>({key:`external-${index}`,name:item.name || languageName(item.lang),lang:item.lang,source:item.source,...subtitleFlags(item),selected:selected?.url === item.url,action:()=>{manualSubtitles=true;chooseExternal(item,`external-${index}`,true);}})),
         ];
         const visible = entries.filter(item=>!preferences.onlyPreferredSubtitles || Number.isFinite(languageScore(item.lang,subtitleLanguages)) || item.selected);
-        const counts = new Map(); for (const item of visible) { const key=languageCode(item.lang) || 'und'; counts.set(key,(counts.get(key)||0)+1); }
-        if (languageFilter !== 'all' && !counts.has(languageFilter)) languageFilter = 'all';
-        rail = el('div',{class:'subtitle-language-rail','aria-label':'Idiomas das legendas'});
-        for (const code of ['all',...[...counts.keys()].sort((a,b)=>(languageScore(a,subtitleLanguages)-languageScore(b,subtitleLanguages)) || languageName(a).localeCompare(languageName(b)))]) {
-          rail.append(row(code === 'all' ? 'Todos' : languageName(code), String(code === 'all' ? visible.length : counts.get(code)),()=>{languageFilter=code;draw();},`lang-${code}`,languageFilter===code));
-        }
-        panel.append(row('Mostrar só idiomas preferidos', 'O idioma em uso continua acessível',()=>{setPreference('onlyPreferredSubtitles',!preferences.onlyPreferredSubtitles);languageFilter='all';draw();},'preferred-only',preferences.onlyPreferredSubtitles));
+        visible.sort((a,b)=>(languageScore(a.lang,subtitleLanguages)-languageScore(b.lang,subtitleLanguages)) || languageName(a.lang).localeCompare(languageName(b.lang)));
         list.append(row('Desativadas', '', () => { manualSubtitles = true; chooseNative(null); }, 'off', !selected && !native.some(r => r.selected)));
-        const filtered = visible.filter(item=>languageFilter==='all' || (languageCode(item.lang)||'und')===languageFilter);
-        for (const item of filtered) list.append(row(item.name,downloading===item.key ? 'Carregando…' : [languageName(item.lang),item.source,item.forced?'Forçada':'',item.sdh?'SDH / CC':''].filter(Boolean).join(' · '),item.action,item.key,item.selected));
-        if (!filtered.length) list.append(el('p',{class:'track-notice'},'Nenhuma legenda neste filtro. Use Todos ou desative o filtro de preferidos.'));
-        list.append(row(discovery ? 'Buscando legendas…' : 'Atualizar legendas', '', discover, 'refresh'));
+        for (const item of visible) {
+          const language=languageName(item.lang), variant=[language,languageCode(item.lang)].some(value=>value.toLowerCase()===item.name.toLowerCase()) ? '' : item.name;
+          list.append(row(`${[language,variant].filter(Boolean).join(' ')} — ${item.source}`,downloading===item.key ? 'Carregando…' : [item.forced?'Forçada':'',item.sdh?'SDH / CC':''].filter(Boolean).join(' · '),item.action,item.key,item.selected));
+        }
+        if (!visible.length) list.append(el('p',{class:'track-notice'},'Nenhuma legenda disponível. Confira os idiomas preferidos nos ajustes ou atualize a lista.'));
+        list.append(actionRow(discovery ? 'Buscando legendas…' : 'Atualizar legendas', discover, 'refresh'));
         if (info) list.append(el('p', { class: 'track-notice', role: 'status' }, info));
       }
     }
-    if (['audio','subtitles'].includes(panelKind) && preferences.rememberTracks && (remembered.audio || remembered.subtitles)) panel.append(row('Usar idiomas dos ajustes', 'Esquecer escolhas deste título neste perfil', resetRemembered, 'forget-tracks'));
-    if (error) panel.append(el('p', { class: 'track-error', role: 'alert' }, error));
-    panel.append(rail ? el('div',{class:'subtitle-browser'},rail,list) : list); dialog.replaceChildren(panel); list.scrollTop = oldScroll; if (rail) rail.scrollTop=railScroll;
-    if (activeKey) ([...dialog.querySelectorAll('[data-track-key]')].find(b => b.dataset.trackKey === activeKey) || dialog.querySelector('[data-dismiss]'))?.focus({ preventScroll: true });
+    if (['audio','subtitles'].includes(panelKind) && preferences.rememberTracks && (remembered.audio || remembered.subtitles)) list.append(row('Usar idiomas dos ajustes', 'Esquecer escolhas deste título neste perfil', resetRemembered, 'forget-tracks'));
+    if (error) list.append(el('p', { class: 'track-error', role: 'alert' }, error));
+    panel.append(list); dialog.replaceChildren(dismiss,panel); list.scrollTop = oldScroll;
+    if (activeKey) {
+      const previous=[...dialog.querySelectorAll('[data-track-key]')].find(b => b.dataset.trackKey === activeKey && !b.disabled);
+      const fallback=dialog.querySelector('.subtitle-delay-stepper button:not(:disabled), .track-action, .track-list button:not(:disabled)');
+      (previous || fallback)?.focus({ preventScroll: true });
+    }
   }
   function open(kind) {
     if (dialog) close();
-    returnFocus = document.activeElement; panelKind = kind; editor = false; error = '';
+    returnFocus = document.activeElement; panelKind = kind; editor = false; error = ''; syncNotice.hidden=true; clearTimeout(syncNoticeTimer);
     dialog = el('div', { class: `player-track-dialog${kind==='speed' ? ' player-speed-dialog' : ''}`, role: 'dialog', 'aria-modal': true, 'aria-label': panelTitle(kind) });
     screen.append(dialog); onOpen(); draw();
-    (dialog.querySelector('.track-list .selected-track') || dialog.querySelector('.track-list button') || dialog.querySelector('[data-dismiss]'))?.focus();
+    (dialog.querySelector('.track-list .selected-track') || dialog.querySelector('.track-list button') || dialog.querySelector('.track-action'))?.focus();
     if (kind === 'subtitles' && !found) discover();
   }
+  const timingPlaybackChanged=()=>{ if(panelKind==='timing' && syncSession?.captured===null) draw(); };
+  video.addEventListener('play',timingPlaybackChanged); video.addEventListener('pause',timingPlaybackChanged);
+  const suspendTiming=()=>{if(document.hidden && panelKind==='timing')close();};
+  document.addEventListener('visibilitychange',suspendTiming);
   let watchedLists = [];
   // Coalesce platform events; selection itself may emit synchronous change events.
   function scheduleAutomatic() {
@@ -238,7 +316,18 @@ export function installTrackControls({ screen, video, context, addons, settings,
   video.addEventListener('loadedmetadata', ready); bindTracks();
   return {
     openSpeed: () => open('speed'), openAudio: () => open('audio'), openSubtitles: () => open('subtitles'), isOpen: () => Boolean(dialog),
+    key(key,event) {
+      if (!dialog || !['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)) return false;
+      event.preventDefault();
+      if(panelKind==='timing' && syncSession?.captured===null) {
+        if(key==='MediaPause')video.pause();
+        else if(key==='MediaPlay' || key===' ') { if(key===' ' && !video.paused)video.pause(); else video.play().catch(()=>{error='Não foi possível retomar o vídeo.';draw();}); }
+      }
+      return true;
+    },
     dispose() {
+      syncSession=null; clearTimeout(syncNoticeTimer); syncNotice.remove();
+      video.removeEventListener('play',timingPlaybackChanged);video.removeEventListener('pause',timingPlaybackChanged);document.removeEventListener('visibilitychange',suspendTiming);
       disposed = true; native.dispose(); stopDownload(); discovery?.abort(); clearTimeout(timer); dialog?.remove(); overlay.remove();
       videoEvents.forEach(name => video.removeEventListener(name, renderCue)); video.removeEventListener('loadedmetadata', ready); video.removeEventListener('ratechange',rateChanged);
       for (const list of watchedLists) for (const event of ['addtrack', 'removetrack', 'change']) list.removeEventListener?.(event, tracksChanged);
