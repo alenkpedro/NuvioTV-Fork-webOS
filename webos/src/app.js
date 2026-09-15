@@ -12,6 +12,8 @@ import { nextSource, readPlayback } from './core/playback.js';
 import { autoPlayConfigured, autoPlayModeLabel, selectAutoPlayStream } from './core/auto-play.js';
 import { cacheDurationLabel, clearLinkCache, linkKey, readLink, writeLink } from './core/link-cache.js';
 import { postPlayCountdown, postPlayTrailerCountdown, shouldCountTrailer } from './core/trailer.js';
+import { bufferedAhead, bufferStatusText, initialTarget, rebufferTarget, waitForBuffer } from './core/buffer.js';
+import { formatSpeed, measureSources, speedBudget } from './core/speed-test.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -674,7 +676,11 @@ async function showStreams(main, signal) {
     count.textContent = `${Math.min(100, visible.length)} de ${rows.length} fonte(s)${view.failed ? ` · ${view.failed} addon(s) não responderam` : ''}`;
     if (!visible.length) notice(list, !providers.length ? 'Nenhum add-on instalado fornece fontes para este título.' : !rows.length ? 'Nenhuma fonte encontrada. Tente atualizar ou escolher outro addon.' : 'Nenhuma fonte passou pelos filtros. Use “Mostrar todas” para revisar.');
     for (const s of visible.slice(0, 100)) {
-      list.append(sourceCard(s,providers,()=>playStream(context, s),!list.childElementCount));
+      const node = sourceCard(s,providers,()=>playStream(context, s),!list.childElementCount);
+      // The measurement belongs to the card, so a redraw keeps showing it.
+      const measured = view.speed?.[s.sourceKey];
+      node.append(el('small', { class: 'source-speed', hidden: !measured }, measured ? formatSpeed(measured) : ''));
+      list.append(node);
     }
   };
   const toggle = button(view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas', () => { view.showAll = !view.showAll; toggle.textContent = view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas'; display(); }, { 'data-focus': 'source-filters' });
@@ -682,10 +688,37 @@ async function showStreams(main, signal) {
   for (const provider of [null, ...providers.map((_, i) => i)]) chips.append(button(provider === null ? 'Todos' : providers[provider].manifest.name, () => {
     view.provider = provider; [...chips.querySelectorAll('[data-provider]')].forEach(b => b.classList.toggle('selected', b.dataset.provider === String(provider))); display();
   }, { class: provider === view.provider ? 'selected' : '', 'data-provider': String(provider), 'data-focus': `source-addon-${provider}` }));
+  const speedNote = el('p', { class: 'stream-speed-note muted', role: 'status' }, 'A medição usa a fonte real, com um orçamento pequeno de bytes.');
+  const speedButton = button('Testar velocidade', () => runSpeedTest(), { 'data-focus': 'source-speed', 'aria-label': 'Testar velocidade das fontes' });
   const actions = el('div', { class: 'stream-actions' }, button('Reproduzir melhor fonte', () => {
     const best = chooseBest(subset()); best ? playStream(context, best) : toast('Não há fonte HTTP(S) elegível nesta seleção.');
-  }, { 'data-focus': 'source-best' }), toggle);
-  main.append(chips, count, list, actions); display();
+  }, { 'data-focus': 'source-best' }), speedButton, toggle);
+  main.append(chips, count, list, speedNote, actions); display();
+  view.speed ||= {};
+  // A medição roda sobre a fonte real, pelo mesmo transporte do player. O orçamento é
+  // pequeno de propósito: são bytes do usuário (e do debrid), não um benchmark de banda.
+  async function runSpeedTest() {
+    const candidates = subset().filter(s => /^https?:/i.test(s?.url || '') && !playbackIssue(s, state.settings.avoidDvOnly)).slice(0, speedBudget.maxSources);
+    if (!candidates.length) { toast('Nenhuma fonte HTTP(S) elegível para medir nesta seleção.'); return; }
+    speedButton.disabled = true;
+    speedNote.textContent = `Medindo ${candidates.length} fonte(s) com até ${Math.round(speedBudget.measureBytes / 1048576)} MB cada…`;
+    try {
+      await measureSources(candidates.map(s => ({ key: s.sourceKey, url: s.url })), { signal, onResult: (key, result) => { view.speed[key] = result; paintSpeed(); } });
+      if (!signal.aborted) speedNote.textContent = `Medição feita sobre a fonte real. Até ${Math.round(speedBudget.measureBytes / 1048576)} MB por fonte; a lista e a escolha automática não mudam.`;
+    } catch (error) {
+      if (!signal.aborted) speedNote.textContent = `Não foi possível medir: ${error.message}`;
+    } finally { if (!disposedButton()) speedButton.disabled = false; }
+  }
+  const disposedButton = () => !document.body.contains(speedButton);
+  function paintSpeed() {
+    for (const node of list.querySelectorAll('.source')) {
+      const result = view.speed?.[node.dataset.focus];
+      const host = node.querySelector('.source-speed');
+      if (!host) continue;
+      host.textContent = result ? formatSpeed(result) : '';
+      host.hidden = !result;
+    }
+  }
 }
 function sourceCard(s,providers,choose,initial=false) {
   const f=factsFor(s,state.settings.preferences),issue=playbackIssue(s,state.settings.avoidDvOnly);
@@ -952,9 +985,35 @@ function showPlayer(context) {
     const q = video.getVideoPlaybackQuality?.();
     stats.textContent = `Resolução decodificada: ${video.videoWidth || '—'} × ${video.videoHeight || '—'}\nBuffer disponível: ${buffered.toFixed(1)} s\nFrames perdidos: ${q?.droppedVideoFrames ?? 'indisponível'}\nFonte: ${context.stream.addonName || 'direta'}\nHDR e saída de áudio: não medidos\nTransporte: player nativo / HTTP(S)`;
   }
-  on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; });
-  on('playing', () => { status.hidden = true; chrome.setPlaying(true); reveal(); });
-  on('waiting', () => { status.hidden = false; status.textContent = 'Carregando vídeo…'; });
+  on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; if (pendingStart) { const target = pendingStart; pendingStart = 0; (async () => { try { await waitBuffer(target); } catch { return; } if (!disposed && !pauseOverlay?.isOpen()) play(); })(); } });
+  // Buffer e Rede: the visual series needs the initial play, not a stall before it started.
+  on('playing', () => { hasStarted = true; status.hidden = true; chrome.setPlaying(true); reveal(); });
+  // Buffer e Rede: with the custom buffer on, the TV waits for the configured amount of
+  // loaded media before starting, and holds the resume after a stall until the same
+  // target is back. Values come from PlayerSettings' bufferForPlayback(AfterRebuffer)Ms.
+  const playbackPrefs = () => readPlayback(state.settings.playback);
+  let pendingStart = 0, bufferHold = false, hasStarted = false;
+  async function waitBuffer(target) {
+    if (!(target > 0)) return 'ready';
+    status.hidden = false; status.textContent = bufferStatusText(target);
+    const outcome = await waitForBuffer({ target, read: () => bufferedAhead(video.buffered, video.currentTime), timeout: playbackPrefs().bufferWaitTimeout * 1000, signal: request.signal });
+    if (!disposed) status.hidden = true;
+    return outcome;
+  }
+  on('waiting', async () => {
+    status.hidden = false; status.textContent = 'Carregando vídeo…';
+    const target = rebufferTarget(playbackPrefs());
+    // The hold is for a rebuffer: before the first frame the element keeps its own policy.
+    if (disposed || bufferHold || !hasStarted || !(target > 0) || video.ended || pauseOverlay?.isOpen()) return;
+    bufferHold = true;
+    try {
+      video.pause();
+      const outcome = await waitBuffer(target);
+      if (disposed || outcome !== 'ready' || video.ended || pauseOverlay?.isOpen()) return;
+      play();
+    } catch { /* o controle remoto ou a navegação cancelaram a espera */ }
+    finally { bufferHold = false; }
+  });
   on('pause', () => { chrome.setPlaying(false); if(!manuallyHidden)reveal(); save(); });
   function updateTimeline() {
     const duration=video.duration,position=seekPreview.position();
@@ -973,7 +1032,12 @@ function showPlayer(context) {
   screen.addEventListener('mousemove', reveal); screen.addEventListener('focusin',()=>{if(!segments.focused())reveal();});
   const issue = playbackIssue(context.stream, state.settings.avoidDvOnly);
   if (issue) status.textContent = issue;
-  else { video.src = context.stream.url; play(); }
+  else {
+    video.src = context.stream.url;
+    // The start waits for the initial buffer only when the custom buffer is on.
+    pendingStart = initialTarget(playbackPrefs());
+    if (!pendingStart) play();
+  }
   player = { back(){
     if(seekPreview.active()){seekPreview.cancel();return true;}
     if(postPlay.isOpen()){postPlay.dismiss();return true;}

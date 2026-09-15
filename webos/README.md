@@ -27,6 +27,26 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Buffer e Rede (0.23)
+
+**Buffer de reprodução personalizado** liga os dois controles que o player da TV
+consegue obedecer: **Buffer inicial** (5 s, 0–20 s) espera o material carregado
+antes de começar, e **Buffer após travamento** (3 s, 0–20 s) segura a retomada
+depois de uma travessia por falta de buffer. Um **tempo limite de espera**
+(5–60 s, padrão 20 s) impede tela preta em conexões lentas. Desligado, o player
+mantém o comportamento de sempre.
+
+**Testar velocidade** na lista de fontes mede a fonte real pelo mesmo transporte
+do player e mostra taxa e latência no cartão (`9,4 Mbps · 230 ms`), com um
+orçamento pequeno de bytes: até 4 fontes, 2 MB cada, 8 s por fonte. A medição é
+informação — a ordem da lista e a escolha automática não mudam.
+
+Linhas que só existem no Media3 (janelas mínima/máxima em bytes, orçamento de
+memória, cache em disco, conexões paralelas/HTTP/2, memória nativa do ExoPlayer e
+AFR) continuam visíveis e marcadas como **Pendente**, com o motivo.
+
+[Comportamento, orçamento e limites](NETWORK.md).
+
 ## Reprodução automática (0.22)
 
 **Seleção automática de fonte** tem os quatro modos do fork. Manual (padrão)

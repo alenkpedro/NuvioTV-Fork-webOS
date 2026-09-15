@@ -74,6 +74,11 @@ Grupos: **Geral**, **Pular automaticamente**, **Player e Seleção de Fontes**,
   assistir" são controles reais — quatro modos em chips, cache de 1 h a 7 dias,
   atraso do trailer de 3 s a 15 s e o filtro de palavras (Regex) em diálogo.
   Ver [AUTO_PLAY.md](AUTO_PLAY.md).
+- **Buffer e Rede** entrou na 0.23 como grupo próprio: o interruptor de buffer
+  personalizado com **Buffer inicial**, **Buffer após travamento** e **Tempo
+  limite de espera** em passos, mais as linhas do Media3 (janelas em bytes,
+  orçamento de memória, cache em disco, conexões paralelas, memória nativa e AFR)
+  marcadas como **Pendente** com o motivo. Ver [NETWORK.md](NETWORK.md).
 
 ## Demais categorias
 

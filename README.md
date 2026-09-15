@@ -15,7 +15,15 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.22.0
+## Estado: prévia 0.23.0
+
+A 0.23.0 acrescenta **Buffer e Rede** em **Ajustes → Reprodução**: o **buffer de
+reprodução personalizado** com **Buffer inicial** (5 s) e **Buffer após
+travamento** (3 s), os padrões e as faixas do fork, mais um **tempo limite de
+espera** para não deixar tela preta — e o **teste de velocidade** na lista de
+fontes, que mede a fonte real pelo mesmo transporte do player e mostra taxa e
+latência no cartão com um orçamento pequeno de bytes. Ver
+[webos/NETWORK.md](webos/NETWORK.md).
 
 A 0.22.0 acrescenta a **reprodução automática** do fork em **Ajustes →
 Reprodução**: os quatro modos de seleção de fonte (Manual, Primeira fonte,

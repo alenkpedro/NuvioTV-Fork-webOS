@@ -37,6 +37,8 @@ Caminhos relativos a `app/src/main/java/com/nuvio/tv/`.
 | Pós-reprodução | Arte 200×113, coluna de ações 240, motivo 12/16, título 28/36, sinopse 14/20 em até 3 linhas | `ui/screens/player/PostPlayRecommendationOverlay.kt`, `PostPlayOverlay.kt` |
 | Contador do trailer | Linha de 13 px sob a sinopse, texto `Trailer em Ns`, sem foco; alimentada pelo contador de 5 s do fork | `ui/screens/player/PostPlayRecommendationState.kt` |
 | Reprodução automática | Modos, durações e atrasos em chips e passos dentro do grupo do fork (`settings-choices` 10 px, passo 44×44); o padrão do atraso usa o mesmo `settings-threshold` | `ui/screens/settings/PlaybackAutoPlaySettings.kt` |
+| Buffer e Rede | Mesmo `settings-threshold` do fork para as três durações, com os rótulos de `playback_buffer_*`; as linhas sem equivalente usam o marcador de pendência | `ui/screens/settings/PlaybackAutoPlaySettings.kt`, `NetworkSettingsScreen.kt` |
+| Medição de velocidade | Linha de 11 px em verde sob as etiquetas da fonte, sem foco próprio; o cartão continua sendo o alvo do controle | `ui/screens/settings/NetworkSettingsScreen.kt` |
 | Addons | Margens 36/28, bloco de instalação com padding 20 | `ui/screens/addon/AddonManagerScreen.kt` |
 
 Fonte, wordmark e SVGs de busca/biblioteca/ajustes são copiados **sem alteração**;

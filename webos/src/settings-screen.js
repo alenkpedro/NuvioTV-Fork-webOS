@@ -7,6 +7,7 @@ import { readPlayback, postPlayThresholdRange } from './core/playback.js';
 import { autoPlayModes, compileRegex } from './core/auto-play.js';
 import { cacheDurationLabel, clearLinkCache, linkCacheHours } from './core/link-cache.js';
 import { trailerDelayRange } from './core/trailer.js';
+import { bufferRanges, readBufferSeconds, readWaitTimeout } from './core/buffer.js';
 import { themes, settingsStyles, readAppearance } from './core/appearance.js';
 export const settingsCategories = Object.freeze([
   { id: 'account', title: 'Conta', subtitle: 'Conta e status de sincronização', icon: 'profile' },
@@ -187,6 +188,20 @@ export function settingsScreen(context) {
       redraw(`button[aria-label="${label}"]`);
     }, { class: 'settings-threshold-step', 'aria-label': label, disabled: delta < 0 ? play().trailerDelay <= trailerDelayRange[0] : play().trailerDelay >= trailerDelayRange[1] });
     const automationChip = (label, selected, action, description) => chip(label, selected, () => { action(); redraw(`button[aria-label="${label}"]`); }, description);
+    // PlayerSettings SliderSettingsItem for the two durations the TV media element can
+    // honour, plus the wait guard the fork applies before giving up on the buffer.
+    const bufferBounds = { bufferInitial: bufferRanges.initial, bufferAfterRebuffer: bufferRanges.afterRebuffer, bufferWaitTimeout: [5, 60] };
+    const bufferValue = key => key === 'bufferWaitTimeout' ? readWaitTimeout(play().bufferWaitTimeout) : readBufferSeconds(play()[key], key === 'bufferInitial' ? 'initial' : 'afterRebuffer');
+    const bufferStep = (label, delta, key) => {
+      const [min, max] = bufferBounds[key];
+      const value = bufferValue(key);
+      return button(delta < 0 ? '−' : '+', () => {
+        const current = bufferValue(key), next = key === 'bufferWaitTimeout' ? readWaitTimeout(current + delta) : readBufferSeconds(current + delta, key === 'bufferInitial' ? 'initial' : 'afterRebuffer');
+        if (next === current) return;
+        updatePlayback({ [key]: next });
+        redraw(`button[aria-label="${label}"]`);
+      }, { class: 'settings-threshold-step', 'aria-label': label, disabled: delta < 0 ? value <= min : value >= max });
+    };
     // SettingsTextInputDialog: the fork stores the pattern as typed, so an invalid
     // expression is refused here instead of silently never matching a source.
     function promptRegex() {
@@ -210,6 +225,30 @@ export function settingsScreen(context) {
       group('Legendas', 'Idioma, estilo e renderização',
         row('Aparência das legendas', 'Tamanho, cores, contorno e posição', () => navigate({ name: 'subtitle-appearance' })),
         pending('Renderização avançada', 'Usar libass para ASS/SSA', 'ASS/SSA com libass depende do decodificador Android; o webOS renderiza SRT e WebVTT.')),
+      group('Buffer e Rede', 'Quanto conteúdo manter na memória e como buscar os streams.',
+        toggle('Buffer de reprodução personalizado', 'Substitui o buffer padrão do player pelos valores abaixo. Se desativado, o player usa os valores padrão da TV.', () => play().customBuffer, value => { updatePlayback({ customBuffer: value }); redraw('button[aria-label="Buffer de reprodução personalizado"]'); }),
+        play().customBuffer ? el('div', { class: 'settings-threshold' },
+          el('span', { class: 'grow' }, el('strong', {}, 'Buffer inicial'), el('small', { class: 'muted' }, 'Quanto conteúdo deve ser carregado antes de iniciar a reprodução. Valores menores iniciam mais rápido, mas podem causar travamentos iniciais em conexões lentas.')),
+          bufferStep('Diminuir buffer inicial', -1, 'bufferInitial'),
+          el('span', { class: 'settings-threshold-value' }, `${play().bufferInitial}s`),
+          bufferStep('Aumentar buffer inicial', 1, 'bufferInitial')) : null,
+        play().customBuffer ? el('div', { class: 'settings-threshold' },
+          el('span', { class: 'grow' }, el('strong', {}, 'Buffer após travamento'), el('small', { class: 'muted' }, 'Quanto conteúdo carregar após a reprodução travar por falta de buffer. Valores maiores reduzem interrupções repetidas.')),
+          bufferStep('Diminuir buffer após travamento', -1, 'bufferAfterRebuffer'),
+          el('span', { class: 'settings-threshold-value' }, `${play().bufferAfterRebuffer}s`),
+          bufferStep('Aumentar buffer após travamento', 1, 'bufferAfterRebuffer')) : null,
+        play().customBuffer ? el('div', { class: 'settings-threshold' },
+          el('span', { class: 'grow' }, el('strong', {}, 'Tempo limite de espera'), el('small', { class: 'muted' }, 'Quanto esperar pelo buffer antes de iniciar assim mesmo.')),
+          bufferStep('Diminuir tempo limite de espera', -5, 'bufferWaitTimeout'),
+          el('span', { class: 'settings-threshold-value' }, `${play().bufferWaitTimeout}s`),
+          bufferStep('Aumentar tempo limite de espera', 5, 'bufferWaitTimeout')) : null,
+        play().customBuffer ? note('Estas configurações afetam o comportamento do buffer. Valores incorretos podem causar problemas na reprodução. O player nativo da TV só obedece a estas duas durações; os tamanhos em MB do Media3 não existem aqui.') : null,
+        pending('Duração mínima e máxima do buffer', 'Quanto manter carregado antes e depois da posição atual', 'São janelas do Media3 em bytes; o player da TV decide o próprio buffer. O port controla apenas o início e a retomada.'),
+        pending('Gerenciamento de uso de memória', 'Limita o buffer a uma parcela segura da memória do dispositivo', 'O orçamento de memória do ExoPlayer não existe no elemento de mídia da TV.'),
+        pending('Cache em disco', 'Salva bytes baixados para voltar sem baixar de novo', 'O cache de disco do Media3 é um armazenamento próprio; o webOS usa o cache do navegador.'),
+        pending('Rede personalizada', 'Múltiplas conexões paralelas e HTTP/2', 'Conexões paralelas e HTTP/2 são do cliente OkHttp; a TV usa o transporte do navegador.'),
+        pending('Memória nativa do ExoPlayer', 'Alocador off-heap e otimizações de busca', 'Recurso do ExoPlayer Android, sem equivalente no webOS.'),
+        pending('Ajuste automático de taxa de quadros (AFR)', 'Alterar a taxa de atualização da tela conforme o vídeo', 'Um aplicativo web no webOS não pode trocar a frequência do painel; o recurso do fork é do modo Android.')),
       group('Reprodução automática', 'Fila, maratona e recomendações',
         toggle('Recomendações após assistir', 'Recomendar filmes e séries depois que assistir.', () => play().postPlayRecommendations, value => { updatePlayback({ postPlayRecommendations: value }); redraw('button[aria-label="Recomendações após assistir"]'); }),
         play().postPlayRecommendations ? el('div', { class: 'settings-threshold' },
@@ -292,7 +331,7 @@ export function settingsScreen(context) {
       group('Diagnóstico', 'Versão e dados desta instalação',
         row('Versão do app', 'Pacote instalado nesta TV', () => textDialog('Versão do app', `Nuvio Fork para webOS ${version}\n${base}\nAlvo: LG 55UT8050 / webOS 24`), { value: version }),
         row('Addons instalados', 'Add-ons desta TV', () => textDialog('Addons instalados', state.addons.map(addon => `${addon.manifest.name} · ${new URL(addon.url).hostname}`).join('\n') || 'Nenhum add-on instalado.'), { value: String(state.addons.length) }),
-        pending('Executar teste de velocidade', 'Medir velocidade de download e latência', 'O teste do fork mede a fonte em reprodução com o cliente Media3; o webOS não expõe a mesma medição.')),
+        row('Teste de velocidade', 'Mede a fonte real pelo mesmo transporte do player', () => textDialog('Teste de velocidade', 'Abra um título, entre em Assistir e use “Testar velocidade” na lista de fontes. A medição roda sobre a fonte HTTP(S) real, com um orçamento de poucos MB por fonte, e não altera a ordem da lista nem a escolha automática.'), { value: 'Na lista de fontes' })),
       group('Cache', 'Apaga dados carregados nesta sessão',
         row('Limpar cache de metadados', 'Apaga biografias e capas carregadas nesta sessão', () => { clearMetadataCache(); toast('Cache limpo.'); }),
         pending('Limpar cache de imagens', 'Apaga imagens guardadas pelo app Android', 'As imagens no webOS usam o cache do navegador da TV.'))
