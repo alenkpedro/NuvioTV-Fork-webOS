@@ -84,6 +84,26 @@ Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
 - [ ] Uma coleção com **lista do Trakt** aparece com a fonte marcada como não suportada
       nesta TV — ela continua guardada e é devolvida à conta quando você edita aqui.
 
+### R5. Segunda rodada (0.26.0)
+- [ ] **Voltar das fontes**: com a lista de fontes aberta, usar o **botão Voltar do
+      controle**. Esperado: voltar aos detalhes, sem nenhum botão "Voltar" na barra.
+- [ ] **Corte de layout**: olhar o primeiro cartão da lista de fontes e o item **Conta** no
+      rail dos Ajustes com o foco neles. Esperado: contorno completo, sem corte.
+- [ ] **Negrito da legenda**: Ajustes → Reprodução → **Aparência das legendas** → alternar
+      **Negrito** com a legenda na tela. Esperado: ligado fica Medium (como sempre foi);
+      desligado fica visivelmente mais fino. (Se você tiver o arquivo Regular do Netflix
+      Sans, dá para trocar a face fina como descrito nas notas da versão.)
+- [ ] **Painéis no padrão**: Ajustes → Integrações → **Avaliações MDBList** e **TMDB**, e
+      Reprodução → **Idiomas e próximo episódio**. Esperado: mesmo desenho do resto dos
+      Ajustes, com a chave digitável (contador + Salvar) e seletores que abrem lista pelo
+      controle.
+- [ ] **Coleções na Home**: abrir **Ajustes → Conteúdo e Descoberta → Coleções**. Esperado:
+      cada coleção diz quantas fileiras entram na Home, e cada fonte diz **pronta**,
+      **add-on não instalado** ou **não suportada nesta TV**. Na Home, o que não pode abrir
+      aparece com o motivo.
+- [ ] **Segurar o OK**: segurar em um cartão de Continuar assistindo. Esperado: abre a janela
+      uma vez, sem acionar nenhum botão sozinho.
+
 ## Bloco A — essencial
 
 ### A1. Abrir e navegar

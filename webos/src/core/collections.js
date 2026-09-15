@@ -110,21 +110,24 @@ export function moveIn(list, id, move) {
   return next;
 }
 export const moveFolder = (list, id, folderId, move) => replace(list, id, item => ({ ...item, folders: moveIn(item.folders, folderId, move) }));
-// One rail per folder that has at least one source the TV can open; a pinned collection
-// comes first, like the fork's pinToTop.
-export function collectionRails(collections) {
+// One rail per folder: a pinned collection comes first, like the fork's pinToTop. A folder
+// whose sources the TV cannot open still produces a rail, marked with the reason, so a
+// collection created elsewhere never disappears from the Home without an explanation.
+export function collectionRails(collections, { addonInstalled = () => true } = {}) {
   const rows = [];
-  for (const collection of [...collections].sort((a, b) => Number(b.pinToTop) - Number(a.pinToTop))) {
+  const ordered = [...collections].sort((a, b) => Number(b.pinToTop) - Number(a.pinToTop));
+  for (const collection of ordered) {
     for (const folder of collection.folders) {
-      const sources = folder.sources.filter(isPlayableSource);
-      if (!sources.length) continue;
+      const usable = folder.sources.filter(source => source.kind === 'tmdb' || (source.kind === 'catalog' && addonInstalled(source)));
+      const title = collection.folders.length > 1 ? `${collection.title} · ${folder.title}` : folder.title;
+      const key = `collection-${collection.id}-${folder.id}`;
+      if (usable.length) { rows.push({ key, collectionId: collection.id, folderId: folder.id, pinned: collection.pinToTop === true, title, sources: usable }); continue; }
+      const catalog = folder.sources.find(source => source.kind === 'catalog');
       rows.push({
-        key: `collection-${collection.id}-${folder.id}`,
-        collectionId: collection.id,
-        folderId: folder.id,
-        pinned: collection.pinToTop === true,
-        title: collection.folders.length > 1 ? `${collection.title} · ${folder.title}` : folder.title,
-        sources
+        key, collectionId: collection.id, folderId: folder.id, pinned: collection.pinToTop === true, title, sources: [], unavailable: catalog ? 'addon' : 'unsupported',
+        unavailableMessage: catalog
+          ? `O add-on “${catalog.addonName || catalog.addonId}” desta coleção não está instalado nesta TV.`
+          : folder.sources.length ? 'Esta pasta só tem fontes que a TV não abre (listas do Trakt, por exemplo).' : 'Esta pasta ainda não tem fontes.'
       });
     }
   }

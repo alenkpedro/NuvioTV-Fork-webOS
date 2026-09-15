@@ -35,7 +35,24 @@ test('partial ratings preserve other sources and use only read lookups without N
  const f=await fixture(page,{partial:true});await detail(page);await expect(page.locator('.rating-item')).toHaveCount(3);await expect(page.getByRole('button',{name:'IMDb: 8,2',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Avaliações indisponíveis',exact:true})).toBeVisible();const calls=f.calls.filter(x=>x.url.includes('api.mdblist'));expect(calls).toHaveLength(4);for(const call of calls){expect(call.method).toBe('POST');expect(call.body).toEqual({ids:['tt100'],provider:'imdb'});expect(call.headers.authorization).toBeUndefined();expect(call.url).toContain('/rating/movie/');}await page.getByRole('button',{name:'Letterboxd: 4,1',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('Fonte: MDBList');await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Letterboxd: 4,1',exact:true})).toBeFocused();await page.screenshot({path:'test-results/ratings-1920.png'});
 });
 test('MDBList provider preferences persist separately and removal stops lookups',async({page})=>{
- const f=await fixture(page);await settings(page);await page.getByRole('checkbox',{name:'Letterboxd',exact:true}).uncheck();await page.getByRole('button',{name:'Salvar',exact:true}).click();expect(await page.evaluate(()=>localStorage.getItem('nuvio-fork.webos.v1').includes('fixture-key-123'))).toBe(false);await detail(page);await expect(page.locator('.detail-ratings')).toHaveAttribute('aria-busy','false');expect(f.calls.some(x=>x.url.includes('/rating/movie/letterboxd'))).toBe(false);await settings(page);await expect(page.locator('input[type=password]')).toHaveValue('');await page.getByRole('button',{name:'Remover chave',exact:true}).click();const before=f.calls.filter(x=>x.url.includes('api.mdblist')).length;await detail(page);await expect(page.getByRole('button',{name:'TMDB: 84',exact:true})).toBeVisible();expect(f.calls.filter(x=>x.url.includes('api.mdblist'))).toHaveLength(before);
+ const f=await fixture(page);await settings(page);await page.getByRole('button',{name:'Letterboxd',exact:true}).click();await page.getByRole('button',{name:'Salvar',exact:true}).click();expect(await page.evaluate(()=>localStorage.getItem('nuvio-fork.webos.v1').includes('fixture-key-123'))).toBe(false);await detail(page);await expect(page.locator('.detail-ratings')).toHaveAttribute('aria-busy','false');expect(f.calls.some(x=>x.url.includes('/rating/movie/letterboxd'))).toBe(false);await settings(page);await expect(page.getByRole('textbox',{name:'Chave de API MDBList'})).toHaveValue('');await page.getByRole('button',{name:'Remover chave',exact:true}).click();const before=f.calls.filter(x=>x.url.includes('api.mdblist')).length;await detail(page);await expect(page.getByRole('button',{name:'TMDB: 84',exact:true})).toBeVisible();expect(f.calls.filter(x=>x.url.includes('api.mdblist'))).toHaveLength(before);
+});
+test('the MDBList key field is a plain text card with a counter and a format check', async ({ page }) => {
+  const f = await fixture(page);
+  await settings(page);
+  const input = page.getByRole('textbox', { name: 'Chave de API MDBList' });
+  await input.fill('fixture key 123');
+  await expect(page.locator('.settings-field-actions small')).toContainText('15 caracteres');
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(page.locator('.settings-field p[role=status]')).toContainText('apenas letras, números, hífen e sublinhado');
+  expect(f.calls.some(call => call.url.includes('api.mdblist') && call.body?.apikey === 'fixture key 123')).toBe(false);
+  await input.fill('fixture-key-123');
+  await expect(page.locator('.settings-field-actions small')).toContainText('15 caracteres');
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(page.locator('.settings-field p[role=status]')).toContainText('Preferências salvas');
+  await page.screenshot({ path: 'test-results/settings-mdblist-1920.png' });
+  await detail(page);
+  expect(f.calls.some(call => call.url.includes('apikey=fixture-key-123'))).toBe(true);
 });
 test('leaving detail cancels late rating results without changing history or rebuilding the old screen',async({page})=>{
  const f=await fixture(page,{delay:700});await detail(page);await expect.poll(()=>f.calls.filter(x=>x.url.includes('api.mdblist')).length).toBe(3);await page.keyboard.press('Escape');await expect(page.locator('.home-rows')).toBeVisible();await expect(page.locator('.detail-ratings')).toHaveCount(0);expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).progress)).toEqual({});

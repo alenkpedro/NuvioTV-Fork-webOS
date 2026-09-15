@@ -4,7 +4,15 @@ import {readSubtitleStyle,subtitleStyleDefaults} from '../src/core/subtitle-styl
 import {segmentIdentity,normalizeSegments,activeSegment,fetchSegments} from '../src/core/skip-segments.js';
 import {readPlayback} from '../src/core/playback.js';
 test('subtitle appearance bounds and palette preserve the fixed default and reject font overrides',()=>{
- assert.deepEqual(readSubtitleStyle(),subtitleStyleDefaults);const s=readSubtitleStyle({size:999,offset:-99,opacity:-1,color:'red',fontFamily:'Arial',bold:'true'});assert.equal(s.size,200);assert.equal(s.offset,-20);assert.equal(s.opacity,0);assert.equal(s.color,'#ffffff');assert.equal(s.bold,false);assert.equal(s.fontFamily,undefined);
+ assert.deepEqual(readSubtitleStyle(),subtitleStyleDefaults);
+ // The look the port had (Netflix Sans Medium) is the bold state; the added weight range
+ // and the family come from the packaged faces, never from the saved object.
+ const s=readSubtitleStyle({size:999,offset:-99,opacity:-1,color:'red',fontFamily:'Arial',bold:'true'});
+ assert.equal(s.size,200);assert.equal(s.offset,-20);assert.equal(s.opacity,0);assert.equal(s.color,'#ffffff');assert.equal(s.bold,true);assert.equal(s.fontFamily,undefined);
+ assert.equal(subtitleStyleDefaults.bold,true);assert.equal(subtitleStyleDefaults.v,2);
+ // A style saved before v2 keeps Medium, so an update never changes the viewer's look.
+ assert.equal(readSubtitleStyle({size:120,outline:false}).bold,true);
+ assert.equal(readSubtitleStyle({v:2,bold:false}).bold,false);
 });
 test('skip intervals require exact episode identity and valid finite positive windows',()=>{
  const context={id:'tt123:1:2',meta:{type:'series',id:'tt123'},episode:{season:1,episode:2}},id=segmentIdentity(context);assert.equal(id.imdb_id,'tt123');assert.equal(segmentIdentity({...context,episode:null}),null);assert.equal(segmentIdentity({...context,meta:{type:'movie'}}),null);

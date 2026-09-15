@@ -40,7 +40,9 @@ test('editing keeps the fork limits, the ordering and the pin',()=>{
   assert.deepEqual(collectionRails(list).map(rail=>rail.title),[]); // no folder, no rail
   list=addFolder(list,a.id,createFolder('Star Wars'));
   const folderId=list[0].folders[0].id;
-  assert.deepEqual(collectionRails(list).map(rail=>rail.title),[]); // a folder without sources stays out of the Home
+  // A folder without sources is visible with the reason instead of vanishing from the Home.
+  assert.deepEqual(collectionRails(list).map(rail=>rail.unavailable),['unsupported']);
+  assert.match(collectionRails(list)[0].unavailableMessage,/ainda não tem fontes/);
   list=addSource(list,a.id,folderId,catalog);list=addSource(list,a.id,folderId,tmdb);
   assert.equal(collectionSourceCount(list[0]),2);
   assert.deepEqual(collectionRails(list).map(rail=>rail.title),['Star Wars']); // one rail per folder, sources merged

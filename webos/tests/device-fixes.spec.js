@@ -68,14 +68,16 @@ test('Esquerda still opens the menu from the Home', async ({ page }) => {
   await page.keyboard.press('ArrowLeft');
   await expect(page.locator('#app')).toHaveClass(/drawer-open/);
 });
-test('the source list has a visible way back to the details', async ({ page }) => {
+test('Back from the source list returns to the details without a visible button', async ({ page }) => {
   await boot(page);
   await page.goto('/');
   await drawer(page, 'Início');
   await page.getByRole('button', { name: /Horizonte de teste/ }).click();
   await page.getByRole('button', { name: 'Assistir', exact: true }).click();
   await expect(page.locator('.source')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Voltar para os detalhes', exact: true }).click();
+  // The user asked for the remote's Back key, not a button beside Atualizar.
+  await expect(page.getByRole('button', { name: 'Voltar para os detalhes' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { name: 'Horizonte de teste' })).toBeVisible();
   await expect(page.locator('.source')).toHaveCount(0);
 });
@@ -110,16 +112,16 @@ test('the TMDB key field accepts the full key and refuses a short one', async ({
   // Pasted keys keep their text (the TV keyboard adds spaces and dashes sometimes).
   await input.fill('a'.repeat(40));
   await expect(input).toHaveValue('a'.repeat(40));
-  await expect(page.locator('.metadata-form small')).toContainText('40/32');
+  await expect(page.locator('.settings-field-actions small')).toContainText('40/32');
   await input.fill('abc');
-  await expect(page.locator('.metadata-form small')).toContainText('3/32');
+  await expect(page.locator('.settings-field-actions small')).toContainText('3/32');
   await page.getByRole('button', { name: 'Salvar e verificar' }).click();
-  await expect(page.locator('.metadata-form p[role=status]')).toContainText('32 caracteres; chegaram 3');
+  await expect(page.locator('.settings-field p[role=status]')).toContainText('32 caracteres; chegaram 3');
   // Spaces and dashes are ignored, so a key copied from the browser still saves.
   await input.fill('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
-  await expect(page.locator('.metadata-form small')).toContainText('32/32');
+  await expect(page.locator('.settings-field-actions small')).toContainText('32/32');
   await page.getByRole('button', { name: 'Salvar e verificar' }).click();
-  await expect(page.locator('.metadata-form p[role=status]')).toContainText('TMDB conectado');
+  await expect(page.locator('.settings-field p[role=status]')).toContainText('TMDB conectado');
   expect(calls).toContain('/3/configuration');
 });
 

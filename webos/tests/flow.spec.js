@@ -490,11 +490,15 @@ test('automatic next resolves the same binge group, advances once, and does not 
 });
 test('playback preferences persist without resetting source preferences',async({page})=>{
   await install(page);await navigation(page,'Ajustes');await page.getByRole('button',{name:'Reprodução',exact:true}).click();await page.getByRole('button',{name:/Idiomas e próximo episódio/}).click();
-  await page.getByRole('combobox',{name:'Idioma do áudio',exact:true}).selectOption('pt-br');await page.getByRole('checkbox',{name:'Reproduzir próximo episódio automaticamente'}).check();await page.getByRole('combobox',{name:'Idioma das legendas',exact:true}).selectOption('off');
-  const prefs=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).settings);expect(prefs.playback.audio).toBe('pt-br');expect(prefs.playback.autoNext).toBe(true);expect(prefs.preferences).toEqual({});
-  await page.locator('main').evaluate(e=>e.scrollTop=0);await page.locator('#toast').evaluate(e=>e.hidden=true);
+  // The screen uses the app's own kit now: pickers open a dialog and toggles are switches.
+  await page.getByRole('button',{name:/^Idioma do áudio/}).click();
+  await page.getByRole('dialog',{name:'Idioma do áudio'}).getByRole('button',{name:'Português (Brasil)',exact:true}).click();
+  await page.getByRole('switch',{name:'Reproduzir próximo episódio automaticamente',exact:true}).click();
+  await page.getByRole('button',{name:/^Idioma das legendas/}).click();
+  await page.getByRole('dialog',{name:'Idioma das legendas'}).getByRole('button',{name:'Desativadas',exact:true}).click();
+  const prefs=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).settings);expect(prefs.playback.audio).toBe('pt-br');expect(prefs.playback.subtitles).toBe('off');expect(prefs.playback.autoNext).toBe(true);expect(prefs.preferences).toEqual({});
   await page.screenshot({path:'test-results/player-preferences-1920.png'});
-  await page.reload();await navigation(page,'Ajustes');await page.getByRole('button',{name:'Reprodução',exact:true}).click();await page.getByRole('button',{name:/Idiomas e próximo episódio/}).click();await expect(page.getByRole('combobox',{name:'Idioma do áudio',exact:true})).toHaveValue('pt-br');
+  await page.reload();await navigation(page,'Ajustes');await page.getByRole('button',{name:'Reprodução',exact:true}).click();await page.getByRole('button',{name:/Idiomas e próximo episódio/}).click();await expect(page.getByRole('button',{name:/^Idioma do áudio/})).toContainText('Português (Brasil)');
 });
 test('unaired successor is visible but cannot start automatically or via the remote',async({page})=>{
   await startSeriesForNext(page,{autoNext:true},{released:'2999-01-01'});
@@ -1005,9 +1009,12 @@ test('pause series metadata fits the logical canvas with long episode title and 
 test('fork subtitle appearance updates live, preserves family, persists and resets only appearance',async({page})=>{
  await syncFixture(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();const dialog=page.getByRole('dialog'),overlay=page.locator('.subtitle-overlay');
  await dialog.getByRole('button',{name:'Aumentar tamanho',exact:true}).click();await expect(overlay).toHaveCSS('font-size','21.384px');await expect(dialog.getByRole('button',{name:'Aumentar tamanho',exact:true})).toBeFocused();
+ // The look the port already had (Netflix Sans Medium) is the bold state now; without bold
+ // the subtitle asks for a thinner face, so the toggle always changes what is on screen.
+ await expect(overlay).toHaveCSS('font-weight','500');await expect(overlay).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
  await dialog.getByRole('button',{name:'Cor do texto: Amarelo',exact:true}).click();await expect(overlay).toHaveCSS('color','rgb(255, 215, 0)');await dialog.getByRole('button',{name:'Diminuir opacidade do texto',exact:true}).click();await expect(overlay).toHaveCSS('color','rgba(255, 215, 0, 0.9)');
- await dialog.getByRole('button',{name:'Negrito',exact:true}).click();await expect(overlay).toHaveCSS('font-weight','700');await dialog.getByRole('button',{name:'Contorno',exact:true}).click();await expect(overlay).toHaveCSS('text-shadow','none');
- await dialog.getByRole('button',{name:'Aumentar posição vertical',exact:true}).click();expect(await overlay.evaluate(e=>parseFloat(getComputedStyle(e).bottom))).toBeCloseTo(62.1,1);await expect(overlay).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');await expect(dialog).not.toContainText('Netflix');
+ await dialog.getByRole('button',{name:'Negrito',exact:true}).click();await expect(overlay).toHaveCSS('font-weight','400');await expect(overlay).toHaveCSS('font-family','"Netflix Sans Regular", Inter, Arial, sans-serif');await dialog.getByRole('button',{name:'Contorno',exact:true}).click();await expect(overlay).toHaveCSS('text-shadow','none');
+ await dialog.getByRole('button',{name:'Aumentar posição vertical',exact:true}).click();expect(await overlay.evaluate(e=>parseFloat(getComputedStyle(e).bottom))).toBeCloseTo(62.1,1);await expect(dialog).not.toContainText('Netflix');
  await dialog.getByRole('button',{name:/^Atraso:/}).click();await dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();await dialog.getByRole('button',{name:'Voltar à aparência',exact:true}).click();await dialog.getByRole('button',{name:'Cor do texto: Amarelo',exact:true}).focus();await page.locator('#toast').evaluate(e=>e.hidden=true);await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await page.screenshot({path:'test-results/subtitle-appearance-1920.png'});
  await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=25;});await expect(overlay).toHaveCSS('font-size','21.384px');
  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();await dialog.getByRole('button',{name:'Restaurar aparência padrão',exact:true}).click();await expect(overlay).toHaveCSS('font-size','19.44px');await expect(overlay).toHaveCSS('font-weight','500');await expect(overlay).toHaveCSS('color','rgb(255, 255, 255)');await expect(dialog).toContainText('Atraso: +100 ms');

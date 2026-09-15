@@ -27,9 +27,21 @@ test('collections built in another client arrive through the account blob',()=>{
   assert.equal(sourceKindLabel('other'), 'Outro cliente');
   assert.equal(describeSource(traktSource), 'Lista do Trakt · Minha lista Trakt (não suportada nesta TV)');
   assert.equal(isPlayableSource(traktSource), false);
-  // Only the folder the TV can open becomes a Home rail.
-  assert.deepEqual(collectionRails(parsed).map(rail => rail.title), ['Sagas do Xperience · Star Wars']);
-  assert.deepEqual(collectionRails(parsed)[0].sources.map(source => source.kind), ['catalog', 'tmdb']);
+  // Only the folder with a usable source becomes a real rail; the empty one still shows up
+  // with the reason, so nothing disappears from the Home without an explanation.
+  const rails = collectionRails(parsed, { addonInstalled: source => source.addonId === 'local.test' });
+  assert.deepEqual(rails.map(rail => rail.title), ['Sagas do Xperience · Star Wars', 'Sagas do Xperience · Vazia']);
+  assert.deepEqual(rails[0].sources.map(source => source.kind), ['catalog', 'tmdb']);
+  assert.equal(rails[0].unavailable, undefined);
+  assert.equal(rails[1].unavailable, 'unsupported');
+  assert.match(rails[1].unavailableMessage, /ainda não tem fontes/);
+  // An add-on that is not installed is reported as such instead of an empty row.
+  const missing = collectionRails(parsed, { addonInstalled: () => false });
+  assert.equal(missing[0].sources.length, 1);
+  assert.equal(missing[0].unavailableMessage, undefined);
+  const many = [{ id: 'c', title: 'C', folders: [{ id: 'f', title: 'F', sources: [{ kind: 'catalog', addonId: 'gone', type: 'movie', catalogId: 'x' }] }] }];
+  assert.equal(collectionRails(many, { addonInstalled: () => false })[0].unavailable, 'addon');
+  assert.match(collectionRails(many, { addonInstalled: () => false })[0].unavailableMessage, /não está instalado nesta TV/);
 });
 test('pushing keeps foreign sources and the fields the other client needs',()=>{
   const parsed = parseAccountCollections(accountBlob);

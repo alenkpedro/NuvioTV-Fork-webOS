@@ -3,7 +3,7 @@
 // folders and each folder owns sources. The port keeps the fork's shape, labels and
 // ordering with the two source families that work on this target (an installed add-on
 // catalog and TMDB) and leaves Trakt lists, cover art, tile shapes and JSON import out.
-import { addFolder, addSource, collectionLimits, collectionSourceCount, createCollection, createFolder, describeSource, moveFolder, moveIn, removeCollection, removeFolder, removeSource, renameCollection, renameFolder, sourceKindLabel, tmdbMediaTypes, tmdbSorts, tmdbSourceTypes, togglePin } from './core/collections.js';
+import { addFolder, addSource, collectionLimits, collectionRails, collectionSourceCount, createCollection, createFolder, describeSource, moveFolder, moveIn, removeCollection, removeFolder, removeSource, renameCollection, renameFolder, sourceKindLabel, tmdbMediaTypes, tmdbSorts, tmdbSourceTypes, togglePin } from './core/collections.js';
 import { catalogEntries } from './core/discovery.js';
 // SettingsTextInputDialog / confirmation dialog, same shape as the fork's editors.
 function inputDialog(el, button, { title, label, value, onSave }) {
@@ -36,8 +36,11 @@ function choiceDialog(el, button, { title, description, options, onPick, onCance
   sheet.querySelector('.collection-choice')?.focus();
 }
 export function collectionsScreen(context) {
-  const { main, el, button, state, persist, navigate, toast, account, pushCollections, syncCollections, syncStatus } = context;
+  const { main, el, button, state, persist, navigate, toast, account, pushCollections, syncCollections, syncStatus, addonInstalled } = context;
   const collections = () => state.collections || (state.collections = []);
+  const installed = source => addonInstalled ? addonInstalled(source) : true;
+  const railsOf = collection => collectionRails([collection], { addonInstalled: installed });
+  const sourceStatus = source => source.kind === 'other' ? 'não suportada nesta TV' : source.kind === 'catalog' && !installed(source) ? 'add-on não instalado' : 'pronta';
   const save = patch => { state.collections = patch(collections()); persist(); pushCollections?.(); draw(); };
   const host = el('div', { class: 'collections-body' });
   const status = el('p', { class: 'settings-note muted', role: 'status' }, '');
@@ -63,7 +66,7 @@ export function collectionsScreen(context) {
     if (!list.length) { host.replaceChildren(el('p', { class: 'notice', role: 'status' }, 'Nenhuma coleção ainda. Crie uma para organizar suas fileiras na Home.')); return; }
     host.replaceChildren(...list.map((collection, index) => el('article', { class: 'collection-row' },
       button([el('strong', {}, collection.title),
-        el('small', { class: 'muted' }, `${collection.folders.length} pasta(s) · ${collectionSourceCount(collection)} fonte(s)`),
+        el('small', { class: 'muted' }, `${collection.folders.length} pasta(s) · ${collectionSourceCount(collection)} fonte(s) · ${railsOf(collection).filter(rail => rail.sources.length).length} fileira(s) na Home`),
         collection.pinToTop ? el('span', { class: 'collection-pin' }, 'Fixada') : null],
         () => navigate({ name: 'collection-editor', collectionId: collection.id }),
         { class: 'collection-open', 'aria-label': `${collection.title}: abrir editor`, 'data-focus': `collection-${collection.id}` }),
@@ -90,8 +93,10 @@ export function collectionsScreen(context) {
 }
 
 export function collectionEditorScreen(context) {
-  const { main, el, button, state, persist, navigate, toast, route, signal } = context;
+  const { main, el, button, state, persist, navigate, toast, route, signal, addonInstalled } = context;
   const collections = () => state.collections || (state.collections = []);
+  const installed = source => addonInstalled ? addonInstalled(source) : true;
+  const sourceStatus = source => source.kind === 'other' ? 'não suportada nesta TV' : source.kind === 'catalog' && !installed(source) ? 'add-on não instalado' : 'pronta';
   const current = () => collections().find(collection => collection.id === route.collectionId);
   const save = patch => { state.collections = patch(collections()); persist(); context.pushCollections?.(); draw(); };
   const host = el('div', { class: 'collection-editor-body' });
@@ -162,7 +167,7 @@ export function collectionEditorScreen(context) {
       button('↓', () => save(list => moveFolder(list, collection.id, folder.id, 1)), { class: 'collection-action', 'aria-label': `Mover ${folder.title} para baixo`, disabled: index === collection.folders.length - 1 }),
       button('Remover', () => confirmDialog(el, button, { title: 'Remover pasta?', message: `A pasta “${folder.title}” e as fontes dela saem desta coleção.`, label: 'Remover', onConfirm: () => save(list => removeFolder(list, collection.id, folder.id)) }), { class: 'collection-action danger', 'aria-label': `Remover ${folder.title}` }));
     const sourceRow = (source, position) => el('div', { class: 'collection-source' },
-      el('span', { class: 'grow' }, el('strong', {}, sourceKindLabel(source.kind)), el('small', { class: 'muted' }, describeSource(source))),
+      el('span', { class: 'grow' }, el('strong', {}, `${sourceKindLabel(source.kind)} · ${sourceStatus(source)}`), el('small', { class: 'muted' }, describeSource(source))),
       button('Remover', () => save(list => removeSource(list, collection.id, folder.id, position)), { class: 'collection-action danger', 'aria-label': `Remover fonte ${describeSource(source)}` }));
     const body = folder.sources.length ? el('div', { class: 'collection-sources' }, ...folder.sources.map(sourceRow)) : el('p', { class: 'muted' }, 'Nenhuma fonte nesta pasta ainda.');
     return el('section', { class: 'collection-folder' },

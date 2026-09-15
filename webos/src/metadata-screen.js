@@ -2,6 +2,7 @@
 import {enrichPlayerMetadata} from './core/player-artwork.js';
 import {people,trailers,readMetadataSettings,saveMetadataSettings,youtubeId} from './core/metadata.js';
 import {installRatings,collectionSection} from './ratings-screen.js';
+import {createSettingsKit} from './settings-kit.js';
 const roles={Creator:'Criação',Director:'Direção',Writer:'Roteiro',Acting:'Atuação',Directing:'Direção',Writing:'Roteiro'};
 export function launchTrailer(ytId,{signal,Bridge=globalThis.PalmServiceBridge,timeout=8000,browser=false}={}) {
   if(!youtubeId(ytId))return Promise.reject(Error('Trailer inválido.'));
@@ -111,16 +112,30 @@ export async function personScreen(ctx) {
   draw();main.append(el('p',{class:'metadata-source muted'},person.error?'Dados do addon':'Dados de pessoas e filmografia: TMDB'));
 }
 export function metadataSettingsScreen(ctx) {
-  const {main,el,button,metadata,signal}=ctx,config=readMetadataSettings(localStorage);
-  main.append(el('h1',{},'TMDB'),el('p',{class:'muted'},'Complete elenco, biografias, filmografia, recomendações e trailers. Use sua chave de API v3 do TMDB; ela fica somente nesta TV.'));
-  const input=el('input',{type:'text',inputmode:'text','aria-label':'Chave de API TMDB',autocomplete:'off',spellcheck:'false',maxlength:40,placeholder:config.key?'Chave salva — deixe vazio para manter':'Cole a chave de API v3 (32 caracteres)'}),counter=el('small',{class:'muted','aria-live':'polite'}),language=el('select',{'aria-label':'Idioma dos metadados'},[['pt-BR','Português (Brasil)'],['en-US','English'],['es-ES','Español']].map(([value,label])=>el('option',{value,selected:value===config.language},label))),status=el('p',{role:'status'});
-  // The TV keyboard sometimes drops characters in secret fields, so the key is typed in
-  // the open with a counter: the user can see 32/32 before saving.
+  const {main,el,button,icon,toast,metadata,signal}=ctx,config=readMetadataSettings(localStorage);
+  const kit=createSettingsKit({el,button,icon,toast});
+  const pane=el('div',{class:'settings-pane'});
+  let validation;signal?.addEventListener('abort',()=>validation?.abort(),{once:true});
+  // The TV keyboard drops characters in secret fields, so the key is typed in the open with
+  // a counter: the user sees 32/32 before saving (same shape as the MDBList screen).
   const normalizeKey = value => String(value || '').replace(/[\s-]/g, '').toLowerCase();
-  const paintCounter = () => { const clean = normalizeKey(input.value); counter.textContent = clean ? `${clean.length}/32 caracteres` : 'Nenhuma chave digitada.'; counter.classList.toggle('warning', Boolean(clean) && !/^[a-f0-9]{32}$/.test(clean)); };
-  input.addEventListener('input', paintCounter);
-  let validation;signal.addEventListener('abort',()=>validation?.abort(),{once:true});
-  const save=button('Salvar e verificar',async()=>{validation?.abort();const active=validation=new AbortController();save.disabled=true;try{const typed=normalizeKey(input.value),key=typed || config.key;if(!key)throw Error('Informe sua chave de API v3 do TMDB.');if(!/^[a-f0-9]{32}$/.test(key))throw Error(`A chave do TMDB tem 32 caracteres; chegaram ${key.length}.`);saveMetadataSettings(localStorage,{key,language:language.value});config.key=key;input.value='';paintCounter();input.placeholder='Chave salva — deixe vazio para manter';metadata.clear();status.textContent='Verificando…';await metadata.validate(active.signal);if(!signal.aborted && !active.signal.aborted)status.textContent='TMDB conectado. Reabra os detalhes do título para carregar os dados.';}catch(error){if(!signal.aborted && !active.signal.aborted)status.textContent=error.message;}finally{if(validation===active)save.disabled=false;}});
-  main.append(el('div',{class:'metadata-form'},el('label',{},'Chave da API',input),counter,el('label',{},'Idioma',language),el('div',{class:'toolbar'},save,button('Remover chave',()=>{validation?.abort();save.disabled=false;try{saveMetadataSettings(localStorage,{key:'',language:language.value});config.key='';input.value='';paintCounter();input.placeholder='Cole a chave de API v3 (32 caracteres)';metadata.clear();status.textContent='TMDB desativado nesta TV. Os dados dos addons continuam disponíveis.';}catch{status.textContent='Não foi possível alterar o armazenamento desta TV.';}})),status),el('img',{src:'assets/tmdb.svg',alt:'TMDB',class:'tmdb-logo'}),el('p',{class:'metadata-attribution muted'},'This product uses the TMDB API but is not endorsed or certified by TMDB.'));
-  paintCounter();
+  function draw(){
+    const input=el('input',{type:'text',inputmode:'text','aria-label':'Chave de API TMDB',autocomplete:'off',spellcheck:'false',maxlength:40,placeholder:config.key?'Chave salva — deixe vazio para manter':'Cole a chave de API v3 (32 caracteres)'}),
+      counter=el('small',{class:'muted','aria-live':'polite'}),status=el('p',{role:'status'});
+    const paintCounter=()=>{const clean=normalizeKey(input.value);counter.textContent=clean?`${clean.length}/32 caracteres`:'Nenhuma chave digitada.';counter.classList.toggle('warning',Boolean(clean)&&!/^[a-f0-9]{32}$/.test(clean));};
+    input.addEventListener('input',paintCounter);
+    const save=button('Salvar e verificar',async()=>{validation?.abort();const active=validation=new AbortController();save.disabled=true;try{const typed=normalizeKey(input.value),key=typed || config.key;if(!key)throw Error('Informe sua chave de API v3 do TMDB.');if(!/^[a-f0-9]{32}$/.test(key))throw Error(`A chave do TMDB tem 32 caracteres; chegaram ${key.length}.`);saveMetadataSettings(localStorage,{key,language:config.language});config.key=key;input.value='';paintCounter();input.placeholder='Chave salva — deixe vazio para manter';metadata.clear();status.textContent='Verificando…';await metadata.validate(active.signal);if(!signal?.aborted && !active.signal.aborted)status.textContent='TMDB conectado. Reabra os detalhes do título para carregar os dados.';}catch(error){if(!signal?.aborted && !active.signal.aborted)status.textContent=error.message;}finally{if(validation===active)save.disabled=false;}},{class:'primary'});
+    const remove=button('Remover chave',()=>{validation?.abort();try{saveMetadataSettings(localStorage,{key:'',language:config.language});config.key='';input.value='';paintCounter();metadata.clear();status.textContent='TMDB desativado nesta TV. Os dados dos addons continuam disponíveis.';}catch{status.textContent='Não foi possível alterar o armazenamento desta TV.';}});
+    const languages=[['pt-BR','Português (Brasil)'],['en-US','English'],['es-ES','Español']];
+    pane.replaceChildren(
+      kit.header('TMDB','Elenco, imagens, recomendações e trailers dos títulos.'),
+      kit.group('Chave da API','Complete o que os add-ons não trazem; a chave fica somente nesta TV',
+        kit.field({title:'Chave da API TMDB',subtitle:'32 caracteres; nenhuma URL de vídeo ou credencial Nuvio é enviada',control:input,actions:[save,remove],hint:counter,status})),
+      kit.group('Idioma dos metadados','Sinopses, imagens e nomes de gênero',
+        kit.choices('Idioma dos metadados',...languages.map(([code,label])=>kit.chip(label,config.language===code,()=>{saveMetadataSettings(localStorage,{key:config.key,language:code});config.language=code;metadata.clear();draw();`Metadados em ${label}`})))),
+      kit.note('This product uses the TMDB API but is not endorsed or certified by TMDB.'));
+    paintCounter();
+  }
+  main.append(el('div',{class:'settings-workspace settings-workspace-single'},pane),el('img',{src:'assets/tmdb.svg',alt:'TMDB',class:'tmdb-logo'}));
+  draw();
 }

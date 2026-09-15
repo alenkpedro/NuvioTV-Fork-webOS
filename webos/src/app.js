@@ -175,6 +175,8 @@ function navigate(next, replace = false) {
   route = next; render();
 }
 function back(force = false) {
+  // The menu the user has open is the first thing Back closes.
+  if (drawerOpen) { setDrawer(false); return; }
   // Only a dialog the user can see may consume Back: player overlays stay mounted hidden.
   const dialog = root.querySelector('[role=dialog]:not([hidden])');
   if (dialog) { (dialog.querySelector('[data-dismiss]') || dialog.querySelector('button'))?.click(); return; }
@@ -182,6 +184,9 @@ function back(force = false) {
   if(route.name==='discover' && document.activeElement?.closest('.discover-grid')) {root.querySelector('[data-picker]')?.focus();root.querySelector('main').scrollTop=0;return;}
   if(route.name==='search' && document.activeElement?.closest('.search-results')) {root.querySelector('input[type=search]')?.focus();root.querySelector('main').scrollTop=0;return;}
   if (route.name === 'profiles') { toast('Escolha um perfil para continuar.'); return; }
+  // A source list without a stack (returning from playback, or after the TV relaunched the
+  // app) always leads back to the title, never to the menu.
+  if (route.name === 'streams' && !stack.length && route.meta) { route = { name: 'detail', meta: route.meta, addon: route.addon, restoreFocus: 'detail-play' }; render(); return; }
   if (root.querySelector('.sidebar') && !stack.length) {
     if (!drawerOpen) { setDrawer(true); return; }
     if (window.webOSSystem?.platformBack) window.webOSSystem.platformBack();
@@ -253,7 +258,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, collections: showCollections, 'collection-editor': showCollectionEditor, 'collection-source': showCollectionSource, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el,button,icon,toast}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, collections: showCollections, 'collection-editor': showCollectionEditor, 'collection-source': showCollectionSource, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
@@ -377,8 +382,10 @@ async function cachedMetaJSON(url, signal) {
 }
 async function showHome(main, signal) {
   const recent = layout.continueWatching ? continueHistory(state) : [];
-  // Coleções: cada pasta com ao menos uma fonte vira uma fileira, as fixadas primeiro.
-  const rails = collectionRails(state.collections || []);
+  // Coleções: cada pasta com fonte utilizável vira uma fileira; as que a TV não abre entram
+  // com o motivo, para nunca desaparecerem da Home sem explicação.
+  const addonOf = source => state.addons.find(addon => (source?.addonId && addon.manifest.id === source.addonId) || (source?.addonUrl && addon.url === source.addonUrl));
+  const rails = collectionRails(state.collections || [], { addonInstalled: source => Boolean(addonOf(source)) });
   if (!state.addons.length && !recent.length && !rails.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon instalado. Adicione um para começar.')); return;
   }
@@ -408,7 +415,7 @@ async function showHome(main, signal) {
     } else if (r.error) notice(rows, `${catalogs[i].addon.manifest.name}: ${r.error.message}`);
   }
   if (rails.length) {
-    const collectionResults = await mapLimit(rails, async rail => {
+    const collectionResults = await mapLimit(rails.filter(rail => rail.sources.length), async rail => {
       try { return { rail, data: await fetchCollectionSource(rail.sources[0], signal) }; }
       catch (error) { return { rail, error }; }
     }, signal);
@@ -422,6 +429,9 @@ async function showHome(main, signal) {
       } else if (value.error) notice(rows, `${value.rail.title}: ${value.error.message}`);
       else notice(rows, `${value.rail.title}: esta fonte não devolveu títulos.`);
     }
+    // A collection that cannot be opened stays visible with the reason, instead of simply
+    // missing from the Home.
+    for (const rail of rails.filter(entry => !entry.sources.length)) notice(rows, `${rail.title}: ${rail.unavailableMessage}`);
   }
   if (first) updateHomeHero(first);
   else notice(rows, 'Nenhum conteúdo encontrado.');
@@ -560,7 +570,7 @@ function textDialog(title, body) {
   const close = button('Fechar', () => { dialog.remove(); previous?.focus({ preventScroll: true }); }, { 'data-dismiss': true });
   dialog.firstChild.append(close); root.append(dialog); close.focus();
 }
-function metadataContext(main,signal) {return {main,signal,el,button,card,poster,route,root,navigate,textDialog,metadata,ratings,readTrailer:()=>readPlayback(state.settings.playback),qr:url=>{
+function metadataContext(main,signal) {return {main,signal,el,button,icon,toast,card,poster,route,root,navigate,textDialog,metadata,ratings,readTrailer:()=>readPlayback(state.settings.playback),qr:url=>{
   const matrix=qrcode(0,'M');matrix.addData(url);matrix.make();const count=matrix.getModuleCount(),canvas=el('canvas',{width:(count+8)*4,height:(count+8)*4,'aria-label':'QR code do trailer',role:'img'}),ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#000';for(let r=0;r<count;r++)for(let c=0;c<count;c++)if(matrix.isDark(r,c))ctx.fillRect((c+4)*4,(r+4)*4,4,4);return canvas;
 }};}
 async function showDetail(main, signal) {
@@ -729,7 +739,7 @@ async function showStreams(main, signal) {
     }
   };
   const toggle = button(view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas', () => { view.showAll = !view.showAll; toggle.textContent = view.showAll ? 'Aplicar filtros do fork' : 'Mostrar todas'; display(); }, { 'data-focus': 'source-filters' });
-  const chips = el('div', { class: 'stream-chips' }, button('Voltar', () => back(), { 'data-focus': 'source-back', 'aria-label': 'Voltar para os detalhes' }), button('Atualizar', () => { view.rows = null; route.restoreFocus = 'source-refresh'; render(); }, { 'data-focus': 'source-refresh', 'aria-label': 'Atualizar fontes' }));
+  const chips = el('div', { class: 'stream-chips' }, button('Atualizar', () => { view.rows = null; route.restoreFocus = 'source-refresh'; render(); }, { 'data-focus': 'source-refresh', 'aria-label': 'Atualizar fontes' }));
   for (const provider of [null, ...providers.map((_, i) => i)]) chips.append(button(provider === null ? 'Todos' : providers[provider].manifest.name, () => {
     view.provider = provider; [...chips.querySelectorAll('[data-provider]')].forEach(b => b.classList.toggle('selected', b.dataset.provider === String(provider))); display();
   }, { class: provider === view.provider ? 'selected' : '', 'data-provider': String(provider), 'data-focus': `source-addon-${provider}` }));
@@ -942,6 +952,7 @@ function showSettings(main, signal) { settingsScreen(settingsContext(main, signa
 function collectionsContext(main, signal) {
   return { main, signal, el, button, icon, state, persist, navigate, toast, route,
     account: account.user ? { email: account.user.email } : null,
+    addonInstalled: source => state.addons.some(addon => (source?.addonId && addon.manifest.id === source.addonId) || (source?.addonUrl && addon.url === source.addonUrl)),
     pushCollections: () => scheduleCollectionsPush(),
     syncCollections: () => syncCollections(signal),
     syncStatus: () => state.collectionsSync || null };

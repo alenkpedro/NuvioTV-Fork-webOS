@@ -5,15 +5,18 @@ export function installRemote({ root, back, playerKey, boundaryLeft, onLeftColum
   // adds it where it helps — holding OK on an element marked [data-longpress] opens the
   // short-press action on release and the extra action from the 'longpress' event.
   const longPressMs = 600;
-  let hold = null;
+  let hold = null, swallowEnter = false;
   const longPressTarget = () => document.activeElement?.closest?.('[data-longpress]') || null;
   document.addEventListener('keydown', e => {
     const key = mapping[e.keyCode] ?? e.key;
+    // A TV remote keeps sending keydown while the button is held, and the browser would
+    // activate whatever got focus when the gesture fired. Enter is swallowed until release.
+    if (key === 'Enter' && swallowEnter) { e.preventDefault(); return; }
     if (key === 'Enter' && !e.repeat) {
       const target = longPressTarget();
       if (target) {
         e.preventDefault();
-        const timer = setTimeout(() => { const node = hold?.target; hold = null; node?.dispatchEvent(new CustomEvent('longpress', { bubbles: true })); }, longPressMs);
+        const timer = setTimeout(() => { const node = hold?.target; swallowEnter = true; hold = null; node?.dispatchEvent(new CustomEvent('longpress', { bubbles: true })); }, longPressMs);
         hold = { target, timer };
         return;
       }
@@ -56,10 +59,12 @@ export function installRemote({ root, back, playerKey, boundaryLeft, onLeftColum
   });
   document.addEventListener('keyup', e => {
     const key = mapping[e.keyCode] ?? e.key;
-    if (key !== 'Enter' || !hold) return;
+    if (key !== 'Enter') return;
+    swallowEnter = false;
+    if (!hold) return;
     clearTimeout(hold.timer);
     const node = hold.target; hold = null;
     if (node?.isConnected && document.activeElement === node) node.click();
   });
-  document.addEventListener('blur', () => { if (hold) { clearTimeout(hold.timer); hold = null; } });
+  document.addEventListener('blur', () => { swallowEnter = false; if (hold) { clearTimeout(hold.timer); hold = null; } });
 }

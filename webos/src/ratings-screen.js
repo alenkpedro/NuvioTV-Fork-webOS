@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import {ratingProviders,readRatingsSettings,saveRatingsSettings,ratingText,validRating} from './core/ratings.js';
+import {createSettingsKit} from './settings-kit.js';
 export function installRatings(ctx,meta) {
  const {main,el,button,signal,ratings,textDialog}=ctx;
  const slot=main.querySelector('.detail-source-space');if(!slot)return {update:()=>{}};
@@ -28,13 +29,35 @@ export function installRatings(ctx,meta) {
  return {update(next,rating){if(typeof rating==='number')base.tmdb={value:rating,origin:'TMDB'};draw();load({...meta,...next});}};
 }
 export function ratingsSettingsScreen(ctx) {
- const {main,el,button,signal,ratings}=ctx,config=readRatingsSettings(localStorage);
- main.append(el('h1',{},'Avaliações MDBList'),el('p',{class:'muted'},'Consulte as notas das fontes que você escolher. Sua chave fica somente nesta TV. Esta integração não envia avaliações pessoais nem altera listas ou histórico.'));
- const input=el('input',{type:'password','aria-label':'Chave de API MDBList',autocomplete:'off',maxlength:128,placeholder:config.key?'Chave salva — deixe vazio para manter':'Chave de API MDBList'}),enabled=el('input',{type:'checkbox',checked:config.enabled,'aria-label':'Ativar avaliações MDBList'}),providers=el('fieldset',{class:'chips'},el('legend',{},'Fontes de avaliações')),status=el('p',{role:'status'});
- for(const p of ratingProviders)providers.append(el('label',{},el('input',{type:'checkbox',checked:config.providers.includes(p.id),'data-provider':p.id}),p.label));
- const save=button('Salvar',()=>{try{const key=input.value.trim() || config.key;if(enabled.checked && !key)throw Error('Informe sua chave MDBList para ativar as avaliações.');saveRatingsSettings(localStorage,{key,enabled:enabled.checked,providers:[...providers.querySelectorAll('input:checked')].map(n=>n.dataset.provider)});config.key=key;input.value='';input.placeholder=key?'Chave salva — deixe vazio para manter':'Chave de API MDBList';ratings.clear();status.textContent=enabled.checked?'Preferências salvas. As fontes serão consultadas ao abrir um título.':'Avaliações MDBList desativadas. Notas do addon e TMDB continuam disponíveis.';}catch(error){status.textContent=error.message;}});
- main.append(el('div',{class:'metadata-form'},el('label',{},'Chave da API',input),el('label',{},enabled,'Ativar avaliações MDBList'),providers,el('div',{class:'toolbar'},save,button('Remover chave',()=>{try{saveRatingsSettings(localStorage,{...readRatingsSettings(localStorage),key:'',enabled:false});config.key='';input.value='';input.placeholder='Chave de API MDBList';enabled.checked=false;ratings.clear();status.textContent='Chave removida desta TV.';}catch{status.textContent='Não foi possível alterar o armazenamento da TV.';}})),status));
+ const {main,el,button,icon,toast,ratings}=ctx,kit=createSettingsKit({el,button,icon,toast}),config=readRatingsSettings(localStorage);
+ const pane=el('div',{class:'settings-pane'});
+ const grid=el('div',{class:'settings-workspace settings-workspace-single'},pane);
+ function draw(){
+  const input=el('input',{type:'text',inputmode:'text','aria-label':'Chave de API MDBList',autocomplete:'off',spellcheck:'false',maxlength:64,placeholder:config.key?'Chave salva — deixe vazio para manter':'Cole a chave (só letras e números)'}),
+   counter=el('small',{class:'muted','aria-live':'polite'}),status=el('p',{role:'status'});
+  const state=()=>readRatingsSettings(localStorage);
+  const paintCounter=()=>{const value=input.value.trim();counter.textContent=value?`${value.length} caracteres`:'Nenhuma chave digitada.';};
+  input.addEventListener('input',paintCounter);
+  const save=button('Salvar',()=>{try{const key=input.value.trim()||state().key;if(!key&&state().enabled)throw Error('Informe sua chave MDBList para ativar as avaliações.');if(key&&!/^[A-Za-z0-9_-]{8,128}$/.test(key))throw Error('A chave da MDBList usa apenas letras, números, hífen e sublinhado (8 a 128 caracteres).');saveRatingsSettings(localStorage,{key,enabled:state().enabled,providers:state().providers});input.value='';input.placeholder=key?'Chave salva — deixe vazio para manter':'Cole a chave (só letras e números)';paintCounter();ratings.clear();status.textContent=state().enabled?'Preferências salvas. As fontes serão consultadas ao abrir um título.':'Avaliações MDBList desativadas. Notas do addon e TMDB continuam disponíveis.';}catch(error){status.textContent=error.message;}},{class:'primary'});
+  const remove=button('Remover chave',()=>{try{saveRatingsSettings(localStorage,{key:'',enabled:false,providers:state().providers});input.value='';paintCounter();ratings.clear();draw();toast('Chave removida desta TV.');}catch{status.textContent='Não foi possível alterar o armazenamento da TV.';}});
+  const providers=ratingProviders.map(provider=>kit.chip(provider.label,state().providers.includes(provider.id),()=>{
+   const current=state(),list=new Set(current.providers);list.has(provider.id)?list.delete(provider.id):list.add(provider.id);
+   saveRatingsSettings(localStorage,{...current,providers:[...list]});ratings.clear();draw();
+  },`Mantém ${provider.label} nas notas`));
+  pane.replaceChildren(kit.header('Avaliações MDBList','Notas de fontes externas, somente leitura. A chave fica nesta TV.'),
+   kit.group('Ativação','Ligue as avaliações e guarde sua chave',
+    kit.toggle('Ativar avaliações MDBList','Consulta as fontes escolhidas ao abrir um título',()=>state().enabled,value=>{saveRatingsSettings(localStorage,{...state(),enabled:value});ratings.clear();draw();}),
+    kit.field({title:'Chave da API MDBList',subtitle:'Somente nesta TV; o app consulta apenas as notas públicas.',
+     control:input,actions:[save,remove],hint:counter,status})),
+   kit.group('Fontes de avaliações','Escolha quem pode responder',
+    kit.choices('Fontes de avaliações',...providers)),
+   kit.note('A integração é somente leitura: o port não envia avaliações pessoais nem altera listas ou histórico.'));
+  paintCounter();
+ }
+ main.append(grid);
+ draw();
 }
+
 export function collectionSection(ctx) {
  const {main,el,button,card,route,signal,metadata}=ctx,section=el('section',{class:'movie-collection',hidden:true});main.append(section);
  let reference=null,data=null,error='',loading=false,controller;
