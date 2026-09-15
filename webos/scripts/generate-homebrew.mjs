@@ -7,7 +7,7 @@ if (tag !== `webos-v${app.version}`) throw Error('Tag must match package version
 const filename = `${app.id}_${app.version}_all.ipk`, file = `packages/${filename}`;
 const manifest = {
   id: app.id, version: app.version, type: app.type, title: app.title,
-  appDescription: 'Telas de carregamento do fork, Home mais rápida e capas nas coleções.',
+  appDescription: 'Tela de carregamento do fork no player, miniatura pelo arquivo e Home com foco acompanhando.',
   iconUri: `https://raw.githubusercontent.com/${repo}/${tag}/webos/public/assets/icon.png`,
   sourceUrl: `https://github.com/${repo}/tree/${tag}`,
   rootRequired: false,
@@ -15,7 +15,7 @@ const manifest = {
   ipkHash: { sha256: createHash('sha256').update(readFileSync(file)).digest('hex') },
   ipkSize: statSync(file).size,
 };
-const index = { paging: { page: 1, count: 1, maxPage: 1, itemsTotal: 1 }, packages: [{ id: app.id, title: app.title, iconUri: manifest.iconUri, manifest, pool: 'main', shortDescription: 'Player do fork com telas de carregamento, capas nas coleções e Home progressiva.' }] };
+const index = { paging: { page: 1, count: 1, maxPage: 1, itemsTotal: 1 }, packages: [{ id: app.id, title: app.title, iconUri: manifest.iconUri, manifest, pool: 'main', shortDescription: 'Player do fork com a tela de carregamento do fork, miniaturas pelo arquivo e Home progressiva.' }] };
 writeFileSync('../apps.json', JSON.stringify(index, null, 2) + '\n');
 writeFileSync(`packages/${app.id}.manifest.json`, JSON.stringify(manifest, null, 2) + '\n');
 console.log(JSON.stringify({ file, bytes: manifest.ipkSize, sha256: manifest.ipkHash.sha256 }));

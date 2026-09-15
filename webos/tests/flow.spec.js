@@ -308,9 +308,14 @@ test('duplicate titles in different home catalogs restore focus to their own row
   await page.route('https://fixture.example/manifest.json', route => route.fulfill({ json: { id: 'local.test', name: 'Catálogo de teste', resources: ['catalog', 'meta'], types: ['movie', 'series'], catalogs: [{ id: 'first', name: 'Primeira faixa', type: 'movie' }, { id: 'second', name: 'Segunda faixa', type: 'movie' }] } }));
   await install(page); await navigation(page, 'Início');
   await expect(page.locator('.catalog-section').first().locator('.card').first()).toBeFocused();
+  // The Home draws rail by rail: wait for both rows before walking down (the placeholder focus is
+  // covered by its own test, in loading.spec.js).
+  await expect(page.locator('.skeleton-section')).toHaveCount(0);
   await page.keyboard.press('ArrowDown');
   expect(errors).toEqual([]);
   const second = page.locator('.catalog-section').nth(1).locator('.card').first();
+  // The poll reports what actually holds the focus when this ever fails.
+  await expect.poll(() => page.evaluate(() => document.activeElement?.dataset?.focus || document.activeElement?.getAttribute('aria-label') || document.activeElement?.tagName)).toBe('card-home-1-movie-ttfixture');
   await expect(second).toBeFocused();
   await page.keyboard.press('Enter'); await expect(page.locator('.detail-title')).toBeVisible();
   await page.keyboard.press('Escape'); await expect(second).toBeFocused();
@@ -1041,12 +1046,20 @@ test('skip auto hide and Back dismissal restore controls; late lookup cannot rev
 test('automatic skipping is opt-in, runs once per interval and never skips a paused video',async({page})=>{
  await segmentsFixture(page,{auto:['intro']});await page.locator('video').evaluate(v=>{v.pause();v.currentTime=12;});await expect(page.getByRole('button',{name:'Pular abertura',exact:true})).toBeVisible();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBe(12);await page.locator('video').evaluate(v=>v.play());await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThanOrEqual(20);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=12;});await page.locator('video').evaluate(v=>v.play());await expect(page.getByRole('button',{name:'Pular abertura',exact:true})).toBeVisible();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBeLessThan(16);
 });
-test('thumbnail cache uses one video and only nearby viewed frames, cancels on Back and expires after commit',async({page})=>{
- await playbackPrefs(page,{seekThumbnails:true});await page.route('**/clip.mp4',r=>{const body=fs.readFileSync('tests/fixtures/thumbnail.mp4'),range=r.request().headers().range?.match(/bytes=(\d+)-(\d*)/),start=range?Number(range[1]):0,end=range?.[2]?Math.min(Number(range[2]),body.length-1):body.length-1;return r.fulfill({status:range?206:200,contentType:'video/mp4',body:body.subarray(start,end+1),headers:{'Accept-Ranges':'bytes',...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})}});});await startFixtureVideo(page);await page.clock.install();
- for(const time of [10,20,30]){await page.clock.runFor(1200);await page.locator('video').evaluate(async(v,t)=>{v.currentTime=t;await new Promise(r=>v.addEventListener('seeked',r,{once:true}));await v.play();v.dispatchEvent(new Event('timeupdate'));v.pause();},time);}
- const timeline=page.getByRole('slider',{name:'Posição do vídeo'});await timeline.focus();await page.keyboard.down('ArrowLeft');await expect(page.locator('.seek-thumbnail')).toBeVisible();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBeCloseTo(30,0);await expect(page.locator('video')).toHaveCount(1);await page.locator('#toast').evaluate(e=>e.hidden=true);await page.screenshot({path:'test-results/seek-thumbnail-1920.png'});
- await page.keyboard.press('Escape');await page.keyboard.up('ArrowLeft');await expect(page.locator('.seek-thumbnail')).toBeHidden();expect(await page.locator('video').evaluate(v=>v.currentTime)).toBeCloseTo(30,0);
- await timeline.focus();await page.keyboard.down('ArrowLeft');await page.keyboard.up('ArrowLeft');await expect(page.locator('.seek-thumbnail')).toBeVisible();await page.clock.runFor(3100);await expect(page.locator('.seek-thumbnail')).toBeHidden();await leavePlayer(page);await expect(page.locator('.seek-thumbnail')).toHaveCount(0);
+test('the seek preview decodes the stream in its own element, cancels on Back and expires after commit',async({page})=>{
+ await playbackPrefs(page,{seekThumbnails:true});await page.route('**/clip.mp4',r=>{const body=fs.readFileSync('tests/fixtures/thumbnail.mp4'),range=r.request().headers().range?.match(/bytes=(\d+)-(\d*)/),start=range?Number(range[1]):0,end=range?.[2]?Math.min(Number(range[2]),body.length-1):body.length-1;return r.fulfill({status:range?206:200,contentType:'video/mp4',body:body.subarray(start,end+1),headers:{'Accept-Ranges':'bytes',...(range?{'Content-Range':`bytes ${start}-${end}/${body.length}`}:{})}});});
+ await startFixtureVideo(page);await page.clock.install();
+ // SeekThumbnailEngine.kt: the frame comes from the file itself, in a second element that only
+ // exists while a preview is open.
+ const timeline=page.getByRole('slider',{name:'Posição do vídeo'});await timeline.focus();await page.keyboard.down('ArrowLeft');
+ await expect(page.locator('.seek-thumbnail')).toBeVisible({timeout:15000});
+ await expect(page.locator('.seek-thumbnail video')).toHaveCount(1);
+ expect(await page.locator('.player-screen video:not(.seek-thumbnail-video)').evaluate(v=>v.currentTime)).toBeCloseTo(25,0);
+ await page.locator('#toast').evaluate(e=>e.hidden=true);await page.screenshot({path:'test-results/seek-thumbnail-1920.png'});
+ await page.keyboard.press('Escape');await page.keyboard.up('ArrowLeft');await expect(page.locator('.seek-thumbnail')).toBeHidden();
+ expect(await page.locator('.player-screen video:not(.seek-thumbnail-video)').evaluate(v=>v.currentTime)).toBeCloseTo(25,0);
+ await timeline.focus();await page.keyboard.down('ArrowLeft');await page.keyboard.up('ArrowLeft');await expect(page.locator('.seek-thumbnail')).toBeVisible({timeout:15000});await page.clock.runFor(3100);await expect(page.locator('.seek-thumbnail')).toBeHidden();
+ await leavePlayer(page);await expect(page.locator('.seek-thumbnail')).toHaveCount(0);await expect(page.locator('video')).toHaveCount(0);
 });
 
 test('outro starts next-episode prompt before percentage threshold and late segment results are cancelled on exit',async({page})=>{

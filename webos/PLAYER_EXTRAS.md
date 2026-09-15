@@ -63,52 +63,36 @@ executando tarefas periódicas. Navegador de desenvolvimento usa fetch; testes
 interceptam a API. Falha do serviço não interrompe o vídeo. Cancelar a tela
 ignora callbacks tardios; eventual pedido HTTPS já iniciado termina no timeout.
 
-## Miniaturas de busca — adaptação parcial
+## Miniaturas de busca — extração pelo próprio arquivo
 
 **Ajustes → Reprodução → Miniaturas ao buscar**, inicialmente desativado como no
 fork. O painel segue altura 108 dp, raio 6 dp, margens laterais 32 dp, inferior
 140 dp; acompanha a posição prevista e permanece até 3 segundos após confirmar.
 Voltar, outro painel, suspensão ou saída removem a prévia.
 
-O decoder/worker Android não existe neste port. Para a LG, o cache captura o
-próprio vídeo durante a reprodução com canvas, sem segundo player, downloads
-adicionais, alteração de CORS da mídia ou busca do vídeo para gerar imagens.
-Um quadro por intervalo de 10 s, no máximo 64, até 320×108 px (aproximadamente
-8,5 MiB de pixels no pior caso); o intervalo entre capturas é de 1 s até 1080p e
-de 1,5 s acima disso, porque escalar um quadro 4K custa mais e a reprodução tem
-prioridade. Prévia só usa quadros a até 10 s da posição
-pedida; lacunas ficam sem imagem. O cache é por reprodução e é liberado ao sair.
-Não há exportação de pixels ou persistência em disco.
+O fork (`SeekThumbnailEngine.kt`) não lê o quadro da superfície que está
+reproduzindo: ele abre o **próprio arquivo** com um `MediaMetadataRetriever`
+(reutilizado na sessão) e pede o quadro da posição desejada. O port faz o mesmo
+com **um elemento `<video>` escondido**, criado só na primeira prévia: o navegador
+desenha o quadro da posição buscada, e o painel mostra esse elemento. Como nada é
+lido de volta, a TV não devolve preto — o problema da 0.27/0.28 — e a reprodução
+não é tocada: nenhum canvas, nenhuma cópia de pixels, nenhum download extra até
+você usar as setas.
 
-Fontes até 4K (4096×2304) entram, inclusive as anunciadas como HDR ou Dolby
-Vision: o nome da fonte não decide mais nada, e a TV mostra o que ela consegue
-decodificar. Fonte com DRM detectado, tela protegida, imagem sem quadro
-decodificado ou app oculto não capturam, assim como pausa, buffering e painel
-aberto. Uma busca captura a posição nova na hora, sem esperar
-o próximo intervalo — a prévia já aparece no primeiro arrasto do scrubber. Três erros
-consecutivos desativam capturas naquela reprodução. A API de desenho é documentada
-em [drawImage](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage).
-Ainda falta o equivalente à extração antecipada de quadros de partes não vistas,
-a persistência Android e a confirmação de captura pelo compositor real da LG.
-Não se declara a função integralmente idêntica ao fork.
+O elemento é único por reprodução e reaproveitado: uma prévia nova busca a posição
+nova, e pedidos que chegam enquanto a busca anterior está em andamento são
+coalescidos no mais recente (a prioridade do fork). Enquanto o quadro não chega, o
+painel **não aparece** — nunca há uma caixa preta sobre a linha do tempo. Fonte com
+DRM detectado, tela protegida ou sem URL HTTP(S) não têm quadro para buscar e não
+abrem o segundo decodificador. Se a TV recusar o segundo vídeo, o port avisa **uma
+vez** ("A TV não conseguiu abrir/decodificar a prévia desta fonte") e desliga as
+miniaturas naquela reprodução.
 
-### Quando a TV não entrega o quadro
-
-Em muitas TVs o vídeo é composto por uma camada de hardware que o canvas não
-consegue ler; nesse caso o `drawImage` devolve preto, e a 0.27 mostrava esse preto
-como um bloco sobre a linha do tempo. A captura passou a esperar o quadro
-efetivamente apresentado (`requestVideoFrameCallback`, com `timeupdate` como
-alternativa) e, quando o canvas é legível, o port confere nove amostras do quadro
-antes de guardá-lo: um quadro preto **não entra no cache nem aparece**. Depois de
-duas respostas pretas seguidas ele avisa uma vez — "a TV não entrega o quadro para
-a prévia desta fonte" — e desliga as miniaturas naquela reprodução, em vez de
-deixar um bloco preto na tela. Se a origem for de outro domínio sem autorização de
-leitura (canvas contaminado), o port não consegue distinguir preto de cena escura
-e mantém o quadro como antes.
-
-A prévia também deixou de exigir um quadro a até 10 s: ela mostra o quadro mais
-próximo que já foi capturado, então andar um passo além do último trecho visto não
-apaga mais o painel.
+Limites que continuam existindo: o fork também extrai quadros de partes **não
+vistas** antecipadamente (fora do escopo deste port) e mantém um cache em disco
+compartilhado entre sessões; aqui o painel busca a posição pedida na hora, o que
+custa uma busca por arrasto em vez de ler um bitmap do cache. A confirmação de
+desempenho e de conflito de decodificador na LG continua dependendo do aparelho.
 
 ## Diagnóstico de reprodução no canto
 

@@ -9,7 +9,7 @@ const movie = { id: 'tt1000001', type: 'movie', name: 'Filme da fileira', releas
 const accountCollections = [{
   id: 'acc1', title: 'Sagas do Xperience', pinToTop: true, viewMode: 'TABBED_GRID', showAllTab: true,
   folders: [{
-    id: 'f1', title: 'Star Wars', tileShape: 'POSTER', hideTitle: false, coverImageUrl: 'https://images.fixture/cover.jpg', coverEmoji: '🚀',
+    id: 'f1', title: 'Star Wars', tileShape: 'SQUARE', hideTitle: false, coverImageUrl: 'https://images.fixture/cover.svg', coverEmoji: '🚀',
     sources: [{ provider: 'addon', addonId: 'local.test', type: 'movie', catalogId: 'test' }, { provider: 'trakt', traktListId: 5, title: 'Lista do Trakt' }]
   }]
 }];
@@ -48,7 +48,9 @@ async function mockAccount(page) {
     if (route.request().url().endsWith('manifest.json')) return json({ id: 'local.test', name: 'Addon da conta', resources: ['catalog', 'meta'], types: ['movie'], idPrefixes: ['tt'], catalogs: [{ id: 'test', type: 'movie', name: 'Coleção de teste' }] });
     return json({ metas: [movie] });
   });
-  await page.route('https://images.fixture/**', route => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') }));
+  // A wide cover in a folder that keeps the default square tile: the card follows the picture
+  // instead of cropping it into a poster box.
+  await page.route('https://images.fixture/**', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="340"><rect width="600" height="340" fill="#284568"/></svg>' }));
   await page.route('https://api.tiffara.com/**', route => route.fulfill({ json: { parentsGuide: [] } }));
   return requests;
 }
@@ -72,8 +74,12 @@ test('collections built in another client arrive with the account and travel bac
   await expect(rail.locator('.collection-card')).toContainText('Star Wars');
   await expect(rail.locator('.collection-card')).not.toContainText('Filme da fileira');
   const cover = rail.locator('.collection-card .collection-cover img');
-  await expect(cover).toHaveAttribute('src', 'https://images.fixture/cover.jpg');
+  await expect(cover).toHaveAttribute('src', 'https://images.fixture/cover.svg');
   await expect.poll(() => cover.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  // A 600×340 cover gets the wide box even though the folder asks for a square tile.
+  await expect(rail.locator('.collection-card')).toHaveClass(/collection-card-wide/);
+  const art = await rail.locator('.collection-card .art').evaluate(node => { const rect = node.getBoundingClientRect(); return { w: Math.round(rect.width), h: Math.round(rect.height) }; });
+  expect(art.w).toBeGreaterThan(art.h);
   await page.screenshot({ path: 'test-results/collections-cover-home-1920.png' });
   await expect.poll(() => requests.filter(r => r.path.endsWith('sync_pull_collections')).length).toBeGreaterThan(0);
   // The management screen shows the imported collection and its sync state.
@@ -95,7 +101,7 @@ test('collections built in another client arrive with the account and travel bac
   expect(pushed.body.p_collections_json[0].folders[0].sources[1].provider).toBe('trakt');
   // The cover and the appearance settings the other client chose travel back untouched, so an
   // edit here never wipes the folder art in the app.
-  expect(pushed.body.p_collections_json[0].folders[0]).toMatchObject({ tileShape: 'POSTER', hideTitle: false, coverImageUrl: 'https://images.fixture/cover.jpg', coverEmoji: '🚀' });
+  expect(pushed.body.p_collections_json[0].folders[0]).toMatchObject({ tileShape: 'SQUARE', hideTitle: false, coverImageUrl: 'https://images.fixture/cover.svg', coverEmoji: '🚀' });
   expect(pushed.body.p_collections_json[0]).toMatchObject({ viewMode: 'TABBED_GRID', showAllTab: true, focusGlowEnabled: true });
   expect(errors).toEqual([]);
 });

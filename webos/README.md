@@ -27,18 +27,19 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
-## Abertura, carregamento e resposta (0.28)
+## Abertura, carregamento e resposta (0.28–0.29)
 
-O app abre com a **tela do fork**: wordmark do Nuvio e anel de carregamento sobre fundo
-preto, até a primeira tela entrar. Escolher um título mostra o **esqueleto da própria
-tela** (fundo, logo, sinopse, botões, episódios) em vez de uma tela vazia, e a lista de
-fontes mostra linhas de esqueleto enquanto os add-ons respondem. A **Home entra por
-partes**: cada fileira tem o seu esqueleto e é substituída assim que aquele catálogo
-responde, sem esperar o mais lento, e as coleções deixaram de buscar títulos na Home (a
-capa vem da conta; os títulos entram ao abrir a pasta). O brilho e as formas são os do
-fork (`PlaceholderShimmer.kt`, `Skeletons.kt`). Catálogos e metadados ficam em memória por
-5 minutos, então voltar à Home não pergunta tudo de novo.
-[Comportamento, limites e testes](LOADING.md).
+O app abre com a **tela do fork**: wordmark do Nuvio e anel de carregamento cobrindo o painel
+inteiro, até a primeira tela entrar. **Abrir uma fonte mostra a tela de carregamento do fork**
+— imagem do título atrás, logo no meio, mensagem e a fonte sendo aberta — e um travamento de
+buffer depois disso é só o anel. Escolher um título mostra o **esqueleto da própria tela** e a
+lista de fontes mostra as linhas de espera com **os add-ons que estão sendo consultados**. A
+**Home entra por partes**: cada fileira tem o seu esqueleto (navegável, como no fork) e é
+substituída assim que aquele catálogo responde, sem esperar o mais lento; as coleções deixaram
+de buscar títulos na Home (a capa vem da conta; os títulos entram ao abrir a pasta). O brilho e
+as formas são os do fork (`PlaceholderShimmer.kt`, `Skeletons.kt`, `LoadingOverlay.kt`).
+Catálogos e metadados ficam em memória por 5 minutos, então voltar à Home não pergunta tudo de
+novo. [Comportamento, limites e testes](LOADING.md).
 
 ## Coleções (0.24)
 
@@ -147,9 +148,9 @@ opções de pular automaticamente começam desligadas. Os botões dependem dos
 intervalos disponíveis no IntroDB. O IPK inclui o serviço local necessário à TV.
 
 Ative **Miniaturas ao buscar** para prévias dos trechos já reproduzidos em
-fontes até 4K, sem segundo player. A captura espera o quadro apresentado e não guarda
-quadro preto; se a TV não entregar o quadro, o port avisa em vez de deixar um bloco
-preto na linha do tempo. Extração antecipada permanece pendente.
+fontes até 4K, sem segundo player. O port busca o quadro **no próprio arquivo**, como o
+`SeekThumbnailEngine.kt` do fork (um decodificador sob demanda), então a prévia não depende de
+ler a imagem da reprodução. Extração antecipada permanece pendente.
 [Comportamento, diferenças e limites](PLAYER_EXTRAS.md).
 
 ## Tela de pausa e logos (0.18)

@@ -1,4 +1,4 @@
-# Checklist de validação na LG 55UT8050 — versão 0.28.0
+# Checklist de validação na LG 55UT8050 — versão 0.29.0
 
 Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
 deve acontecer**; a validação física é a única coisa que os testes de navegador não
@@ -6,7 +6,7 @@ substituem. Veja também as pendências conhecidas no fim: elas já estão docum
 são falhas novas.
 
 > Esta versão nasceu das suas rodadas na TV: o **Bloco R** lista exatamente o que foi
-> corrigido a partir do seu relato, para conferência rápida. O **R7** é o desta versão.
+> corrigido a partir do seu relato, para conferência rápida. O **R8** é o desta versão.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -16,7 +16,7 @@ são falhas novas.
 ## Como usar
 
 - **Bloco A (essencial, ~10 min):** o que, se quebrar, quebra o resto.
-- **Bloco R (~20 min):** o que as rodadas na TV corrigiram, da mais recente (R7) para trás.
+- **Bloco R (~25 min):** o que as rodadas na TV corrigiram, da mais recente (R8) para trás.
 - **Bloco B (~15 min):** o que cada versão recente acrescentou (0.20 a 0.24).
 - **Bloco C (~20 min):** fluxos que nunca foram confirmados no aparelho desde a 0.4.
 - **Bloco D:** formatos de vídeo/áudio — só a TV responde.
@@ -31,7 +31,7 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
 ## Antes de começar
 
 1. **Atualizar:** Homebrew Channel → atualize a lista do repositório já salvo →
-   instale **Nuvio Fork**. Confirme a versão **0.28.0** em Ajustes → Sobre.
+   instale **Nuvio Fork**. Confirme a versão **0.29.0** em Ajustes → Sobre.
 2. **Entrar no perfil que você usa de verdade.** Coleções, biblioteca, histórico
    e preferências de reprodução são por perfil.
 3. Anote para o relatório: versão do firmware/webOS da TV, saída de áudio em uso
@@ -39,9 +39,28 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
    de teste você está usando.
 
 
-## Bloco R — correções das rodadas na TV (0.28, 0.27, 0.26 e 0.25)
+## Bloco R — correções das rodadas na TV (0.29, 0.28, 0.27, 0.26 e 0.25)
 
 Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R8. Quinta rodada (0.29.0)
+- [ ] **Abrir uma fonte (reproduzir)**: esperado a **tela de carregamento do fork** — a imagem
+      do filme/série atrás, a **logo no meio** (ou o título, quando não há logo), a mensagem de
+      carregamento e, embaixo, **o add-on e a fonte escolhida**. Nada mais no topo do painel.
+- [ ] **Buffer depois de começar**: pausar o buffer não mostra a tela inteira de novo, só o anel.
+- [ ] **Abertura do app**: esperado o wordmark com o anel **cobrindo a tela inteira** (antes
+      podia aparecer no canto).
+- [ ] **Escolher uma fonte**: esperado o backlog e a logo do título na coluna da esquerda e,
+      na lista, o esqueleto com **"Buscando fontes em N addon(s): nomes"**.
+- [ ] **Home**: esperado o primeiro cartão **já focado** sem esperar o add-on mais lento; descer
+      para uma fileira que ainda está carregando e ver o foco **acompanhar** o conteúdo quando
+      ele chega; rolar para baixo e para cima funciona em todas as fileiras.
+- [ ] **Coleções na Home**: esperado o cartão de cada pasta com a **capa na proporção da
+      imagem** (capa horizontal aparece larga, não cortada como pôster) e o nome embaixo.
+- [ ] **Miniaturas ao buscar**: ligar, reproduzir e arrastar a linha do tempo. Esperado a prévia
+      **com imagem** (agora o port busca o quadro no próprio arquivo, como o fork); enquanto o
+      quadro não chega o painel **não aparece**; se a TV recusar o segundo vídeo, um aviso único.
+- [ ] Comparar: a reprodução principal continua igual (sem travar) com as miniaturas ligadas.
 
 ### R7. Quarta rodada (0.28.0)
 - [ ] **Elenco na tela de pausa**: pausar 5 s, descer com a seta até o **primeiro** nome.
@@ -381,11 +400,11 @@ documentos de cada versão:
   no aplicativo da TV, como descrito em [AUTO_PLAY.md](AUTO_PLAY.md). Ao voltar do
   YouTube, o sistema pode relançar o app no Início — é o ciclo de vida do webOS, não
   uma ação do port.
-- **Miniaturas de busca**: dependem de a TV entregar o quadro decodificado ao canvas
-  (até 4K, inclusive fontes anunciadas como HDR/DV). Quando a TV compõe o vídeo por hardware
-  e o quadro sai preto, o port avisa uma vez e desliga as miniaturas naquela reprodução, em
-  vez de deixar um bloco preto na linha do tempo; em fonte de outro domínio sem autorização
-  de leitura, o port não consegue verificar o quadro.
+- **Miniaturas de busca**: o port busca o quadro no próprio arquivo, como o fork (um segundo
+  decodificador sob demanda), então a imagem aparece mesmo quando a TV não deixa ler a
+  superfície que está reproduzindo. Duas coisas continuam dependendo do aparelho: o suporte a
+  um segundo vídeo ao mesmo tempo (a TV pode recusar, e aí o port avisa uma vez) e a extração
+  antecipada de quadros de partes ainda não vistas, que não existe neste port.
 - **AFR**: um aplicativo web no webOS não troca a frequência do painel.
 - **Velocidade 2×**: o port desliga a correção de tom acima de 1× para aliviar o
   decodificador; se a fonte for muito pesada, 1,5× é o limite prático da TV.

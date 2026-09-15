@@ -2,6 +2,7 @@
 import { loadAddon, getJSON, resourceURL, supports, mapLimit, eachLimit } from './core/addons.js';
 import { defaults, enums, rankStreams, filterAndSort, factsFor, playbackIssue, sizeBytes } from './core/ranking.js';
 import { readState, saveState, progressKey, recordProgress } from './core/storage.js';
+import { installLoadingOverlay } from './player-loading.js';
 import { railSkeleton, detailSkeleton, streamsSkeleton } from './skeletons.js';
 import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
@@ -279,18 +280,14 @@ function card(meta, addon, progress, rowKey = '', {portrait=false} = {}) {
   const image = wide ? meta.background || meta.fanart || meta.poster : meta.poster;
   const node = button([poster(image, meta.name), el('strong', {}, meta.name || id), el('span', { class: 'muted' }, progress ? [progress.episode ? `T${progress.episode.season}:E${progress.episode.episode}` : '', `Retomar em ${clock(progress.time)}`].filter(Boolean).join(' · ') : meta.releaseInfo || '')], () => navigate(progress ? { name: 'streams', meta: { ...meta, type }, addon, type: progress.type, id: progress.id, episode: progress.episode } : { name: 'detail', meta: { ...meta, type }, addon }), { class: `card${progress ? ' continue-card' : ''}`, 'aria-label': meta.name || id, 'data-focus': `card-${rowKey}-${type}-${progress?.id || id}` });
   node.addEventListener('focus', () => {
+    // Scrolling the row is the Home's own focusin handler (it also covers the collection cards);
+    // here only the hero enrichment lives.
     const section = node.closest('.home-rows .catalog-section');
-    if (section) {
-      const viewport = section.parentElement;
-      if (!pointerFocus) {
-        viewport.scrollTop = Math.max(0, section.offsetTop - 40);
-        node.parentElement.scrollLeft = Math.max(0, node.offsetLeft - 52);
-      }
-      clearTimeout(heroTimer);
-      heroRequest?.abort();
-      section.dataset.lastFocus = node.dataset.focus;
-      heroTimer = setTimeout(() => { if (route.name === 'home') enrichHomeHero(meta, addon); }, 450);
-    }
+    if (!section) return;
+    clearTimeout(heroTimer);
+    heroRequest?.abort();
+    section.dataset.lastFocus = node.dataset.focus;
+    heroTimer = setTimeout(() => { if (route.name === 'home') enrichHomeHero(meta, addon); }, 450);
   });
   if (progress) node.querySelector('.art').append(el('progress', { max: progress.duration, value: progress.time, 'aria-label': 'Progresso assistido' }));
   // Long press on a Continue Watching card: resume, or take the title out of the row.
@@ -405,6 +402,17 @@ async function showHome(main, signal) {
   }
   main.append(el('section', { class: 'home-hero', 'aria-label': 'Título em destaque' }, el('div', { class: 'hero-fade' }), el('div', { class: 'hero-copy' })));
   const rows = el('div', { class: 'home-rows' }); main.append(rows);
+  // Every rail scrolls the same way, whatever kind of card it holds: the row that received the
+  // focus comes to the top of the viewport. The per-card handlers missed the collection cards,
+  // which left the Home looking stuck when the focus walked down from the first row.
+  rows.addEventListener('focusin', event => {
+    if (pointerFocus) return;
+    const card = event.target.closest('.card');
+    const section = card?.closest('.catalog-section');
+    if (!card || !section) return;
+    rows.scrollTop = Math.max(0, section.offsetTop - 40);
+    card.parentElement.scrollLeft = Math.max(0, card.offsetLeft - 52);
+  });
   let first = recent[0]?.meta;
   if (recent.length) {
     rows.append(el('section', { class: 'catalog-section continue-section' }, el('div', { class: 'section-head' }, el('h2', {}, 'Continuar assistindo')), el('div', { class: 'rail' }, recent.map(p => card(p.meta, null, p, 'continue')))));
@@ -415,10 +423,11 @@ async function showHome(main, signal) {
     if (section.folders.some(folder => folder.sources.length)) collectionSection(rows, section);
     else collectionUnavailable(rows, section.title, section.folders.find(folder => folder.unavailableMessage)?.unavailableMessage || 'Esta coleção ainda não tem fontes.');
   }
+  focusHomeIfIdle(main);
   // Catálogos: cada fileira entra assim que chega, com o esqueleto do fork no lugar enquanto
   // isso. Antes a Home esperava todas as respostas para desenhar a primeira fileira.
   const pending = catalogs.map(({ addon, catalog }, index) => {
-    const skeleton = railSkeleton(el, { title: catalogTitle(catalog, layout), cards: 6, landscape: layout.landscapePosters });
+    const skeleton = railSkeleton(el, { title: catalogTitle(catalog, layout), cards: 6, landscape: layout.landscapePosters, key: `home-${index}` });
     rows.append(skeleton);
     return { addon, catalog, skeleton, key: `home-${index}` };
   });
@@ -434,11 +443,30 @@ async function showHome(main, signal) {
       return;
     }
     if (!first) { first = metas[0]; updateHomeHero(first); }
-    skeleton.replaceWith(catalogSection(rows, catalogTitle(catalog, layout), metas, addon, () => navigate({ name: 'catalog', addon, catalog }), key));
+    // The placeholder row was focusable: the focus moves to the real card *before* the skeleton
+    // leaves the DOM, at the same place in the row. Removing a focused node makes the browser
+    // reset the focus to the body afterwards, which is what made the remote lose its place.
+    const held = [...skeleton.querySelectorAll('.skeleton-card')].indexOf(document.activeElement);
+    const section = catalogSection(rows, catalogTitle(catalog, layout), metas, addon, () => navigate({ name: 'catalog', addon, catalog }), key);
+    if (held >= 0) {
+      const cards = [...section.querySelectorAll('.rail .card')];
+      (cards[Math.min(held, cards.length - 1)] || cards[0])?.focus({ preventScroll: true });
+    }
+    skeleton.replaceWith(section);
+    focusHomeIfIdle(main);
   }, 3);
   if (!current(signal)) return;
   if (first) updateHomeHero(first);
   else notice(rows, 'Nenhum conteúdo encontrado.');
+  focusHomeIfIdle(main);
+}
+// The Home draws rail by rail: the first card must take the focus as soon as a rail lands, or
+// the remote has no starting point on the panel.
+function focusHomeIfIdle(main) {
+  if (drawerOpen || route.name !== 'home' || pointerFocus) return;
+  const active = document.activeElement;
+  if (active && active !== document.body && active !== main && main.contains(active)) return;
+  main.querySelector('.home-rows .card')?.focus({ preventScroll: true });
 }
 // CollectionRowSection.kt + CollectionFolderCardMedia.kt: the Home shows the cover the user
 // picked for each folder (image first, emoji next), with the folder title underneath. A folder
@@ -446,13 +474,19 @@ async function showHome(main, signal) {
 function collectionSection(rows, section) {
   const cards = section.folders.map(folder => {
     const cover = folder.cover || {};
-    const art = cover.image
-      ? el('div', { class: 'art collection-cover' }, el('img', { src: cover.image, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer', onerror: e => e.target.remove() }))
-      : el('div', { class: 'art collection-cover collection-cover-empty' }, cover.emoji ? el('span', { class: 'collection-emoji' }, cover.emoji) : icon('sidebar_library'));
+    const art = el('div', { class: 'art collection-cover' });
     const description = folder.sources.length ? describeSource(folder.sources[0]) : folder.unavailableMessage;
-    return button([art, cover.hideTitle ? null : el('strong', {}, folder.title), el('small', { class: 'muted' }, description)],
+    const card = button([art, cover.hideTitle ? null : el('strong', {}, folder.title), el('small', { class: 'muted' }, description)],
       () => navigate({ name: 'collection-source', collectionId: folder.collectionId, folderId: folder.folderId }),
       { class: `card collection-card${folder.sources.length ? '' : ' unavailable'}${cover.shape === 'LANDSCAPE' ? ' collection-card-wide' : cover.shape === 'POSTER' ? ' collection-card-poster' : ''}`, 'aria-label': `${folder.title}${folder.sources.length ? '' : ` · ${folder.unavailableMessage}`}`, 'data-focus': folder.key });
+    if (cover.image) {
+      const image = el('img', { class: 'collection-cover-image', src: cover.image, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer', onerror: event => event.target.remove() });
+      // Most folders keep the default square tile, but their cover is often a wide picture: follow
+      // the picture instead of cropping it into a poster box.
+      image.addEventListener('load', () => { if (cover.shape !== 'LANDSCAPE' && image.naturalWidth > image.naturalHeight * 1.15) card.classList.add('collection-card-wide'); }, { once: true });
+      art.append(image);
+    } else art.append(cover.emoji ? el('span', { class: 'collection-emoji' }, cover.emoji) : icon('sidebar_library'));
+    return card;
   });
   rows.append(el('section', { class: 'catalog-section collection-section' }, el('div', { class: 'section-head' }, el('h2', {}, section.title)), el('div', { class: 'rail' }, cards)));
 }
@@ -742,7 +776,7 @@ async function showStreams(main, signal) {
     }
   }
   if (!view.rows || Date.now() - view.loadedAt > 120000) {
-    const loading = streamsSkeleton(el); main.append(loading);
+    const loading = streamsSkeleton(el, { addons: providers.map(addon => addon.manifest.name) }); main.append(loading);
     const responses = await mapLimit(providers, async (addon, provider) => {
       const result = await getJSON(resourceURL(addon, 'stream', context.type, context.id), { signal });
       if (!Array.isArray(result.streams)) throw Error('Resposta de fontes inválida.');
@@ -1095,11 +1129,13 @@ function bytes(n) { return Number.isFinite(n) && n > 0 ? `${(n / 1024 ** 3).toFi
 function showPlayer(context) {
   root.replaceChildren();
   const video = el('video', { autoplay: true, playsinline: true, preload: 'metadata' });
-  const status = el('p', { class: 'player-status', role: 'status' }, 'Abrindo vídeo…');
+  // LoadingOverlay.kt + PlayerBufferingIndicator: the loading screen replaces the old status bar
+  // that floated at the top of the panel.
+  const loading = installLoadingOverlay({ el, context });
   const stats = el('pre', { class: 'stats', hidden: true });
   const chrome=playerUI({el,button,context,video,toggle,restart:()=>{seekTo(0);play();},audio:()=>tracks.openAudio(),subtitles:()=>tracks.openSubtitles(),sources:()=>episodes.openCurrent(),episodes:()=>episodes.open(),speed:()=>tracks.openSpeed(),aspect:()=>aspect.cycle(),stats:()=>{stats.hidden=!stats.hidden;screen.classList.toggle('stats-visible',!stats.hidden);chrome.info.setAttribute('aria-pressed',String(!stats.hidden));updateStats();}});
   const {controls,timeline,pause}=chrome;
-  const screen = el('div', { class: 'player-screen controls-visible' }, video, chrome.top, status, stats, controls); root.append(screen);
+  const screen = el('div', { class: 'player-screen controls-visible' }, video, chrome.top, loading.element, stats, controls); root.append(screen);
   let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview, pauseOverlay, segments, thumbnails, parental, postPlay, postPlayCandidates = [];
   const aspect=installAspect({video,settings:state.settings,persist,notify:toast});
   const listeners = [];
@@ -1171,7 +1207,7 @@ function showPlayer(context) {
   const clockTimer=setInterval(()=>{if(!document.hidden && screen.classList.contains('controls-visible'))chrome.updateClock();},1000);
   chrome.updateClock();
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
-  async function play() { try { await video.play(); } catch { if (!disposed) { status.hidden = false; status.textContent = 'Pressione Reproduzir para iniciar.'; chrome.setPlaying(false); } } }
+  async function play() { try { await video.play(); } catch { if (!disposed) { loading.show('Pressione Reproduzir para iniciar.'); chrome.setPlaying(false); } } }
   function toggle() { video.paused ? play() : pauseOverlay.manualPause(); reveal(); }
   function updateStats() {
     if (stats.hidden) return;
@@ -1182,7 +1218,7 @@ function showPlayer(context) {
   }
   on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; if (pendingStart) { const target = pendingStart; pendingStart = 0; (async () => { try { await waitBuffer(target); } catch { return; } if (!disposed) await beginPlayback(); })(); } });
   // Buffer e Rede: the visual series needs the initial play, not a stall before it started.
-  on('playing', () => { hasStarted = true; status.hidden = true; chrome.setPlaying(true); reveal(); });
+  on('playing', () => { hasStarted = true; loading.ready(); chrome.setPlaying(true); reveal(); });
   // Buffer e Rede: with the custom buffer on, the TV waits for the configured amount of
   // loaded media before starting, and holds the resume after a stall until the same
   // target is back. Values come from PlayerSettings' bufferForPlayback(AfterRebuffer)Ms.
@@ -1190,13 +1226,14 @@ function showPlayer(context) {
   let pendingStart = 0, bufferHold = false, hasStarted = false;
   async function waitBuffer(target) {
     if (!(target > 0)) return 'ready';
-    status.hidden = false; status.textContent = bufferStatusText(target);
+    loading.show(bufferStatusText(target));
     const outcome = await waitForBuffer({ target, read: () => bufferedAhead(video.buffered, video.currentTime), timeout: playbackPrefs().bufferWaitTimeout * 1000, signal: request.signal });
-    if (!disposed) status.hidden = true;
+    if (!disposed && !hasStarted) loading.show('Carregando vídeo…');
     return outcome;
   }
   on('waiting', async () => {
-    status.hidden = false; status.textContent = 'Carregando vídeo…';
+    // Before the first frame this is the loading screen; after it, the buffering ring only.
+    if (hasStarted) loading.buffer(true, 'Carregando vídeo…'); else loading.show('Carregando vídeo…');
     const target = rebufferTarget(playbackPrefs());
     // The hold is for a rebuffer: before the first frame the element keeps its own policy.
     if (disposed || bufferHold || !hasStarted || !(target > 0) || video.ended || pauseOverlay?.isOpen()) return;
@@ -1207,7 +1244,7 @@ function showPlayer(context) {
       if (disposed || outcome !== 'ready' || video.ended || pauseOverlay?.isOpen()) return;
       play();
     } catch { /* o controle remoto ou a navegação cancelaram a espera */ }
-    finally { bufferHold = false; }
+    finally { bufferHold = false; loading.buffer(false); }
   });
   on('pause', () => { chrome.setPlaying(false); if(!manuallyHidden)reveal(); save(); });
   function updateTimeline() {
@@ -1220,8 +1257,8 @@ function showPlayer(context) {
   function updateMetadata(){const chips=[];if(video.videoWidth&&video.videoHeight)chips.push(`${video.videoWidth} × ${video.videoHeight}`);const size=sizeBytes(context.stream);if(size>0)chips.push(size>=1024**3?`${(size/1024**3).toFixed(1)} GB`:`${Math.round(size/1024**2)} MB`);chrome.meta.replaceChildren(...chips.map(text=>el('span',{},text)));updateTimeline();}
   on('loadedmetadata',updateMetadata);on('resize',updateMetadata);on('progress',updateTimeline);on('durationchange',updateTimeline);on('ratechange',()=>chrome.updateClock());
   on('timeupdate', () => {updateTimeline();updateStats();if(Date.now()-savedAt>10000){save();savedAt=Date.now();}});
-  on('ended', () => { save(); status.hidden = false; status.textContent = 'Reprodução concluída.'; reveal(); });
-  on('error', () => { status.hidden = false; status.textContent = 'Não foi possível reproduzir esta fonte. O link pode ter expirado ou o formato não ser compatível. Volte e escolha outra fonte.'; controls.classList.remove('faded'); controls.inert=false; clearTimeout(hideTimer); });
+  on('ended', () => { save(); loading.show('Reprodução concluída.'); reveal(); });
+  on('error', () => { loading.show('Não foi possível reproduzir esta fonte. O link pode ter expirado ou o formato não ser compatível. Volte e escolha outra fonte.'); controls.classList.remove('faded'); controls.inert=false; clearTimeout(hideTimer); });
   const visibility = () => { if (document.hidden) { video.pause(); save(); } };
   document.addEventListener('visibilitychange', visibility);
   screen.addEventListener('mousemove', reveal); screen.addEventListener('focusin',()=>{if(!segments.focused())reveal();});
@@ -1231,14 +1268,15 @@ function showPlayer(context) {
   async function beginPlayback() {
     if (disposed) return;
     if (tracks?.prepareSubtitles) {
-      status.hidden = false; status.textContent = 'Preparando legendas…';
+      loading.show('Preparando legendas…');
       try { await tracks.prepareSubtitles(); } catch { /* segue sem legenda */ }
       if (disposed) return;
-      status.hidden = true;
+      // The loading screen stays until the first frame: only 'playing' takes it away.
+      loading.show('Carregando vídeo…');
     }
     if (!pauseOverlay?.isOpen()) play();
   }
-  if (issue) status.textContent = issue;
+  if (issue) loading.show(issue);
   else {
     video.src = context.stream.url;
     pendingStart = initialTarget(playbackPrefs());
@@ -1271,7 +1309,7 @@ function showPlayer(context) {
     if(chrome.key(key,hideControls)){e.preventDefault();return true;}
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; loading.dispose(); segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   const controlSize=new ResizeObserver(()=>screen.style.setProperty('--subtitle-control-clearance',`${controls.offsetHeight+8}px`));controlSize.observe(controls);
   const disposeBase=cleanupPlayer;cleanupPlayer=()=>{controlSize.disconnect();disposeBase();};
   const artworkSignal=request.signal;
@@ -1369,5 +1407,8 @@ async function boot() {
   if (account.hasSession) route = { name: 'profiles', automatic: true };
   if (!account.hasSession && !state.guestMode && !state.addons.length) route = { name: 'welcome' };
   await render();
+  // The splash covers the panel until the first screen is actually painted, then it leaves for
+  // good (the first render is the slow one: account restore included).
+  requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('#splash')?.remove()));
 }
 boot();

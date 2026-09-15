@@ -7,7 +7,12 @@
 .skeleton-section{pointer-events:none}.skeleton-title{color:#8a8a8a}
 .skeleton-heading{width:220px;height:24px;margin-bottom:16px}
 .skeleton-rail{display:flex;gap:12px;padding:0 52px}
-.skeleton-card{flex:none;width:var(--poster-width,150px)}
+/* Focusable placeholders (the fork keeps the rows reachable while they load): the ring is drawn
+   inside so the row that holds it looks like the real card it is about to become. */
+.skeleton-card{border:0;background:transparent;padding:0;flex:none;width:var(--poster-width,150px);text-align:left}
+.skeleton-card:focus{outline:0}
+.skeleton-card:focus .skeleton-art{outline:2px solid #fff;outline-offset:-2px}
+
 .skeleton-card .skeleton-art{width:100%;height:225px;border-radius:12px}
 .skeleton-card .skeleton-line{height:14px;margin-top:10px}
 .skeleton-rail-landscape .skeleton-card{width:210px}.skeleton-rail-landscape .skeleton-art{height:118px}
@@ -24,12 +29,36 @@
 .skeleton-episode{display:flex;align-items:center;gap:16px;padding:16px;border-radius:16px;background:#1a1a1a}
 .skeleton-thumb{width:130px;height:90px;flex:none;border-radius:10px}.skeleton-logo-small{width:36px;height:36px;flex:none;border-radius:8px}
 .skeleton-streams{display:flex;flex-direction:column;gap:12px}
+.stream-loading-addons{display:flex;align-items:center;gap:10px;font-size:12px;line-height:18px;color:#b3b3b3;margin:0 0 4px}
 .skeleton-source{display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:16px;background:#1a1a1a}
 /* Splash: the port has no Lottie, so the fork's loading indicator becomes a monochrome ring on
-   the same black background, with the app wordmark the sign-in screens already use. */
-.boot-splash{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:#0d0d0d}
+   the same black background, with the app wordmark the sign-in screens already use. It lives
+   outside #app: that element is scaled to the panel by the layout code, so a splash inside it
+   would show as a 960×540 box in the corner of a 4K screen. */
+#splash{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:#0d0d0d}
 .boot-wordmark{width:260px;height:76px;object-fit:contain;object-position:center}
-.boot-spinner{width:44px;height:44px;border-radius:50%;border:2px solid #ffffff26;border-top-color:#fff;animation:boot-spin 1s linear infinite}
-.boot-splash p{color:#b3b3b3;font-size:14px;letter-spacing:.4px}
+#splash p{color:#b3b3b3;font-size:14px;letter-spacing:.4px}
+.ring-spinner{width:44px;height:44px;border-radius:50%;border:2px solid #ffffff26;border-top-color:#fff;animation:boot-spin 1s linear infinite}
+.ring-spinner.small{width:18px;height:18px;border-width:2px}
+/* LoadingOverlay.kt: black screen, the backdrop cropped from the top right, the fork's four-stop
+   vertical scrim, and the artwork box centred at 180 dp with the message and source line under
+   it. PlayerBufferingIndicator keeps only the ring once playback has started. */
+.player-loading{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;background:#000;pointer-events:none}
+.player-loading[hidden]{display:none}
+.player-loading-backdrop{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top right}
+.player-loading-scrim{position:absolute;inset:0;background:linear-gradient(#0000004d 0%,#00000099 35%,#000000cc 70%,#000000e6 100%)}
+.player-loading-center{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
+.player-loading-art{height:180px;display:flex;align-items:center;justify-content:center;animation:loading-logo 2s ease-in-out infinite alternate}
+.player-loading-logo{max-height:180px;max-width:60%;object-fit:contain;animation:loading-fade .7s ease .4s both}
+.player-loading-title{font-size:36px;line-height:44px;font-weight:400;text-align:center;animation:loading-fade .7s ease .4s both}
+.player-loading-message{font-size:14px;line-height:20px;color:#f5f7f8}
+.player-loading-source{font-size:12px;line-height:18px;color:#b3b3b3}
+.player-loading[data-buffering=true]{background:transparent}
+.player-loading[data-buffering=true] .player-loading-backdrop,.player-loading[data-buffering=true] .player-loading-scrim,
+.player-loading[data-buffering=true] .player-loading-art,.player-loading[data-buffering=true] .player-loading-message,
+.player-loading[data-buffering=true] .player-loading-source{display:none}
+@keyframes loading-fade{from{opacity:0}to{opacity:1}}
+@keyframes loading-logo{from{transform:scale(1)}to{transform:scale(1.04)}}
+@media(prefers-reduced-motion:reduce){.player-loading-art,.player-loading-logo,.player-loading-title{animation:none}}
 @keyframes boot-spin{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.boot-spinner{animation:none}}
+@media(prefers-reduced-motion:reduce){.ring-spinner{animation:none}}

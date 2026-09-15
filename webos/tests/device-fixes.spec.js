@@ -8,16 +8,17 @@ async function drawer(page, title) {
   if (!await page.locator('#app').evaluate(node => node.classList.contains('drawer-open'))) await page.keyboard.press('Escape');
   await page.getByRole('button', { name: title, exact: true }).click();
 }
-async function boot(page, { playback = {}, progress = {}, cast = false } = {}) {
-  await page.addInitScript(({ addon, playback, progress }) => {
-    if (!localStorage.getItem('nuvio-fork.webos.v1')) localStorage.setItem('nuvio-fork.webos.v1', JSON.stringify({ guestMode: true, addons: [addon], progress, library: {}, watched: {}, settings: { playback } }));
+async function boot(page, { playback = {}, progress = {}, cast = false, catalogs = [{ id: 'test', name: 'Coleção de teste', type: 'movie' }], collections = [] } = {}) {
+  const script = { ...addon, manifest: { ...addon.manifest, catalogs } };
+  await page.addInitScript(({ script, playback, progress, collections }) => {
+    if (!localStorage.getItem('nuvio-fork.webos.v1')) localStorage.setItem('nuvio-fork.webos.v1', JSON.stringify({ guestMode: true, addons: [script], progress, library: {}, watched: {}, settings: { playback }, collections }));
     localStorage.setItem('nuvio-fork.webos.metadata.v1', JSON.stringify({ key: '', language: 'pt-BR' }));
-  }, { addon, playback, progress });
+  }, { script, playback, progress, collections });
   const meta = cast ? { ...movie, castMembers: Array.from({ length: 8 }, (_, i) => ({ name: `Pessoa ${i + 1}`, character: `Personagem ${i + 1}`, photo: origin + '/poster.svg' })) } : movie;
   await page.route(origin + '/**', route => {
     const p = decodeURIComponent(new URL(route.request().url()).pathname);
     const json = body => route.fulfill({ json: body, headers: { 'Access-Control-Allow-Origin': '*' } });
-    if (p.endsWith('manifest.json')) return json(addon.manifest);
+    if (p.endsWith('manifest.json')) return json(script.manifest);
     if (p.includes('/catalog/')) return json({ metas: [movie] });
     if (p.includes('/meta/')) return json({ meta });
     if (p.includes('/stream/')) return json({ streams: [{ name: 'Movie 1080p WEB-DL-FLUX', url: origin + '/clip.mp4' }] });
@@ -191,5 +192,28 @@ test('the playback info sits in the lower corner and leaves the toolbar in place
   expect(box.left).toBeCloseTo(52, 0);
   expect(box.right).toBeLessThanOrEqual(500);
   expect(box.bottom).toBeLessThanOrEqual(box.controlsTop);
+});
+
+test('the Home focuses the first card and follows the focus up and down the rows', async ({ page }) => {
+  const catalogs = Array.from({ length: 6 }, (_, i) => ({ id: `c${i}`, name: `Fileira ${i}`, type: 'movie' }));
+  const collections = [{ id: 'col1', title: 'Coleção', pinToTop: false, folders: [{ id: 'fold1', title: 'Pasta com capa', tileShape: 'SQUARE', sources: [{ kind: 'catalog', addonUrl: origin + '/manifest.json', addonName: 'Catálogo de teste', type: 'movie', catalogId: 'c0' }] }] }];
+  await boot(page, { catalogs, collections });
+  await page.goto('/');
+  await drawer(page, 'Início');
+  // The Home draws rail by rail: the first card must be focused as soon as a rail lands.
+  const first = page.locator('.home-rows .card').first();
+  await expect(first).toBeFocused();
+  const rows = page.locator('.home-rows');
+  const scrollTop = () => rows.evaluate(node => Math.round(node.scrollTop));
+  expect(await scrollTop()).toBe(0);
+  // Down five rows: the list scrolls with the focus, whatever kind of card each rail holds.
+  for (let i = 0; i < 5; i++) { await page.keyboard.press('ArrowDown'); await page.waitForTimeout(150); }
+  expect(await scrollTop()).toBeGreaterThan(0);
+  const visible = await page.evaluate(() => { const list = document.querySelector('.home-rows'), box = document.activeElement.getBoundingClientRect(), view = list.getBoundingClientRect(); return box.top >= view.top - 2 && box.top <= view.bottom - 2; });
+  expect(visible).toBe(true);
+  // Back up to the collection row: the list follows it to the top (this is what used to stick).
+  for (let i = 0; i < 5; i++) { await page.keyboard.press('ArrowUp'); await page.waitForTimeout(150); }
+  await expect(first).toBeFocused();
+  expect(await scrollTop()).toBe(0);
 });
 

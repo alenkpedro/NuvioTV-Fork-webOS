@@ -12,9 +12,36 @@ Referência do fork: `PlaceholderShimmer.kt`, `Skeletons.kt` (`MetaDetailsSkelet
 `SplashScreen` do Android virou uma tela de abertura em `public/index.html`, com o
 **wordmark do Nuvio** e um anel de carregamento sobre fundo preto. Ela é o primeiro HTML
 renderizado e sai quando a primeira tela do app entra (a restauração da conta e o primeiro
-`render()`). O fork usa uma animação Lottie; o port não embarca Lottie, então o indicador é
-um anel monoesquemático nas mesmas cores — o resto (fundo, marca, centralização) é igual.
-Com `prefers-reduced-motion`, o anel para de girar.
+`render()`, mais dois quadros de pintura). Ela fica **fora de `#app`**: aquele elemento é
+escalado pela lógica de layout, então uma abertura dentro dele apareceria como uma caixa de
+960×540 no canto de uma tela 4K. O fork usa uma animação Lottie; o port não embarca Lottie,
+então o indicador é um anel monoesquemático nas mesmas cores — o resto (fundo, marca,
+centralização) é igual. Com `prefers-reduced-motion`, o anel para de girar.
+
+## Tela de carregamento do player
+
+`LoadingOverlay.kt` + `PlayerBufferingIndicator`: ao abrir uma fonte, o port mostra a mesma
+tela do fork em vez da linha de texto que flutuava no topo do painel:
+
+- **fundo preto** com o **backdrop** do título (`object-fit:cover`, alinhado ao canto
+  superior direito, como o `Alignment.TopEnd` do fork);
+- o **degradê vertical de quatro paradas** do fork (preto 30% → 60% → 80% → 90%);
+- a **logo centralizada numa caixa de 180 dp** (o título quando não há logo), com fade de
+  700 ms e um pulso lento (escala 1 → 1,04 em 2 s);
+- a **mensagem** de carregamento (buffer, preparação de legendas, erro) e, embaixo, a
+  **linha da fonte** com o add-on e o nome da fonte escolhida;
+- depois que a reprodução começa, um travamento mostra **só o anel** centralizado
+  (`PlayerBufferingIndicator`), nunca a tela inteira de novo.
+
+## Home: esqueleto e foco
+
+As fileiras são desenhadas como esqueleto e substituídas conforme cada add-on responde. Os
+cartões do esqueleto são **focáveis, como no fork**: o controle pode descer para uma fileira
+que ainda está carregando, e quando o conteúdo chega o **foco acompanha** o mesmo lugar da
+fileira. A primeira fileira que aparece já recebe o foco, então o controle tem um ponto de
+partida sem esperar o add-on mais lento. A rolagem da Home é feita por um único tratador
+(`focusin` em `.home-rows`): qualquer cartão, de catálogo ou de coleção, traz a sua fileira
+para o topo da lista.
 
 ## Esqueletos
 
