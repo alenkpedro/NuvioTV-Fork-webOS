@@ -129,3 +129,14 @@ Diferenças: paginação explícita e lotes de seis catálogos na busca, filtros
 busca adicionais, teclado nativo webOS, sem voz/sugestões/menus long-press.
 A organização de catálogos usa controles web de ordem/visibilidade por perfil.
 A comparação visual Android/webOS com dados idênticos ainda está pendente.
+
+## Entrega 0.10 — metadados e pessoas
+
+Veja [METADATA.md](METADATA.md) para contratos, geometria do fork, configuração
+TMDB própria e diferenças. Elenco aproveita app_extras; pessoa inclui biografia
+em diálogo e filmografia em páginas de 30. Recomendações e trailers usam cartões
+260×146; filmografia 112×168 e foto de pessoa 160×240. As abas transparentes com
+separadores mudam ao receber foco. Ícone de trailer e logo TMDB vêm dos SVGs
+originais. Trailers abrem externamente no YouTube/navegador, com QR alternativo;
+o overlay de reprodução Android ainda não foi portado. Testes da ponte nativa
+são simulados e não substituem validação na LG.

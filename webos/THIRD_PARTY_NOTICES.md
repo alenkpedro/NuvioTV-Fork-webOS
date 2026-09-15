@@ -64,3 +64,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Assets and metadata added in 0.10
+
+`assets/icons/trailer_play_button.svg` and `assets/tmdb.svg` are byte-for-byte
+copies of `app/src/main/res/raw/trailer_play_button.svg` and `mdblist_tmdb.svg`
+from the selected Android fork. The original SVG Repo attribution is retained.
+TMDB and YouTube names/logos remain the property of their respective owners.
+This product uses the TMDB API but is not endorsed or certified by TMDB.
+No private Android build credentials or YouTube resolver service are included.

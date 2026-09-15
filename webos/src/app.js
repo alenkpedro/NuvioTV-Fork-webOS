@@ -5,13 +5,15 @@ import { readState, saveState, progressKey, recordProgress } from './core/storag
 import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
 import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
-import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode, castMembers } from './core/presentation.js';
+import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode } from './core/presentation.js';
 import { installTrackControls } from './player-tracks.js';
 import { initializeProfiles, activateProfile, leaveAccountProfiles, mergeLibrary, setLibraryItem } from './core/profiles.js';
 import { initializeHistory, mergeHistory, markWatched, isWatched, continueHistory, progressWithWatched, historySummary, resolveHistoryConflict } from './core/history.js';
 import { initializeOutbox, flushOutbox, syncSummary as outboundSummary, resolveOutbound } from './core/outbox.js';
 import { discoverScreen, searchScreen, catalogManager } from './discovery-screen.js';
 import { homeCatalogEntries } from './core/discovery.js';
+import {createMetadataClient,readMetadataSettings} from './core/metadata.js';
+import {detailExtras,personScreen,metadataSettingsScreen} from './metadata-screen.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
@@ -24,6 +26,7 @@ const state = readState(localStorage);
 state.settings.layout = readLayout(state.settings.layout);
 const layout = state.settings.layout;
 const account = createAccountClient({ storage: localStorage });
+const metadata=createMetadataClient({settings:()=>readMetadataSettings(localStorage)});
 initializeProfiles(state);
 let profileAccess = null;
 let syncTimer, syncFlight, syncController, syncDelay=3000, syncNextAt=0;
@@ -131,7 +134,7 @@ function focusFirst() { const expectedRoute = route, expectedRequest = request; 
   const restored = route.restoreFocus && [...root.querySelectorAll('[data-focus]')].find(e => e.dataset.focus === route.restoreFocus);
   delete route.restoreFocus;
   (restored || root.querySelector('main [data-initial-focus]') || root.querySelector('main input, main button:not(:disabled)') || root.querySelector('main'))?.focus({ preventScroll: true });
-  if (restored?.classList.contains('source') || (restored && ['discover','catalog','search'].includes(route.name))) restored.scrollIntoView({ block: 'nearest' });
+  if (restored?.classList.contains('source') || (restored && ['discover','catalog','search','person','detail'].includes(route.name))) restored.scrollIntoView({ block: 'nearest' });
 }); }
 function navigate(next, replace = false) {
   if (!replace) stack.push({ route, focus: document.activeElement?.dataset.focus });
@@ -213,7 +216,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
@@ -479,9 +482,15 @@ function textDialog(title, body) {
   const close = button('Fechar', () => { dialog.remove(); previous?.focus({ preventScroll: true }); }, { 'data-dismiss': true });
   dialog.firstChild.append(close); root.append(dialog); close.focus();
 }
+function metadataContext(main,signal) {return {main,signal,el,button,card,poster,route,root,navigate,textDialog,metadata,qr:url=>{
+  const matrix=qrcode(0,'M');matrix.addData(url);matrix.make();const count=matrix.getModuleCount(),canvas=el('canvas',{width:(count+8)*4,height:(count+8)*4,'aria-label':'QR code do trailer',role:'img'}),ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#000';for(let r=0;r<count;r++)for(let c=0;c<count;c++)if(matrix.isDark(r,c))ctx.fillRect((c+4)*4,(r+4)*4,4,4);return canvas;
+}};}
 async function showDetail(main, signal) {
   let { meta, addon } = route;
   heading(main, meta.type === 'series' ? 'SÉRIE' : 'FILME', meta.name || meta.id);
+  if(meta.id?.startsWith('tmdb:') && metadata.configured()) {
+    try {const data=await metadata.detail(meta,signal);if(signal.aborted)return;if(data)meta={...meta,...data.meta};}catch(error){if(signal.aborted)return;}
+  }
   const enriched = await loadMeta(meta, addon, signal);
   if (!current(signal) || !enriched) return;
   ({ meta, addon } = enriched);
@@ -552,13 +561,8 @@ async function showDetail(main, signal) {
     }
     if (seasons.length) { group.append(tabs, list); main.append(group); draw(seasons.includes(route.season) ? route.season : next?.video.season ?? seasons[0]); }
   }
-  const cast = castMembers(meta);
-  if (cast.length) {
-    const roles = { Creator: 'Criação', Director: 'Direção', Writer: 'Roteiro' };
-    main.append(el('section', { class: 'cast-section' }, el('h2', {}, 'Elenco'), el('div', { class: 'cast-rail' }, cast.map((member, i) => button([
-      poster(member.photo, member.name, 'cast-photo'), el('strong', {}, member.name), el('small', { class: 'muted' }, roles[member.character] || member.character || '')],
-      () => textDialog(member.name, roles[member.character] || member.character || 'Integrante do elenco.'), { class: 'cast-card', 'data-focus': `cast-${i}` })))));
-  }
+  const extrasReady=detailExtras(metadataContext(main,signal),meta,addon);
+  if(route.restoreFocus)await extrasReady;
   main.querySelectorAll('.detail-actions button, .synopsis').forEach(b => b.addEventListener('focus', () => { if (!pointerFocus) main.scrollTop = 0; }));
 }
 async function showStreams(main, signal) {
@@ -786,7 +790,10 @@ function showSettings(main, signal) {
       case 'discovery':
         content.append(row('Addons', 'Gerenciar add-ons instalados', () => navigate({ name: 'addons' })),row('Catálogos do início','Ordem e visibilidade neste perfil',()=>navigate({name:'catalog-manager'})),row('Descobrir','Explorar por tipo, catálogo e gênero',()=>navigate({name:'discover'})));
         break;
-      case 'playback': case 'integration':
+      case 'integration':
+        content.append(row('TMDB',metadata.configured()?'Biografias, filmografia e recomendações':'Configurar metadados complementares',()=>navigate({name:'metadata-settings'})));
+        break;
+      case 'playback':
         content.append(row('Preferências de fontes', 'Filtros, grupos de release e reprodução automática', () => navigate({ name: 'preferences' })));
         break;
       case 'appearance':
@@ -823,7 +830,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.9.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.10.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));

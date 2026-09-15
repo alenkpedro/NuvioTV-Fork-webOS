@@ -15,17 +15,22 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.9.0
+## Estado: prévia 0.10.0
 
-A 0.9.0 acrescenta **Descobrir**, com filtros de tipo, catálogo e gênero a partir
-dos addons. Abra **Busca → ícone de bússola** ou **Ajustes → Conteúdo e Descoberta
-→ Descobrir**. Filtros e foco são preservados ao retornar dos detalhes.
+A 0.10.0 amplia **elenco, pessoas, recomendações e trailers** a partir dos
+contratos do fork. Fotos e personagens de `app_extras` são aproveitados;
+selecionar uma pessoa abre sua biografia e filmografia. As abas de detalhes
+mudam ao receber foco e preservam o cartão ao voltar.
 
-A busca agora responde à digitação, guarda até oito pesquisas recentes por perfil
-e oferece filtros de tipo/catálogo. **Ver todos** mantém a consulta ao paginar.
-**Ajustes → Conteúdo e Descoberta → Catálogos do início** permite ordenar e ocultar
-faixas do início, sem retirar os catálogos de Descobrir. Essas preferências são
-locais ao perfil. [Uso, origem e limites](webos/DISCOVERY.md).
+**Biografia, filmografia e recomendações exigem uma chave TMDB em Ajustes →
+Integrações → TMDB.** Essa chave não acompanha o código público do Android nem
+é fornecida pelo login Nuvio. Elenco e trailers enviados pelo addon continuam
+funcionando sem ela. Trailers abrem no YouTube/navegador da TV, com QR code como
+alternativa; reprodução interna e automática ainda estão pendentes.
+[Uso, referências e diferenças](webos/METADATA.md).
+
+Descobrir, busca e organização de catálogos da 0.9 permanecem disponíveis.
+[Descoberta e busca](webos/DISCOVERY.md).
 
 Login, perfis/PIN, biblioteca, histórico e envio de progresso/assistidos/favoritos
 nativos Nuvio da 0.8 continuam disponíveis. [Sincronização](webos/SYNC.md).
@@ -42,11 +47,11 @@ O **login Nuvio por QR code** e a importação dos addons do **perfil selecionad
 
 Sem login, é possível usar **Continuar sem conta** e instalar addons manualmente. Integrações externas de histórico, debrid direto e plugins Android ainda não são sincronizados. Com login, progresso, assistidos e favoritos da LG são sincronizados com o Nuvio; addons manuais e preferências visuais permanecem locais.
 
-Validação: testes de regras, conta e navegação com dados sintéticos; instalação e login da 0.3.0 confirmados pelo usuário. Perfis, PIN, biblioteca, histórico, fila de envio, Descobrir, busca e player foram testados no navegador com dados simulados. A troca efetiva de áudio, formatos e sincronismo precisam de validação na TV. Não se afirma identidade pixel a pixel. [Detalhes da conta](webos/ACCOUNT.md) · [Referência visual](webos/UI_REFERENCE.md).
+Validação: testes de regras, conta e navegação com dados sintéticos; instalação e login da 0.3.0 confirmados pelo usuário. Perfis, PIN, biblioteca, histórico, fila de envio, Descobrir, busca, metadados e player foram testados no navegador com dados simulados. A troca efetiva de áudio, formatos e sincronismo precisam de validação na TV. Não se afirma identidade pixel a pixel. [Detalhes da conta](webos/ACCOUNT.md) · [Referência visual](webos/UI_REFERENCE.md).
 
 ## Próxima etapa
 
-**Detalhes e metadados:** ampliar elenco/filmografia, recomendações e trailers conforme as fontes e contratos do fork. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Coleções/franquias e avaliações adicionais** na tela de detalhes, conforme as fontes e contratos do fork. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 

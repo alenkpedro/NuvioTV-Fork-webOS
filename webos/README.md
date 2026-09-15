@@ -27,6 +27,14 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## TMDB e trailers (0.10)
+
+Ajustes → Integrações → TMDB recebe sua chave pessoal da API v3. Biografias,
+filmografia e recomendações exigem essa configuração; não vem do login Nuvio.
+Dados de elenco/trailers enviados pelo addon funcionam sem a chave. Trailers
+abrem no YouTube ou navegador da TV; a reprodução interna ainda está pendente.
+Veja [METADATA.md](METADATA.md) para uso, fonte e limites.
+
 ## O que funciona nesta prévia
 
 - Login Nuvio por QR code, sessão persistente, renovação e logout somente desta TV.
@@ -124,7 +132,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.9.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.10.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

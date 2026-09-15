@@ -90,6 +90,7 @@ No navegador: retorno com foco/filtros, cancelamento, consulta mantida em Ver to
 menus por controle remoto, nomes repetidos, limites de DOM e falhas de páginas.
 A verificação com addons reais e controle na LG será feita pelo usuário depois.
 
-**Próxima etapa sugerida:** ampliar detalhes/metadados com elenco/filmografia,
-recomendações e trailers, conforme as fontes e contratos do fork. Integrações
+**Metadados acrescentados na 0.10:** elenco/filmografia, recomendações TMDB e
+trailers externos; veja [METADATA.md](METADATA.md). Próxima etapa sugerida:
+coleções/franquias e avaliações adicionais. Integrações
 externas, coleções e demais diferenças seguem em [ROADMAP.md](ROADMAP.md).

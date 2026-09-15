@@ -76,3 +76,14 @@ revisões locais e confirmações por item. `account.mutate` usa as RPCs de
 `GenreLabelFormatter`; layout de `SearchDiscoverSection`, `SearchScreen` e
 `SearchUiState`. `genre-labels.json` deriva das chaves do formatter e strings
 pt-BR do commit de referência. Regras e adaptações: [DISCOVERY.md](DISCOVERY.md).
+
+## Entrega 0.10 — metadados e pessoas
+
+Veja [METADATA.md](METADATA.md) para contratos, geometria do fork, configuração
+TMDB própria e diferenças. Elenco aproveita app_extras; pessoa inclui biografia
+em diálogo e filmografia em páginas de 30. Recomendações e trailers usam cartões
+260×146; filmografia 112×168 e foto de pessoa 160×240. As abas transparentes com
+separadores mudam ao receber foco. Ícone de trailer e logo TMDB vêm dos SVGs
+originais. Trailers abrem externamente no YouTube/navegador, com QR alternativo;
+o overlay de reprodução Android ainda não foi portado. Testes da ponte nativa
+são simulados e não substituem validação na LG.
