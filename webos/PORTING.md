@@ -96,3 +96,10 @@ margens 48, ordem de lançamento e 30 itens por página. Avaliações: logos 24,
 gaps 14/6 na faixa reservada do hero; consultas de leitura com três fontes em
 paralelo. As chaves são locais à TV e independentes do login Nuvio. Testes usam
 fixtures, sem validação física na LG ou chave real do usuário.
+
+## Entrega 0.12 — idiomas e próximo episódio
+
+[PLAYBACK_AUTOMATION.md](PLAYBACK_AUTOMATION.md) registra regras, defaults e diferenças
+do player. Cartão baseado em PostPlayOverlay, 420 dp, padding 10/9, textos 11/14 sp;
+contagem cancelável adaptada ao ciclo de vida webOS. Preferências locais, idioma
+principal/secundário e prioridade para escolhas manuais. Validação física pendente.

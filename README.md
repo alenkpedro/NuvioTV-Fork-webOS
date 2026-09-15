@@ -15,9 +15,14 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.11.0
+## Estado: prévia 0.12.0
 
-A 0.11.0 acrescenta **coleções/franquias TMDB** em ordem de lançamento e
+A 0.12.0 acrescenta seleção automática de **áudio e legendas**, idiomas principal
+e secundário, e **próximo episódio** com contagem cancelável. Configure em
+**Ajustes → Reprodução → Idiomas e próximo episódio**. O avanço automático vem
+desativado por padrão, como no fork. [Regras e limites](webos/PLAYBACK_AUTOMATION.md).
+
+A 0.11.0 acrescentou **coleções/franquias TMDB** em ordem de lançamento e
 **avaliações adicionais via MDBList** na tela de detalhes. Cartões e ícones seguem
 a referência Android, com paginação e consultas limitadas para a LG.
 
@@ -53,7 +58,7 @@ Validação: testes de regras, conta e navegação com dados sintéticos; instal
 
 ## Próxima etapa
 
-**Player:** seleção automática de idiomas de áudio/legendas e próximo episódio, conforme os recursos do fork e os limites da plataforma LG. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Player:** legendas forçadas/SDH, filtro por idioma no painel e lembrança da escolha manual entre episódios. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 

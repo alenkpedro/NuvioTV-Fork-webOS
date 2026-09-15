@@ -27,6 +27,13 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Idiomas e próximo episódio (0.12)
+
+Ajustes → Reprodução → Idiomas e próximo episódio configura idiomas principal e
+secundário, busca automática de legendas dos addons e continuidade de séries.
+Avanço automático vem desligado; ao ativar, há contagem cancelável de 5 segundos.
+Cada episódio busca suas próprias fontes. Ver [PLAYBACK_AUTOMATION.md](PLAYBACK_AUTOMATION.md).
+
 ## TMDB e trailers (0.10)
 
 Ajustes → Integrações → TMDB recebe sua chave pessoal da API v3. Biografias,
@@ -139,7 +146,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.11.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.12.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

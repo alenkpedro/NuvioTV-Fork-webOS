@@ -76,3 +76,10 @@ suspensão, sessões longas e 4K/HDR no aparelho.
 - [LG: protocolos de streaming](https://webostv.developer.lge.com/develop/specifications/streaming-protocol-drm).
 - Contrato dos addons: `data/repository/SubtitleRepositoryImpl.kt` e
   `ui/screens/player/StreamSidecarSubtitles.kt` do fork preservado nesta árvore.
+
+## Automação de reprodução (0.12)
+
+[PLAYBACK_AUTOMATION.md](PLAYBACK_AUTOMATION.md) documenta seleção automática de
+idiomas, busca opcional de legendas dos addons e próximo episódio. A descrição
+de busca apenas ao abrir o painel acima corresponde à configuração padrão: a
+nova opção permite buscar automaticamente. Validação na LG ainda pendente.

@@ -403,3 +403,118 @@ test('source refresh, addon filter, best-source scope and Back selection are pre
   await page.getByRole('button',{name:'Atualizar fontes',exact:true}).click();
   await expect(page.locator('.source')).toHaveCount(1);await expect(page.getByRole('button',{name:'Atualizar fontes',exact:true})).toBeFocused();
 });
+
+async function playbackPrefs(page, prefs) {
+  await page.addInitScript(prefs=>{const key='nuvio-fork.webos.v1';const state=JSON.parse(localStorage.getItem(key));state.settings.playback=prefs;localStorage.setItem(key,JSON.stringify(state));},prefs);
+}
+test('preferred tracks handle regional languages, late tracks and manual overrides',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await playbackPrefs(page,{audio:'pt-br',secondaryAudio:'en',subtitles:'off'});
+  await page.addInitScript(()=>Object.defineProperty(HTMLMediaElement.prototype,'audioTracks',{configurable:true,get(){if(!this.fixtureTracks){const list=[{label:'Original',language:'eng',enabled:true},{label:'Dublado',language:'por',enabled:false}];const events=new EventTarget();list.addEventListener=events.addEventListener.bind(events);list.removeEventListener=events.removeEventListener.bind(events);list.dispatchEvent=events.dispatchEvent.bind(events);this.fixtureTracks=list;}return this.fixtureTracks;}}));
+  await startFixtureVideo(page);
+  expect(await page.locator('video').evaluate(v=>v.audioTracks.map(t=>t.enabled))).toEqual([false,true]);
+  await page.locator('video').evaluate(v=>{v.audioTracks.push({label:'Brasil',language:'pob',enabled:false});v.audioTracks.dispatchEvent(new Event('addtrack'));});
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.audioTracks.map(t=>t.enabled))).toEqual([false,false,true]);
+  await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.getByRole('button',{name:/Original/}).click();
+  await page.locator('video').evaluate(v=>v.audioTracks.dispatchEvent(new Event('change')));
+  await expect(page.getByRole('button',{name:/Original/})).toHaveAttribute('aria-pressed','true');
+  expect(errors).toEqual([]);
+});
+test('automatic subtitles fall back after HTTP failure and manual Off survives late events',async({page})=>{
+  await playbackPrefs(page,{subtitles:'pt-br',secondarySubtitles:'en'});
+  const downloads=[];
+  await page.route('**/stream/movie/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',subtitles:[{url:origin+'/preferred.srt',lang:'pob'},{url:origin+'/fallback.srt',lang:'eng'}]}]}}));
+  await page.route('**/preferred.srt',r=>{downloads.push('preferred');return r.fulfill({status:403,body:'expired'});});
+  await page.route('**/fallback.srt',r=>{downloads.push('fallback');return r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nAutomatic fallback'});});
+  await startFixtureVideo(page);await expect(page.locator('.subtitle-overlay')).toHaveText('Automatic fallback');
+  expect(downloads).toEqual(['preferred','fallback']);
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();await page.keyboard.press('Escape');
+  await page.locator('video').evaluate(v=>v.textTracks.dispatchEvent(new Event('change')));
+  await expect(page.locator('.subtitle-overlay')).toBeHidden();expect(downloads).toHaveLength(2);
+});
+test('manual subtitle selection cancels a pending automatic response and addon discovery is opt-in',async({page})=>{
+  await playbackPrefs(page,{subtitles:'pt',addonSubtitles:true});
+  let release;const gate=new Promise(r=>release=r);let requested=0;
+  await page.route('**/manifest.json',r=>r.fulfill({json:{id:'local.test',name:'Catálogo de teste',resources:['catalog','meta','stream','subtitles'],types:['movie','series'],catalogs:[{id:'test',name:'Coleção de teste',type:'movie'}]}}));
+  await page.route('**/subtitles/**',r=>{requested++;return r.fulfill({json:{subtitles:[{lang:'por',url:origin+'/automatic-slow.srt'}]}});});
+  await page.route('**/automatic-slow.srt',async r=>{await gate;await r.fulfill({body:'1\n00:00:00,000 --> 00:02:00,000\nLate automatic'}).catch(()=>{});});
+  await startFixtureVideo(page);await expect.poll(()=>requested).toBe(1);
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('Carregando…');
+  await page.getByRole('button',{name:'Desativadas',exact:true}).click();release();
+  await page.keyboard.press('Escape');await expect(page.locator('.subtitle-overlay')).toBeHidden();
+});
+async function startSeriesForNext(page,prefs={},nextVideo={}) {
+  await page.clock.install();
+  await playbackPrefs(page,prefs);
+  await page.route('**/meta/series/**',r=>r.fulfill({json:{meta:{...show,videos:[...show.videos,{id:'ttshow:2:1',title:'Nova temporada',season:2,episode:1,thumbnail:origin+'/backdrop.svg',...nextVideo}]}}}));
+  await install(page);await navigation(page,'Início');await page.getByRole('button',{name:'Série de teste',exact:true}).click();await page.getByRole('button',{name:/Primeiro episódio/}).click();await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);
+  await page.locator('video').evaluate(v=>{v.pause();v.currentTime=v.duration*.995;});
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.seeking)).toBe(false);
+}
+test('next episode card uses fresh episode sources and Back returns without a playback loop',async({page})=>{
+  const ids=[];await page.route('**/stream/series/**',r=>{ids.push(decodeURIComponent(r.request().url()));return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4'}]}});});
+  await startSeriesForNext(page);
+  await expect(page.locator('.next-episode')).toBeVisible();await expect(page.locator('.next-episode')).toContainText('T2 · E1 · Nova temporada');
+  await page.locator('#toast').evaluate(e=>e.hidden=true);
+  await page.screenshot({path:'test-results/player-next-episode-1920.png'});
+  await page.locator('.next-episode-play').focus();await page.keyboard.press('Enter');
+  await expect(page.getByText('Temporada 2 · Episódio 1',{exact:true})).toBeVisible();expect(ids.at(-1)).toContain('ttshow:2:1.json');
+  await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveCount(1);
+  await expect(page.getByRole('button',{name:'Ir para o próximo episódio'})).toHaveCount(0);
+  await page.keyboard.press('Escape');await expect(page.locator('.source')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('.detail-title')).toBeVisible();
+});
+test('automatic next waits while paused or in track menu, can be cancelled, and survives a backward seek',async({page})=>{
+  await startSeriesForNext(page,{autoNext:true});
+  await expect(page.locator('.next-episode')).toContainText('pausado');
+  await page.clock.runFor(6000);await expect(page.locator('video')).toHaveCount(1);await expect(page.locator('.next-episode')).toContainText('5 s');
+  await page.locator('video').evaluate(v=>{v.currentTime=10;});await expect(page.locator('.next-episode')).toBeHidden();
+  await page.locator('video').evaluate(v=>{v.currentTime=v.duration*.995;});await expect(page.locator('.next-episode')).toBeVisible();
+  await page.getByRole('button',{name:'Áudio',exact:true}).click();await page.clock.runFor(6000);await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Continuar neste episódio'}).click();await page.locator('video').evaluate(v=>v.dispatchEvent(new Event('ended')));await page.clock.runFor(6000);await expect(page.locator('.next-episode')).toBeHidden();
+});
+test('automatic next resolves the same binge group, advances once, and does not mark next watched',async({page})=>{
+  const ids=[];await page.route('**/stream/series/**',r=>{ids.push(decodeURIComponent(r.request().url()));return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',behaviorHints:{bingeGroup:'fixture-binge'}}]}});});
+  await startSeriesForNext(page,{autoNext:true});
+  await page.locator('video').evaluate(v=>{Object.defineProperty(v,'ended',{get:()=>true});v.dispatchEvent(new Event('ended'));});
+  await page.clock.runFor(6500);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T2 E1');
+  await page.locator('video').evaluate(v=>v.pause());expect(ids).toHaveLength(2);
+  const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')));expect(state.progress[JSON.stringify(['series','ttshow:2:1'])]?.complete).not.toBe(true);
+  await page.keyboard.press('Escape');await expect(page.locator('.source')).toBeVisible();
+});
+test('playback preferences persist without resetting source preferences',async({page})=>{
+  await install(page);await navigation(page,'Ajustes');await page.getByRole('button',{name:'Reprodução',exact:true}).click();await page.getByRole('button',{name:/Idiomas e próximo episódio/}).click();
+  await page.getByRole('combobox',{name:'Idioma do áudio',exact:true}).selectOption('pt-br');await page.getByRole('checkbox',{name:'Reproduzir próximo episódio automaticamente'}).check();await page.getByRole('combobox',{name:'Idioma das legendas',exact:true}).selectOption('off');
+  const prefs=await page.evaluate(()=>JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')).settings);expect(prefs.playback.audio).toBe('pt-br');expect(prefs.playback.autoNext).toBe(true);expect(prefs.preferences).toEqual({});
+  await page.locator('main').evaluate(e=>e.scrollTop=0);await page.locator('#toast').evaluate(e=>e.hidden=true);
+  await page.screenshot({path:'test-results/player-preferences-1920.png'});
+  await page.reload();await navigation(page,'Ajustes');await page.getByRole('button',{name:'Reprodução',exact:true}).click();await page.getByRole('button',{name:/Idiomas e próximo episódio/}).click();await expect(page.getByRole('combobox',{name:'Idioma do áudio',exact:true})).toHaveValue('pt-br');
+});
+test('unaired successor is visible but cannot start automatically or via the remote',async({page})=>{
+  await startSeriesForNext(page,{autoNext:true},{released:'2999-01-01'});
+  await expect(page.locator('.next-episode')).toContainText('ainda não foi lançado');await expect(page.locator('.next-episode-play')).toBeDisabled();
+  await page.locator('video').evaluate(v=>{Object.defineProperty(v,'ended',{get:()=>true});v.dispatchEvent(new Event('ended'));});await page.clock.runFor(8000);
+  await expect(page.locator('.player-controls h1')).toHaveText('Série de teste · T1 E1');
+});
+test('missing binge group with fallback disabled leaves a usable source list without autoplay on Back',async({page})=>{
+  await page.route('**/stream/series/**',r=>r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',behaviorHints:{bingeGroup:decodeURIComponent(r.request().url()).includes('ttshow:1:1')?'first':'other'}}]}}));
+  await startSeriesForNext(page,{autoNext:true,nextFallback:false});await page.locator('.next-episode-play').click();
+  await expect(page.locator('.source')).toBeVisible();await expect(page.locator('video')).toHaveCount(0);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveCount(1);
+  await page.keyboard.press('Escape');await expect(page.locator('.source')).toBeVisible();await expect(page.locator('video')).toHaveCount(0);
+});
+test('native preferred subtitles select late tracks and Off disables them without a change-event loop',async({page})=>{
+  await playbackPrefs(page,{subtitles:'pt-br',secondarySubtitles:'en'});await startFixtureVideo(page);
+  await page.locator('video').evaluate(v=>{v.addTextTrack('subtitles','English','eng');v.addTextTrack('subtitles','Brasil','pob');});
+  await expect.poll(()=>page.locator('video').evaluate(v=>Array.from(v.textTracks,t=>t.mode))).toEqual(['disabled','showing']);
+  await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Desativadas',exact:true}).click();
+  await page.locator('video').evaluate(v=>v.textTracks.dispatchEvent(new Event('change')));await expect.poll(()=>page.locator('video').evaluate(v=>Array.from(v.textTracks,t=>t.mode))).toEqual(['disabled','disabled']);
+});
+test('late next-episode source response cannot start a video while the app is hidden',async({page})=>{
+  let release;const gate=new Promise(r=>release=r);let requested=false;
+  await page.route('**/stream/series/**',async r=>{if(decodeURIComponent(r.request().url()).includes('ttshow:2:1')){requested=true;await gate;}await r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4'}]}}).catch(()=>{});});
+  await startSeriesForNext(page,{autoNext:true});await page.locator('.next-episode-play').click();await expect.poll(()=>requested).toBe(true);
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});release();
+  await expect(page.locator('.source')).toBeVisible();await expect(page.locator('video')).toHaveCount(0);
+  await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});await page.clock.runFor(6000);await expect(page.locator('video')).toHaveCount(0);
+  await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect(page.locator('video')).toHaveCount(1);
+});

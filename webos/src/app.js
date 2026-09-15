@@ -6,6 +6,9 @@ import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
 import { importAccountAddons, detachAccountAddons } from './core/account-sync.js';
 import { readLayout, homeGeometry, catalogTitle, runtimeText, releaseText, episodeList, nextEpisode } from './core/presentation.js';
+import { nextSource } from './core/playback.js';
+import { playbackSettingsScreen } from './playback-settings.js';
+import { installNextEpisode } from './next-episode.js';
 import { installTrackControls } from './player-tracks.js';
 import { initializeProfiles, activateProfile, leaveAccountProfiles, mergeLibrary, setLibraryItem } from './core/profiles.js';
 import { initializeHistory, mergeHistory, markWatched, isWatched, continueHistory, progressWithWatched, historySummary, resolveHistoryConflict } from './core/history.js';
@@ -219,7 +222,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
@@ -593,9 +596,10 @@ async function showStreams(main, signal) {
   }
   const all = view.rows;
   const chooseBest = rows => rankStreams(rows.filter(s => !playbackIssue(s, state.settings.avoidDvOnly)), state.settings.preferences)[0];
-  if (state.settings.autoPlay && !view.visited) {
-    view.visited = true; const best = chooseBest(all);
-    if (best) { navigate({ ...context, name: 'player', stream: best }); return; }
+  if ((context.nextPlayback ? context.nextPlayback.auto : state.settings.autoPlay) && !view.visited) {
+    view.visited = true;
+    const best = context.nextPlayback ? nextSource(rankStreams(all.filter(s=>!playbackIssue(s,state.settings.avoidDvOnly)),state.settings.preferences),context.nextPlayback.bingeGroup,state.settings.playback) : chooseBest(all);
+    if (best && !document.hidden) { navigate({ ...context, name: 'player', stream: best }); return; }
   }
   view.visited = true;
   const list = el('div', { class: 'streams' });
@@ -797,6 +801,7 @@ function showSettings(main, signal) {
         content.append(row('TMDB',metadata.configured()?'Biografias, filmografia e coleções':'Configurar metadados complementares',()=>navigate({name:'metadata-settings'})),row('Avaliações MDBList',ratings.configured()?'Escolher fontes de avaliações':'Configurar notas de IMDb, Letterboxd e outras fontes',()=>navigate({name:'ratings-settings'})));
         break;
       case 'playback':
+        content.append(row('Idiomas e próximo episódio', 'Áudio, legendas e continuidade de séries', () => navigate({name:'playback-settings'})));
         content.append(row('Preferências de fontes', 'Filtros, grupos de release e reprodução automática', () => navigate({ name: 'preferences' })));
         break;
       case 'appearance':
@@ -833,7 +838,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.11.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.12.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -883,7 +888,17 @@ function showPlayer(context) {
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
   const resume = state.progress[progressKey(context.type, context.id)];
   const tracks = installTrackControls({ screen, video, context, addons: state.addons, settings: state.settings, persist, el, button,
-    onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, onClose: reveal });
+    onOpen: () => { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); upNext.refresh(); }, onClose: ()=>{reveal();upNext.refresh();} });
+  const upNext = installNextEpisode({screen,video,context,settings:state.settings,el,button,
+    loadMeta:async()=> (await loadMeta(context.meta,context.addon,request.signal)).meta,
+    modalOpen:()=>tracks.isOpen(), restoreFocus:()=>{reveal();pause.focus();},
+    advance:(episode,auto)=>{
+      // Drop earlier episode routes so binge playback cannot grow navigation indefinitely.
+      while (['player','streams'].includes(stack.at(-1)?.route.name)) stack.pop();
+      navigate({name:'streams',meta:context.meta,addon:context.addon,id:episode.id,type:context.type,
+        episode:{title:episode.title,season:episode.season,episode:episode.episode},
+        nextPlayback:{auto,bingeGroup:context.stream.behaviorHints?.bingeGroup || null}},true);
+    }});
   function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
   function reveal() { if (tracks.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen()) hideTimer = setTimeout(() => { controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, 4500); }
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
@@ -915,11 +930,11 @@ function showPlayer(context) {
     if (['MediaPlay', 'MediaPause', 'MediaStop', 'MediaRewind', 'MediaFastForward', ' '].includes(key)) {
       e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') video.pause(); else if (key === 'MediaStop') back(); else if (key === 'MediaRewind') seek(-30); else if (key === 'MediaFastForward') seek(30); else toggle(); return true;
     }
-    if (controls.classList.contains('faded') && ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) { e.preventDefault(); reveal(); pause.focus(); return true; }
+    if (!upNext.focused() && controls.classList.contains('faded') && ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) { e.preventDefault(); reveal(); pause.focus(); return true; }
     if (document.activeElement === timeline && ['ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); seek(key === 'ArrowLeft' ? -10 : 10); return true; }
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; save(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; save(); upNext.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   pause.focus();
 }
 function layoutKey(key, event) {

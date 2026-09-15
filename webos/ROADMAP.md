@@ -32,6 +32,8 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
 
 | 0.11 | Coleções/franquias TMDB e avaliações MDBList com escolha de fontes | Pendente; contratos e navegação testados com simulação |
 
+| 0.12 | Idiomas principal/secundário, legendas automáticas opcionais e próximo episódio | Pendente; mídia sintética e APIs de faixas simuladas |
+
 ## Sequência proposta
 
 1. **Aparência e navegação — primeira entrega 0.4.** Menu clássico/moderno, menu
@@ -46,7 +48,7 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    internas expostas pela plataforma; legendas da fonte e de addons em SRT/VTT,
    tamanho/fundo/atraso e busca na timeline. Testes de UI/renderização no navegador;
    áudio simulado, sem confirmação no hardware. Permanecem ASS/PGS/ZIP,
-   seleção automática de idioma, busca manual, estilos avançados, personalização
+   busca manual, forced/SDH, estilos avançados, personalização
    de badges e paridade completa do player. Ver [PLAYER.md](PLAYER.md).
 3. **Biblioteca, histórico e perfis — primeira entrega 0.6.** Seleção/PIN, addons
    por perfil e leitura da biblioteca nativa Nuvio entregues. Dados locais isolados,
@@ -69,12 +71,14 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    somente de leitura, com chaves próprias e seleção de fontes. Ver
    [COLLECTIONS_RATINGS.md](COLLECTIONS_RATINGS.md). Coleções pessoais, notas por
    episódio, recomendações Trakt e trailers internos/automáticos ficam pendentes.
-   **Próxima etapa sugerida:** seleção automática de idiomas e próximo episódio no player.
+   **Idiomas e próximo episódio entregues na 0.12:** ver [PLAYBACK_AUTOMATION.md](PLAYBACK_AUTOMATION.md).
+   **Próxima etapa sugerida:** legendas forçadas/SDH, filtro por idioma e lembrança
+   da escolha manual entre episódios.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.
 6. **Player avançado e desempenho na LG.** Avaliar transporte/buffer paralelo,
-   Up Next, retomada, suspensão, controle remoto, 4K/HDR/áudio e memória no aparelho.
+   paridade avançada de Up Next, retomada, suspensão, controle remoto, 4K/HDR/áudio e memória no aparelho.
    Confirmar alternativas de plataforma para Media3/MPV/FFmpeg; não prometer
    conversão HDR, passthrough ou formatos sem evidência no hardware.
 7. **Revisão integral.** Percorrer telas e ações do Android contra o webOS,
