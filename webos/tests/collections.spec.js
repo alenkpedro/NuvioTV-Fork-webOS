@@ -113,8 +113,15 @@ test('a catalog source becomes a Home rail with its own see-all screen', async (
   await expect(rail.locator('.collection-card')).toContainText('Catálogo de teste · Coleção de teste');
   await rail.locator('.collection-card').click();
   await expect(page.getByRole('heading', { name: 'Clássicos' })).toBeVisible();
-  await expect(page.locator('.stream-chips button')).toHaveText(['Catálogo de teste · Coleção de teste']);
-  await expect(page.locator('.card').first()).toContainText('Filme do catálogo');
+  // FolderDetailScreen: one tab per source with the name and whether it is a movie or a series,
+  // and the titles in a grid.
+  const tab = page.locator('.collection-tab');
+  await expect(tab).toHaveCount(1);
+  await expect(tab).toContainText('Catálogo de teste · Coleção de teste');
+  await expect(tab.locator('small')).toHaveText('Filme');
+  await expect(page.locator('.collection-grid')).toBeVisible();
+  expect(await page.locator('.collection-grid').evaluate(node => getComputedStyle(node).display)).toBe('grid');
+  await expect(page.locator('.collection-grid .card').first()).toContainText('Filme do catálogo');
   await page.screenshot({ path: 'test-results/collections-folder-1920.png' });
   expect(errors).toEqual([]);
 });
@@ -147,7 +154,12 @@ test('a TMDB source is added through the pickers and reaches the Home without an
   expect(calls.some(call => call.startsWith('/3/collection/10'))).toBe(false);
   await rail.locator('.collection-card').click();
   await expect(page.getByRole('heading', { name: 'Saga do TMDB' })).toBeVisible();
-  await expect(page.locator('.card')).toHaveCount(2);
+  await expect(page.locator('.collection-tab small')).toHaveText('Filme');
+  await expect(page.locator('.collection-grid .card')).toHaveCount(2);
+  // Two cards side by side: the folder is a grid, not a queue of items.
+  const boxes = await page.locator('.collection-grid .card').evaluateAll(nodes => nodes.map(node => { const rect = node.getBoundingClientRect(); return { x: Math.round(rect.x), y: Math.round(rect.y) }; }));
+  expect(boxes[0].y).toBe(boxes[1].y);
+  expect(boxes[1].x).toBeGreaterThan(boxes[0].x);
   expect(calls.some(call => call.startsWith('/3/collection/10'))).toBe(true);
   // A TMDB-only card opens the detail screen, which then searches the installed add-ons.
   await page.locator('.card').first().click();
@@ -178,3 +190,47 @@ async function home(page) {
   await drawer(page, 'Início');
 }
 const stored = page => page.evaluate(() => JSON.parse(localStorage.getItem('nuvio-fork.webos.v1')));
+test('collection tiles keep the fork sizes for each folder shape', async ({ page }) => {
+  const source = { kind: 'catalog', addonUrl: addon.url, addonName: addon.manifest.name, type: 'movie', catalogId: 'test', catalogName: 'Coleção de teste' };
+  const collections = [{ id: 'c1', title: 'Coleção', pinToTop: false, folders: [
+    { id: 'f1', title: 'Quadrada', tileShape: 'SQUARE', coverEmoji: '🚀', sources: [source] },
+    { id: 'f2', title: 'Paisagem', tileShape: 'LANDSCAPE', coverEmoji: '🌄', sources: [source] },
+    { id: 'f3', title: 'Pôster', tileShape: 'POSTER', coverEmoji: '🎬', sources: [source] }
+  ] }];
+  await boot(page, { collections });
+  await home(page);
+  // FolderCard: poster = width × height, square = width × width, landscape = width × 16/9 wide and
+  // width tall. --width carries the poster card width (114.3072 dp on this layout).
+  const tiles = await page.locator('.collection-card').evaluateAll(nodes => nodes.map(card => {
+    const width = parseFloat(getComputedStyle(card).getPropertyValue('--width')) || 114.3072;
+    const scale = new DOMMatrix(getComputedStyle(document.querySelector('#app')).transform).a;
+    const box = card.getBoundingClientRect(), art = card.querySelector('.art').getBoundingClientRect();
+    return { label: card.getAttribute('aria-label'), width, cardW: box.width / scale, cardH: box.height / scale, artH: art.height / scale };
+  }));
+  expect(tiles.map(tile => tile.label)).toEqual(['Quadrada', 'Paisagem', 'Pôster']);
+  const [square, landscape, poster] = tiles;
+  expect(square.cardW).toBeCloseTo(square.width, 0);
+  expect(square.artH).toBeCloseTo(square.width, 0);
+  expect(landscape.cardW).toBeCloseTo(landscape.width * 16 / 9, 0);
+  expect(landscape.artH).toBeCloseTo(landscape.width, 0);
+  expect(poster.cardW).toBeCloseTo(poster.width, 0);
+  expect(poster.artH).toBeGreaterThan(poster.width * 1.4);
+  expect(landscape.cardH).toBeLessThan(poster.cardH);
+});
+test('the folder header shows the cover preview and the item count', async ({ page }) => {
+  const collections = [{ id: 'c1', title: 'Sagas', pinToTop: false, folders: [{ id: 'f1', title: 'Clássicos', tileShape: 'LANDSCAPE', coverImageUrl: 'https://images.fixture/wide.svg', sources: [{ kind: 'catalog', addonUrl: addon.url, addonName: addon.manifest.name, type: 'series', catalogId: 'test', catalogName: 'Coleção de teste' }] }] }];
+  await page.route('https://images.fixture/**', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="340"/>' }));
+  await boot(page, { collections });
+  await home(page);
+  await page.locator('.collection-card').click();
+  await expect(page.getByRole('heading', { name: 'Clássicos' })).toBeVisible();
+  await expect(page.locator('.collection-heading')).toContainText('Sagas · 1 fonte(s)');
+  const preview = page.locator('.collection-heading-cover');
+  await expect(preview).toHaveClass(/landscape/);
+  // FolderDetailScreen: landscape preview is 64×36 dp.
+  const box = await preview.evaluate(node => { const rect = node.getBoundingClientRect(); const scale = new DOMMatrix(getComputedStyle(document.querySelector('#app')).transform).a; return { w: Math.round(rect.width / scale), h: Math.round(rect.height / scale) }; });
+  expect(box).toEqual({ w: 64, h: 36 });
+  // A series source says so in the tab.
+  await expect(page.locator('.collection-tab small')).toHaveText('Série');
+});
+

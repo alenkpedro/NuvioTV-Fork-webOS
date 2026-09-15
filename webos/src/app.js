@@ -44,7 +44,7 @@ import {ratingsSettingsScreen} from './ratings-screen.js';
 import { detailExtras,personScreen,metadataSettingsScreen,launchTrailer} from './metadata-screen.js';
 import { collectionsScreen, collectionEditorScreen } from './collections-screen.js';
 import { createSettingsKit } from './settings-kit.js';
-import { collectionSections, describeSource, isPlayableSource, parseAccountCollections, readCollections, toAccountCollections } from './core/collections.js';
+import { collectionSections, describeSource, folderCover, isPlayableSource, parseAccountCollections, readCollections, sourceTypeLabel, toAccountCollections } from './core/collections.js';
 import { parseCatalogPage } from './core/discovery.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
@@ -476,14 +476,15 @@ function collectionSection(rows, section) {
     const cover = folder.cover || {};
     const art = el('div', { class: 'art collection-cover' });
     const description = folder.sources.length ? describeSource(folder.sources[0]) : folder.unavailableMessage;
+    const shape = cover.shape === 'LANDSCAPE' ? ' collection-card-wide' : cover.shape === 'SQUARE' ? ' collection-card-square' : '';
     const card = button([art, cover.hideTitle ? null : el('strong', {}, folder.title), el('small', { class: 'muted' }, description)],
       () => navigate({ name: 'collection-source', collectionId: folder.collectionId, folderId: folder.folderId }),
-      { class: `card collection-card${folder.sources.length ? '' : ' unavailable'}${cover.shape === 'LANDSCAPE' ? ' collection-card-wide' : cover.shape === 'POSTER' ? ' collection-card-poster' : ''}`, 'aria-label': `${folder.title}${folder.sources.length ? '' : ` · ${folder.unavailableMessage}`}`, 'data-focus': folder.key });
+      { class: `card collection-card${folder.sources.length ? '' : ' unavailable'}${shape}`, 'aria-label': `${folder.title}${folder.sources.length ? '' : ` · ${folder.unavailableMessage}`}`, 'data-focus': folder.key });
     if (cover.image) {
       const image = el('img', { class: 'collection-cover-image', src: cover.image, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer', onerror: event => event.target.remove() });
-      // Most folders keep the default square tile, but their cover is often a wide picture: follow
-      // the picture instead of cropping it into a poster box.
-      image.addEventListener('load', () => { if (cover.shape !== 'LANDSCAPE' && image.naturalWidth > image.naturalHeight * 1.15) card.classList.add('collection-card-wide'); }, { once: true });
+      // A folder that keeps the default square tile but carries a wide cover gets the landscape
+      // tile: the size stays the fork's (width × 16/9 by width), only the shape follows the art.
+      image.addEventListener('load', () => { if (cover.shape !== 'LANDSCAPE' && image.naturalWidth > image.naturalHeight * 1.15) { card.classList.remove('collection-card-square'); card.classList.add('collection-card-wide'); } }, { once: true });
       art.append(image);
     } else art.append(cover.emoji ? el('span', { class: 'collection-emoji' }, cover.emoji) : icon('sidebar_library'));
     return card;
@@ -1035,15 +1036,19 @@ function collectionsContext(main, signal) {
 }
 function showCollections(main, signal) { collectionsScreen(collectionsContext(main, signal)); }
 function showCollectionEditor(main, signal) { collectionEditorScreen(collectionsContext(main, signal)); }
-// Collection folder detail: the folder's sources as tabs, like FolderDetailScreen.
+// Collection folder detail: FolderDetailScreen — the folder header with its cover, one tab per
+// source showing the name and whether it is a movie or a series, and the titles in a grid.
 async function showCollectionSource(main, signal) {
   const rail = { collectionId: route.collectionId, folderId: route.folderId };
   const collection = (state.collections || []).find(entry => entry.id === rail.collectionId);
   const folder = collection?.folders.find(entry => entry.id === rail.folderId);
   if (!folder) { heading(main, 'COLEÇÃO', 'Pasta removida'); notice(main, 'Esta pasta não existe mais nesta coleção.'); return; }
-  heading(main, 'COLEÇÃO', folder.title, `${collection.title} · ${folder.sources.length} fonte(s)`);
-  const tabs = el('div', { class: 'stream-chips' });
-  const list = el('div', { class: 'streams' });
+  const cover = folderCover(folder);
+  const preview = cover.image ? el('img', { class: `collection-heading-cover ${cover.shape === 'LANDSCAPE' ? 'landscape' : cover.shape === 'POSTER' ? 'poster' : ''}`, src: cover.image, alt: '', onerror: event => event.target.remove() }) : null;
+  main.append(el('div', { class: 'heading collection-heading' }, preview,
+    el('div', { class: 'grow' }, el('h1', {}, folder.title), el('p', { class: 'muted' }, `${collection.title} · ${folder.sources.length} fonte(s)`))));
+  const tabs = el('div', { class: 'collection-tabs' });
+  const list = el('div', { class: 'collection-grid' });
   const status = el('p', { class: 'muted', role: 'status' });
   main.append(tabs, status, list);
   let selected = 0;
@@ -1058,7 +1063,10 @@ async function showCollectionSource(main, signal) {
       list.replaceChildren(...(data.items.length ? data.items.slice(0, 100).map((meta, index) => card(meta, data.addon, null, `collection-${index}`, { portrait: layout.landscapePosters })) : [el('p', { class: 'notice' }, 'Esta fonte não devolveu títulos.')]));
     } catch (error) { if (!signal.aborted) { status.textContent = error.message; list.replaceChildren(); } }
   }
-  folder.sources.forEach((source, index) => tabs.append(button(describeSource(source), () => { selected = index; draw(); }, { 'aria-label': `Fonte ${describeSource(source)}`, 'aria-pressed': String(index === selected), 'data-focus': `collection-source-${index}` })));
+  // The tab carries the source name and, under it, the type (FolderDetailScreen's type suffix).
+  folder.sources.forEach((source, index) => tabs.append(button([el('strong', {}, describeSource(source)), sourceTypeLabel(source) ? el('small', {}, sourceTypeLabel(source)) : null],
+    () => { selected = index; draw(); },
+    { class: `collection-tab${index === selected ? ' selected' : ''}`, 'aria-label': `Fonte ${describeSource(source)}${sourceTypeLabel(source) ? ` · ${sourceTypeLabel(source)}` : ''}`, 'aria-pressed': String(index === selected), 'data-focus': `collection-source-${index}` })));
   main.append(el('div', { class: 'toolbar' }, button('Voltar para Coleções', () => navigate({ name: 'collections' }), { 'aria-label': 'Voltar para Coleções' })));
   draw();
 }

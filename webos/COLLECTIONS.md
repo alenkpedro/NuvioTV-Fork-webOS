@@ -24,13 +24,23 @@ Descoberta → Coleções**, por perfil.
 - **Na Home**, as coleções vêm antes dos catálogos dos add-ons — são conteúdo curado pelo
   usuário — e uma coleção fixada no topo lidera as demais, que seguem a ordem do editor.
   Cada coleção é uma fileira com o nome no cabeçalho e **um cartão de capa por pasta**
-  (`CollectionRowSection` + `CollectionFolderCardMedia`): a capa que você escolheu no outro
-  cliente (imagem, ou o emoji quando não há imagem), com o nome da pasta embaixo e o formato
-  do cartão vindo do `tileShape` (quadrado, pôster ou paisagem). O cartão abre a pasta, com
-  as fontes em abas (`FolderDetailScreen`) — os títulos ficam atrás do cartão, como no fork.
+  (`CollectionRowSection.FolderCard`): a capa que você escolheu no outro cliente (imagem, ou o
+  emoji quando não há imagem), com o nome da pasta embaixo. **O tamanho do cartão segue o
+  formato da pasta**, com as medidas do fork a partir da largura do cartão de pôster
+  (114,3 dp neste layout): **quadrado** = 114,3 × 114,3, **pôster** = 114,3 × 171,5 e
+  **paisagem** = 203,2 × 114,3 (largura × 16/9). A capa é recortada dentro do cartão
+  (`ContentScale.Crop`); quando a pasta mantém o quadrado mas a imagem é claramente horizontal,
+  o port usa o cartão de paisagem para não cortar a arte.
   Uma pasta sem fonte utilizável continua listada, marcada com o motivo.
   A ordem dos add-ons em **Ajustes → Conteúdo e Descoberta → Addons**
   decide a ordem dos catálogos deles na Home.
+- **Dentro da pasta** (`FolderDetailScreen`): o cabeçalho traz o nome da pasta, a coleção e o
+  número de fontes, com uma **prévia da capa** ao lado (48×48 quadrada, 32×48 pôster e 64×36
+  paisagem, como o fork). Cada fonte é uma **aba com o nome e o tipo** — **Filme** ou **Série**,
+  na segunda linha — e os títulos aparecem numa **grade** de cartões de pôster
+  (`GridCells.Adaptive` com a largura do pôster), no estilo do `ContentCard` do fork: nunca uma
+  fila única de itens. A primeira fonte é aberta automaticamente; trocar de aba recarrega a
+  grade com o esqueleto do fork.
 - **As capas e a aparência vêm da conta e voltam para ela**: `coverImageUrl`, `coverEmoji`,
   `focusGifUrl`, `tileShape`, `hideTitle`, `viewMode`, `showAllTab` e `focusGlowEnabled` são
   lidos do blob do perfil e escritos de volta iguais (a 0.27 reescrevia esses campos com

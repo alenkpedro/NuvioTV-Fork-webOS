@@ -177,6 +177,12 @@ export function describeSource(source) {
   return ['TMDB', type, source.title || (source.tmdbId ? String(source.tmdbId) : ''), source.sourceType === 'discover' ? tmdbMediaTypes.find(entry => entry.id === source.mediaType)?.label : '', source.year ? String(source.year) : ''].filter(Boolean).join(' · ');
 }
 export const sourceKindLabel = kind => kind === 'tmdb' ? 'TMDB' : kind === 'other' ? 'Outro cliente' : 'Catálogo de add-on';
+// FolderDetailScreen: the tab says whether the source is a movie or a series.
+export const sourceTypeLabel = source => {
+  if (source?.kind === 'catalog') return source.type === 'series' ? 'Série' : source.type === 'movie' ? 'Filme' : '';
+  if (source?.kind === 'tmdb') return source.mediaType === 'tv' ? 'Série' : source.mediaType === 'movie' ? 'Filme' : '';
+  return '';
+};
 // Sources the TV can actually open in a row.
 export const isPlayableSource = source => source?.kind === 'catalog' || source?.kind === 'tmdb';
 export const sameSource = (a, b) => Boolean(a && b) && a.kind === b.kind && a.catalogId === b.catalogId && a.tmdbId === b.tmdbId && a.sourceType === b.sourceType && describeSource(a) === describeSource(b);

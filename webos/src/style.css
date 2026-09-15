@@ -190,17 +190,32 @@ progress::-webkit-progress-value{background:var(--accent)}
 .hide-poster-labels .card:not(.continue-card):not(.more-card)>strong,.hide-poster-labels .card:not(.continue-card)>.muted{display:none}
 .landscape-posters .grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}.landscape-posters .grid .card{width:210px}.landscape-posters .grid .card .art{height:118.64px}
 .catalog-section .section-head{justify-content:flex-start;gap:8px}.collection-unavailable .notice{margin:0 0 8px}
-/* CollectionFolderCardMedia.kt: the folder card shows the cover, not the titles inside it.
-   SQUARE and RECTANGLE tiles follow the folder's tileShape, like the folder screen. */
-.collection-card .art{height:auto;aspect-ratio:1;background:#1e1e1e;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.collection-card-poster .art{aspect-ratio:2/3}
-.collection-card-wide .art{aspect-ratio:16/9}
-.collection-card .collection-cover img{width:100%;height:100%;object-fit:cover}
-.collection-card .collection-cover-image{display:block}
+/* CollectionRowSection.kt FolderCard: the tile follows the folder shape —
+   POSTER = --width × --height, SQUARE = --width × --width and LANDSCAPE = --width × 16/9 wide,
+   --width tall. The cover is cropped inside the tile (the fork uses ContentScale.Crop). */
+.collection-card{flex:0 0 var(--width,114.3072px);width:var(--width,114.3072px)}
+.collection-card .art{height:var(--height,171.4608px);background:#1e1e1e;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.collection-card-square .art{height:var(--width,114.3072px)}
+.collection-card-wide{flex:0 0 calc(var(--width,114.3072px) * 16 / 9);width:calc(var(--width,114.3072px) * 16 / 9)}
+.collection-card-wide .art{height:var(--width,114.3072px)}
+.collection-card .collection-cover img{width:100%;height:100%;object-fit:cover;display:block}
 .collection-card .collection-cover .icon{width:44px;height:44px;color:#6a6a6a}
 .collection-card .collection-emoji{font-size:52px;line-height:1}
 .collection-card.unavailable{opacity:.65}
 .collection-card strong,.collection-card small{margin-left:4px;margin-right:4px}
+/* FolderDetailScreen: the folder header keeps a small preview of the cover next to the title,
+   sized by the tile shape (xxl×xxxl for poster and square, 64×36 for landscape). */
+.collection-heading{display:flex;align-items:center;gap:16px}
+.collection-heading-cover{width:48px;height:48px;flex:none;border-radius:8px;object-fit:fill;background:#1e1e1e}
+.collection-heading-cover.poster{width:32px;height:48px}.collection-heading-cover.landscape{width:64px;height:36px}
+/* FolderDetailScreen tabs: the source name and, under it, whether it is a movie or a series. */
+.collection-tabs{display:flex;align-items:center;gap:8px;overflow-x:auto;flex-shrink:0;padding:3px}
+.collection-tab{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 16px;white-space:nowrap}
+.collection-tab small{font-size:11px;line-height:14px;color:#b3b3b3}
+/* FolderDetailScreen grid: GridCells.Adaptive(poster width) — a grid of poster cards, never one
+   queue of items. */
+.collection-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--width,114.3072px),1fr));gap:20px 12px;padding:0 52px 24px;overflow-y:auto;min-height:0}
+.collection-grid .card{width:100%;flex:none}
 .home-rows .collection-unavailable{padding:0 52px}.catalog-addon{font-size:12px;line-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.catalog-section h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .switch-track{width:36px;height:20px;flex-shrink:0;border-radius:20px;background:#555;position:relative}.switch-track:after{content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#ccc}.settings-row[aria-checked=true] .switch-track{background:#f5f5f5}.settings-row[aria-checked=true] .switch-track:after{left:19px;background:#111}.settings-row:focus .muted{color:#ddd}
 

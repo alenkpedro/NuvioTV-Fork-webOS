@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {addFolder,addSource,collectionLimits,collectionRails,collectionSections,collectionSourceCount,createCollection,createFolder,describeSource,folderCover,moveFolder,moveIn,parseAccountCollections,readCatalogSource,readCollectionSource,readCollections,readTmdbSource,removeCollection,removeFolder,removeSource,renameCollection,renameFolder,sameSource,sourceKindLabel,tmdbSorts,tmdbSourceTypes,toAccountCollections,togglePin} from '../src/core/collections.js';
+import {addFolder,addSource,collectionLimits,collectionRails,collectionSections,collectionSourceCount,createCollection,createFolder,describeSource,folderCover,moveFolder,moveIn,parseAccountCollections,readCatalogSource,readCollectionSource,readCollections,readTmdbSource,removeCollection,removeFolder,removeSource,renameCollection,renameFolder,sameSource,sourceKindLabel,sourceTypeLabel,tmdbSorts,tmdbSourceTypes,toAccountCollections,togglePin} from '../src/core/collections.js';
 const catalog={kind:'catalog',addonUrl:'https://fixture.example/manifest.json',addonName:'Catálogo de teste',type:'movie',catalogId:'test',catalogName:'Coleção de teste'};
 const tmdb={kind:'tmdb',sourceType:'collection',tmdbId:10,mediaType:'movie',sortBy:'popularity.desc'};
 test('collections and folders are validated like the fork store',()=>{
@@ -54,6 +54,15 @@ test('editing keeps the fork limits, the ordering and the pin',()=>{
   list=removeSource(list,a.id,folderId,0);assert.equal(collectionSourceCount(list.find(entry=>entry.id===a.id)),1);
   list=removeFolder(list,a.id,folderId);assert.equal(list.find(c=>c.id===a.id).folders.length,0);
   list=removeCollection(list,a.id);assert.equal(list.length,1);
+});
+test('a source says whether it is a movie or a series',()=>{
+  assert.equal(sourceTypeLabel({kind:'catalog',type:'movie'}),'Filme');
+  assert.equal(sourceTypeLabel({kind:'catalog',type:'series'}),'Série');
+  assert.equal(sourceTypeLabel({kind:'tmdb',mediaType:'movie'}),'Filme');
+  assert.equal(sourceTypeLabel({kind:'tmdb',mediaType:'tv'}),'Série');
+  // Trakt lists and unknown types have nothing to say: the tab stays single-line.
+  assert.equal(sourceTypeLabel({kind:'other',provider:'trakt'}),'');
+  assert.equal(sourceTypeLabel({kind:'catalog',type:'channel'}),'');
 });
 test('folder covers from another client survive the trip and travel back',()=>{
   const account=[{id:'c1',title:'Sagas',pinToTop:true,viewMode:'GRID',showAllTab:false,focusGlowEnabled:false,folders:[{id:'f1',title:'Star Wars',coverImageUrl:'https://x/c.jpg',coverEmoji:'🚀',tileShape:'LANDSCAPE',hideTitle:true,focusGifUrl:'https://x/a.gif',sources:[{provider:'addon',addonId:'a',type:'movie',catalogId:'c'}]}]}];
