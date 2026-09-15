@@ -40,7 +40,7 @@ test('the narrow toggles of the subtitle editor are reachable and usable with th
 });
 
 
-test('the packaged subtitle faces are served and the light state falls back when needed', async ({ page }) => {
+test('the packaged subtitle faces are served and the light state uses the bundled Regular', async ({ page }) => {
   await page.goto('/');
   const probe = await page.evaluate(async () => {
     const status = {};
@@ -50,15 +50,16 @@ test('the packaged subtitle faces are served and the light state falls back when
     const load = async spec => { try { return (await document.fonts.load(spec)).length; } catch { return 0; } };
     const medium = await load('500 19px "Netflix Sans"');
     const regular = await load('400 19px "Netflix Sans Regular"');
-    const inter = await load('350 19px Inter');
+    const inter = await load('400 19px Inter');
     return { status, medium, regular, inter, families: [...document.fonts].map(face => `${face.family}|${face.weight}`) };
   });
-  // The Medium face is part of the package and must always answer.
+  // The Medium face is the bold state and the Regular the thin one; both are part of the
+  // package, so the light state is no longer served by the Inter fallback.
   expect(probe.status['/assets/fonts/NetflixSans-Medium.otf']).toBe(200);
+  expect(probe.status['/assets/fonts/NetflixSans-Regular.otf']).toBe(200);
   expect(probe.medium).toBe(1);
-  // The light state needs a thinner face: the exact Netflix Sans Regular when the file is
-  // bundled, and the Inter variable font otherwise (never the Medium face again).
-  const lightFace = probe.regular === 1 ? 'Netflix Sans Regular' : 'Inter';
-  expect(probe.families.some(entry => entry.startsWith(`${lightFace}|`))).toBe(true);
-  if (lightFace === 'Inter') expect(probe.inter).toBe(1);
+  expect(probe.regular).toBe(1);
+  expect(probe.families.some(entry => entry.startsWith('Netflix Sans Regular|'))).toBe(true);
+  // Inter stays in the stylesheet as the fallback face, at the weight the editor asks for.
+  expect(probe.inter).toBe(1);
 });

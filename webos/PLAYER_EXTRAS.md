@@ -74,12 +74,18 @@ O decoder/worker Android não existe neste port. Para a LG, o cache captura o
 próprio vídeo durante a reprodução com canvas, sem segundo player, downloads
 adicionais, alteração de CORS da mídia ou busca do vídeo para gerar imagens.
 Um quadro por intervalo de 10 s, no máximo 64, até 320×108 px (aproximadamente
-8,5 MiB de pixels no pior caso). Prévia só usa quadros a até 10 s da posição
+8,5 MiB de pixels no pior caso); o intervalo entre capturas é de 1 s até 1080p e
+de 1,5 s acima disso, porque escalar um quadro 4K custa mais e a reprodução tem
+prioridade. Prévia só usa quadros a até 10 s da posição
 pedida; lacunas ficam sem imagem. O cache é por reprodução e é liberado ao sair.
 Não há exportação de pixels ou persistência em disco.
 
-Limitado a fontes até 1080p sem indicação HDR/DV e sem DRM detectado; não captura
-com pausa, buffering sem frame, busca, app oculto ou painel aberto. Três erros
+Fontes até 4K (4096×2304) entram, inclusive as anunciadas como HDR ou Dolby
+Vision: o nome da fonte não decide mais nada, e a TV mostra o que ela consegue
+decodificar. Fonte com DRM detectado, tela protegida, imagem sem quadro
+decodificado ou app oculto não capturam, assim como pausa, buffering e painel
+aberto. Uma busca captura a posição nova na hora, sem esperar
+o próximo intervalo — a prévia já aparece no primeiro arrasto do scrubber. Três erros
 consecutivos desativam capturas naquela reprodução. A API de desenho é documentada
 em [drawImage](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage).
 Ainda falta o equivalente à extração antecipada de quadros de partes não vistas,

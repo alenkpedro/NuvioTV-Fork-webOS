@@ -52,7 +52,21 @@ test('home catalog ordering and visibility persist without hiding catalogs from 
  await fixture(page);await page.goto('/');await page.keyboard.press('Escape');await page.getByRole('button',{name:'Ajustes',exact:true}).click();await page.getByRole('button',{name:'Conteúdo e Descoberta',exact:true}).click();await page.getByRole('button',{name:/Catálogos do início/}).click();await page.getByRole('button',{name:'Subir: Séries',exact:true}).click();await page.getByRole('button',{name:'Ocultar: Popular',exact:true}).first().click();await page.reload();await expect(page.locator('.home-rows .catalog-section h2').first()).toContainText('Séries');await discover(page);await page.locator('[data-picker="Catálogo"]').click();await expect(page.getByRole('dialog').getByRole('button',{name:'Popular · Addon one',exact:true})).toBeVisible();
 });
 
+test('the add-on order decides the Home rows and survives a reload',async({page})=>{
+ await fixture(page);await page.goto('/');
+ const order=()=>page.locator('.home-rows .catalog-section').evaluateAll(sections=>sections.map(section=>section.querySelector('.card')?.getAttribute('aria-label') || ''));
+ await expect.poll(order).toEqual(['one-movie 0','one-series 0','two-movie 0']);
+ // Ajustes → Conteúdo e Descoberta → Addons: the arrows decide which add-on leads the Home.
+ await page.keyboard.press('Escape');await page.getByRole('button',{name:'Ajustes',exact:true}).click();
+ await page.getByRole('button',{name:'Conteúdo e Descoberta',exact:true}).click();await page.getByRole('button',{name:/^Addons/}).click();
+ await expect(page.locator('.addon-row h2')).toHaveText(['Addon one','Addon two']);
+ await page.getByRole('button',{name:'Mover Addon two para cima',exact:true}).click();
+ await expect(page.locator('.addon-row h2')).toHaveText(['Addon two','Addon one']);
+ await page.reload();
+ await expect.poll(order).toEqual(['two-movie 0','one-movie 0','one-series 0']);
+});
 test('late addon results preserve a scrolled rail and focused poster',async({page})=>{
+
  let release;const secondGate=new Promise(resolve=>release=resolve);
  await fixture(page,{secondGate});await search(page);await page.getByRole('searchbox',{name:'Buscar título'}).fill('scroll');await page.getByRole('button',{name:'Buscar',exact:true}).click();
  await expect(page.locator('.search-results .card')).toHaveCount(32);

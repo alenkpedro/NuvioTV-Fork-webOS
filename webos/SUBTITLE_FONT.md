@@ -2,8 +2,9 @@
 
 Preset solicitado pelo usuário com duas referências visuais e valores CSS.
 Usa o arquivo **NetflixSans-Medium.otf**, peso real **500**, fornecido no ZIP,
-incluído sem alteração (212.020 bytes). Substitui o arquivo Regular; a interface
-continua com Inter. Fonte local, sem consultas externas.
+incluído sem alteração (212.020 bytes). Na 0.19 ele substituiu o arquivo Regular;
+desde a 0.27 o par está completo de novo — o Regular é o estado **sem negrito**.
+A interface continua com Inter. Fonte local, sem consultas externas.
 
 - Branco #fff, sem caixa de fundo e sem stroke.
 - Tamanho: 3,6% da altura do canvas; entrelinha 1,16; espaçamento −0,015 em.
@@ -44,17 +45,13 @@ não houve acesso ao aparelho para identificar a faixa exata ou medir a saída.
 
 ## Peso do texto: negrito e face fina
 
-O port usa duas faces: **Netflix Sans Medium** (o visual que sempre existiu) é o estado
-**com negrito**, e o estado **sem negrito** pede uma face mais fina. Como o arquivo Regular
-do Netflix Sans não chegou em uma transferência utilizável, hoje o estado sem negrito usa a
-**Inter** que já vem no pacote, em peso **350** (a Inter é variável, então 350 é visivelmente
-mais fino que o Medium) — o ajuste muda o que está na tela em qualquer caso.
+O port usa duas faces do mesmo par: **Netflix Sans Medium** é o estado **com negrito** e
+**Netflix Sans Regular** é o estado **sem negrito**. Os dois arquivos entram no pacote
+(`NetflixSans-Medium.otf` e `NetflixSans-Regular.otf`), então a alternância **Negrito** muda
+o desenho real da legenda, sem depender de síntese da TV.
 
-Para usar a Netflix Sans fina exata:
-
-1. coloque `NetflixSans-Regular.otf` (ou a face Light) em `webos/public/assets/fonts/`;
-2. rode `npm run package:webos` de novo — a regra `@font-face` de `Netflix Sans Regular` já
-   existe em `src/style.css` e passa a servir o arquivo.
+Se algum dos arquivos faltar, a pilha CSS cai para a **Inter** que também é embarcada, em peso
+400 no estado fino — o ajuste continua mudando o que está na tela.
 
 Estilos salvos antes da 0.26.0 mantêm o mesmo aspecto: a leitura migra o valor antigo para o
 estado Medium, então nada muda até o usuário tocar no **Negrito**.

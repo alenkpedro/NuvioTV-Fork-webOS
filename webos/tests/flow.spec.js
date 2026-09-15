@@ -83,13 +83,19 @@ test('series navigation, settings persistence and remote back key 461', async ({
   await navigation(page, 'Ajustes');
   await page.getByRole('button', { name: 'Reprodução', exact: true }).click();
   await page.getByRole('button', { name: /Preferências de fontes/ }).click();
-  await page.getByLabel('Grupos excluídos', { exact: true }).fill('MyGroup');
-  await page.getByRole('button', { name: 'Salvar grupos excluídos' }).click();
+  // The text preferences open the fork's dialog: the field takes the focus and Enter saves.
+  await page.getByRole('button', { name: /Grupos excluídos/ }).click();
+  const groups = page.getByRole('dialog', { name: 'Grupos excluídos' });
+  await groups.getByLabel('Grupos excluídos', { exact: true }).fill('MyGroup, Outro Grupo');
+  await groups.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page.getByRole('button', { name: /Grupos excluídos/ })).toContainText('2 grupo(s)');
   await page.reload();
   await navigation(page, 'Ajustes');
   await page.getByRole('button', { name: 'Reprodução', exact: true }).click();
   await page.getByRole('button', { name: /Preferências de fontes/ }).click();
-  await expect(page.getByLabel('Grupos excluídos', { exact: true })).toHaveValue('MyGroup');
+  await page.getByRole('button', { name: /Grupos excluídos/ }).click();
+  // One value per line, as on the fork's dialog, and the saved list comes back unchanged.
+  await expect(page.getByRole('dialog', { name: 'Grupos excluídos' }).getByLabel('Grupos excluídos', { exact: true })).toHaveValue('MyGroup\nOutro Grupo');
 });
 test('empty-state remote navigation and invalid add-on do not break the app', async ({ page }) => {
   await page.goto('/'); await page.keyboard.press('ArrowLeft');
@@ -1010,10 +1016,11 @@ test('fork subtitle appearance updates live, preserves family, persists and rese
  await syncFixture(page);await page.getByRole('button',{name:'Legendas',exact:true}).click();await page.getByRole('button',{name:'Ajustes de legenda',exact:true}).click();const dialog=page.getByRole('dialog'),overlay=page.locator('.subtitle-overlay');
  await dialog.getByRole('button',{name:'Aumentar tamanho',exact:true}).click();await expect(overlay).toHaveCSS('font-size','21.384px');await expect(dialog.getByRole('button',{name:'Aumentar tamanho',exact:true})).toBeFocused();
  // The look the port already had (Netflix Sans Medium) is the bold state now; without bold
- // the subtitle asks for a thinner face, so the toggle always changes what is on screen.
+ // the subtitle asks for the packaged Netflix Sans Regular, so the toggle changes what is on
+ // screen either way.
  await expect(overlay).toHaveCSS('font-weight','500');await expect(overlay).toHaveCSS('font-family','"Netflix Sans", Inter, Arial, sans-serif');
  await dialog.getByRole('button',{name:'Cor do texto: Amarelo',exact:true}).click();await expect(overlay).toHaveCSS('color','rgb(255, 215, 0)');await dialog.getByRole('button',{name:'Diminuir opacidade do texto',exact:true}).click();await expect(overlay).toHaveCSS('color','rgba(255, 215, 0, 0.9)');
- await dialog.getByRole('button',{name:'Negrito',exact:true}).click();await expect(overlay).toHaveCSS('font-weight','350');await expect(overlay).toHaveCSS('font-family','"Netflix Sans Regular", Inter, Arial, sans-serif');await dialog.getByRole('button',{name:'Contorno',exact:true}).click();await expect(overlay).toHaveCSS('text-shadow','none');
+ await dialog.getByRole('button',{name:'Negrito',exact:true}).click();await expect(overlay).toHaveCSS('font-weight','400');await expect(overlay).toHaveCSS('font-family','"Netflix Sans Regular", Inter, Arial, sans-serif');await dialog.getByRole('button',{name:'Contorno',exact:true}).click();await expect(overlay).toHaveCSS('text-shadow','none');
  await dialog.getByRole('button',{name:'Aumentar posição vertical',exact:true}).click();expect(await overlay.evaluate(e=>parseFloat(getComputedStyle(e).bottom))).toBeCloseTo(62.1,1);await expect(dialog).not.toContainText('Netflix');
  await dialog.getByRole('button',{name:/^Atraso:/}).click();await dialog.getByRole('button',{name:'Atrasar 0,1 s',exact:true}).click();await dialog.getByRole('button',{name:'Voltar à aparência',exact:true}).click();await dialog.getByRole('button',{name:'Cor do texto: Amarelo',exact:true}).focus();await page.locator('#toast').evaluate(e=>e.hidden=true);await expect(page.locator('.player-controls')).toHaveCSS('opacity','0');await page.screenshot({path:'test-results/subtitle-appearance-1920.png'});
  await leavePlayer(page);await page.getByRole('button',{name:'Reproduzir melhor fonte'}).click();await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(2);await page.locator('video').evaluate(v=>{v.pause();v.currentTime=25;});await expect(overlay).toHaveCSS('font-size','21.384px');

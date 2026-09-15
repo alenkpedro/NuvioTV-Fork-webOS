@@ -134,7 +134,7 @@ opções de pular automaticamente começam desligadas. Os botões dependem dos
 intervalos disponíveis no IntroDB. O IPK inclui o serviço local necessário à TV.
 
 Ative **Miniaturas ao buscar** para prévias dos trechos já reproduzidos em
-fontes SDR até 1080p, sem segundo player. Extração antecipada permanece pendente.
+fontes até 4K, sem segundo player. Extração antecipada permanece pendente.
 [Comportamento, diferenças e limites](PLAYER_EXTRAS.md).
 
 ## Tela de pausa e logos (0.18)

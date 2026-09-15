@@ -41,6 +41,7 @@ import {createRatingsClient,readRatingsSettings} from './core/ratings.js';
 import {ratingsSettingsScreen} from './ratings-screen.js';
 import { detailExtras,personScreen,metadataSettingsScreen,launchTrailer} from './metadata-screen.js';
 import { collectionsScreen, collectionEditorScreen } from './collections-screen.js';
+import { createSettingsKit } from './settings-kit.js';
 import { collectionRails, describeSource, isPlayableSource, parseAccountCollections, readCollections, toAccountCollections } from './core/collections.js';
 import { parseCatalogPage } from './core/discovery.js';
 import { profileScreen } from './profile-screen.js';
@@ -401,19 +402,9 @@ async function showHome(main, signal) {
     enrichRecentCards(recent, main, signal);
   }
   const loading = el('p', { class: 'loading', role: 'status' }, 'Carregando…'); rows.append(loading);
-  const results = await mapLimit(catalogs, async ({ addon, catalog }) => {
-    const response = await cachedMetaJSON(resourceURL(addon, 'catalog', catalog.type, catalog.id), signal);
-    return { addon, catalog, metas: Array.isArray(response.metas) ? response.metas.map(m => ({ ...m, type: m.type || catalog.type })) : [] };
-  }, signal);
-  if (!current(signal)) return; loading.remove();
-  let first = recent[0]?.meta;
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i];
-    if (r.value?.metas.length) {
-      first ||= r.value.metas[0];
-      catalogSection(rows, catalogTitle(r.value.catalog, layout), r.value.metas, r.value.addon, () => navigate({ name: 'catalog', addon: r.value.addon, catalog: r.value.catalog }), `home-${i}`);
-    } else if (r.error) notice(rows, `${catalogs[i].addon.manifest.name}: ${r.error.message}`);
-  }
+  let first = recent[0]?.meta, collectionFirst = null;
+  // Coleções vêm antes dos catálogos dos add-ons: é conteúdo curado pelo usuário, e é aqui
+  // que o port mostra o motivo quando não consegue abrir uma pasta (nada some da Home).
   if (rails.length) {
     const collectionResults = await mapLimit(rails.filter(rail => rail.sources.length), async rail => {
       try { return { rail, data: await fetchCollectionSource(rail.sources[0], signal) }; }
@@ -424,17 +415,32 @@ async function showHome(main, signal) {
       const value = entry?.value;
       if (!value) continue;
       if (value.data?.items.length) {
-        first ||= value.data.items[0];
+        collectionFirst ||= value.data.items[0];
         catalogSection(rows, value.rail.title, value.data.items, value.data.addon, () => navigate({ name: 'collection-source', collectionId: value.rail.collectionId, folderId: value.rail.folderId }), value.rail.key);
-      } else if (value.error) notice(rows, `${value.rail.title}: ${value.error.message}`);
-      else notice(rows, `${value.rail.title}: esta fonte não devolveu títulos.`);
+      } else if (value.error) collectionUnavailable(rows, value.rail.title, value.error.message);
+      else collectionUnavailable(rows, value.rail.title, 'esta fonte não devolveu títulos.');
     }
-    // A collection that cannot be opened stays visible with the reason, instead of simply
-    // missing from the Home.
-    for (const rail of rails.filter(entry => !entry.sources.length)) notice(rows, `${rail.title}: ${rail.unavailableMessage}`);
+    for (const rail of rails.filter(entry => !entry.sources.length)) collectionUnavailable(rows, rail.title, rail.unavailableMessage);
+  }
+  const results = await mapLimit(catalogs, async ({ addon, catalog }) => {
+    const response = await cachedMetaJSON(resourceURL(addon, 'catalog', catalog.type, catalog.id), signal);
+    return { addon, catalog, metas: Array.isArray(response.metas) ? response.metas.map(m => ({ ...m, type: m.type || catalog.type })) : [] };
+  }, signal);
+  if (!current(signal)) return; loading.remove();
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    if (r.value?.metas.length) {
+      first ||= r.value.metas[0];
+      catalogSection(rows, catalogTitle(r.value.catalog, layout), r.value.metas, r.value.addon, () => navigate({ name: 'catalog', addon: r.value.addon, catalog: r.value.catalog }), `home-${i}`);
+    } else if (r.error) notice(rows, `${catalogs[i].addon.manifest.name}: ${r.error.message}`);
   }
   if (first) updateHomeHero(first);
+  else if (collectionFirst) updateHomeHero(collectionFirst);
   else notice(rows, 'Nenhum conteúdo encontrado.');
+}
+// Uma coleção que a TV não consegue abrir continua na Home com o título e o motivo.
+function collectionUnavailable(rows, title, message) {
+  rows.append(el('section', { class: 'catalog-section collection-unavailable' }, el('div', { class: 'section-head' }, el('h2', {}, title)), el('p', { class: 'notice' }, message)));
 }
 function enrichRecentCards(recent, main, signal) {
   // Metadata arrives after the usable home; retain the focused button and cancel on exit.
@@ -556,7 +562,22 @@ function showAddons(main) {
   } }, input, submit);
   main.append(el('section', { class: 'addon-install' }, el('h2', {}, 'Instalar addon'), form));
   if (!state.addons.length) notice(main, 'Você ainda não instalou nenhum add-on.');
-  for (const a of state.addons) main.append(el('article', { class: 'addon-row' }, poster(a.manifest.logo, a.manifest.name, 'addon-icon'), el('div', { class: 'grow' }, el('h2', {}, a.manifest.name), el('p', { class: 'muted' }, `${a.manifest.version || ''} · ${new URL(a.url).hostname}`), el('p', {}, text(a.manifest.description).slice(0, 250))), button('Remover', () => { state.addons = state.addons.filter(x => x.url !== a.url); persist(); metadataCache.clear(); render(); })));
+  // A ordem desta lista decide a ordem das fontes e dos catálogos na Home (o fork guarda a
+  // mesma ordem no perfil; aqui ela vale nesta TV).
+  if (state.addons.length > 1) main.append(el('p', { class: 'muted' }, 'A ordem abaixo é a ordem das fontes e dos catálogos na Home. Use as setas para mudar.'));
+  state.addons.forEach((a, index) => main.append(el('article', { class: 'addon-row' }, poster(a.manifest.logo, a.manifest.name, 'addon-icon'),
+    el('div', { class: 'grow' }, el('h2', {}, a.manifest.name), el('p', { class: 'muted' }, `${a.manifest.version || ''} · ${new URL(a.url).hostname}`), el('p', {}, text(a.manifest.description).slice(0, 250))),
+    el('div', { class: 'addon-order' },
+      button('↑', () => moveAddon(index, -1), { class: 'addon-move', 'aria-label': `Mover ${a.manifest.name} para cima`, disabled: index === 0 }),
+      button('↓', () => moveAddon(index, 1), { class: 'addon-move', 'aria-label': `Mover ${a.manifest.name} para baixo`, disabled: index === state.addons.length - 1 })),
+    button('Remover', () => { state.addons = state.addons.filter(x => x.url !== a.url); persist(); metadataCache.clear(); render(); }))));
+}
+function moveAddon(index, delta) {
+  const target = index + delta;
+  if (index < 0 || target < 0 || target >= state.addons.length) return;
+  const next = [...state.addons];
+  [next[index], next[target]] = [next[target], next[index]];
+  state.addons = next; persist(); metadataCache.clear(); render();
 }
 function discoveryContext(main,signal) {return {main,signal,el,button,card,state,route,root,persist,navigate};}
 function showDiscover(main,signal) {return discoverScreen(discoveryContext(main,signal));}
@@ -868,12 +889,12 @@ async function showProfiles(main, signal) {
       state.collectionsSync = results[3].status === 'rejected'
         ? { ...(state.collectionsSync || {}), error: results[3].reason.message }
         : { ...(state.collectionsSync || {}), error: '' };
-      const failedAddons = addonResult.status === 'rejected' || addonResult.value.failed;
-      // Entrar na conta leva para a Home: uma falha de addon vira mensagem, e a nova
-      // tentativa continua disponível em Ajustes → Conta.
+      // Entrar na conta leva para a Home. O resumo de addons que não responderam fica em
+      // Ajustes → Conta, sem interromper a chegada com uma mensagem: a contagem que o resumo
+      // usa já foi gravada pelo sincronismo, e uma falha total continua virando aviso.
       stack = []; navigate({ name: 'home' }, true);
       if (messages.length) toast(messages.join(' '));
-      else if (failedAddons) toast(syncSummary(addonResult.value));
+      persist();
     }
   });
 }
@@ -1013,30 +1034,40 @@ function showSubtitleAppearance(main) {
   main.append(host, el('p', { class: 'muted' }, 'A família Netflix Sans é fixa; o player usa estes valores na hora e o padrão do fork pode ser restaurado no próprio editor.'));
 }
 function showPreferences(main) {
-  heading(main, '', 'Reprodução', 'Preferências de fontes e compatibilidade com a LG.');
-  const option = (title, description, checked, change) => {
-    const input = el('input', { type: 'checkbox', checked, onchange: e => { change(e.target.checked); persist(); } });
-    return el('label', { class: 'setting' }, el('span', { class: 'grow' }, el('strong', {}, title), el('small', { class: 'muted' }, description)), input);
-  };
-  main.append(option('Evitar fontes anunciadas como somente Dolby Vision', 'Perfil LG UT8050: HDR10 e HLG. A classificação usa as informações fornecidas pelo add-on.', state.settings.avoidDvOnly, v => state.settings.avoidDvOnly = v));
-  // The old single switch became the fork's four modes, the link cache and the trailer:
-  // all of them live in Ajustes → Reprodução → Reprodução automática.
-  const automation = readPlayback(state.settings.playback);
-  main.append(el('div', { class: 'setting' }, el('span', { class: 'grow' }, el('strong', {}, 'Reprodução automática'), el('small', { class: 'muted' }, `Seleção de fonte: ${autoPlayModeLabel(automation.autoPlayMode)} · Último link: ${automation.reuseLastLink ? cacheDurationLabel(automation.reuseLastLinkHours) : 'desligado'} · Trailer automático: ${automation.trailerAutoPlay ? `${automation.trailerDelay}s` : 'desligado'}`)), button('Abrir em Ajustes', () => navigate({ name: 'settings', category: 'playback' }), { 'data-focus': 'preferences-automation' })));
-  main.append(el('h2', { class: 'section-title' }, 'Filtros e ordem de qualidade'));
-  const fields = [['excludedReleaseGroups', 'Grupos excluídos'], ['preferredReleaseGroups', 'Ordem dos grupos preferidos']];
-  for (const [key, label] of fields) {
-    const area = el('textarea', { 'aria-label': label, rows: 3, spellcheck: 'false' }, (state.settings.preferences[key] ?? defaults[key]).join(', '));
-    main.append(el('label', { class: 'field' }, label, area), button('Salvar ' + label.toLowerCase(), () => { state.settings.preferences[key] = area.value.split(',').map(x => x.trim()).filter(Boolean); persist(); toast('Preferência salva.'); }));
+  const kit = createSettingsKit({ el, button, icon, toast });
+  const pane = el('div', { class: 'settings-pane' });
+  const pref = (key) => state.settings.preferences[key] ?? defaults[key];
+  const save = (message) => { persist(); draw(); if (message) toast(message); };
+  // DirectDebridStreamFilter: the fork splits the list on comma or newline and drops duplicates.
+  const listLine = (key, value) => { state.settings.preferences[key] = [...new Set(value.split(/[\n,]/).map(x => x.trim()).filter(Boolean))]; save('Preferência salva.'); };
+  function draw() {
+    const automation = readPlayback(state.settings.playback);
+    const chips = (title, key, entries) => kit.choices(title, ...entries.map(entry => kit.chip(entry.label, pref(key).includes(entry.id), () => {
+      const list = new Set(pref(key));
+      list.has(entry.id) ? list.delete(entry.id) : list.add(entry.id);
+      state.settings.preferences[key] = [...list]; save();
+    }, `Manter ${entry.label} na lista`)));
+    pane.replaceChildren(
+      kit.header('Preferências de fontes', 'Filtros, grupos de release e compatibilidade com a LG.'),
+      kit.group('Dispositivo', 'O que esta TV aceita',
+        kit.toggle('Evitar fontes anunciadas como somente Dolby Vision', 'Perfil LG UT8050: HDR10 e HLG, segundo o que o add-on informa.', () => state.settings.avoidDvOnly, value => { state.settings.avoidDvOnly = value; save(); })),
+      kit.group('Reprodução automática', 'Quem escolhe a fonte', 
+        kit.row('Seleção de fonte, último link e trailer', 'Ajustes → Reprodução → Reprodução automática',
+          () => navigate({ name: 'settings', category: 'playback' }), { value: autoPlayModeLabel(automation.autoPlayMode), attrs: { 'data-focus': 'preferences-automation' } })),
+      kit.group('Filtros e ordem de qualidade', 'Grupos, codecs, qualidades e limite de fontes',
+        kit.row('Grupos excluídos', 'Separe por vírgula; o port não mostra fontes destes grupos', () => kit.prompt('Grupos excluídos', 'Separe os nomes por vírgula.', pref('excludedReleaseGroups').join('\n'), value => listLine('excludedReleaseGroups', value)), { value: `${pref('excludedReleaseGroups').length} grupo(s)` }),
+        kit.row('Ordem dos grupos preferidos', 'A ordem em que os grupos sobem no ranking', () => kit.prompt('Ordem dos grupos preferidos', 'Separe os nomes por vírgula, do mais preferido para o menos.', pref('preferredReleaseGroups').join('\n'), value => listLine('preferredReleaseGroups', value)), { value: `${pref('preferredReleaseGroups').length} grupo(s)` }),
+        chips('Codecs excluídos', 'excludedEncodes', enums.DebridStreamEncode.entries),
+        chips('Qualidades excluídas', 'excludedQualities', enums.DebridStreamQuality.entries),
+        kit.row('Máximo de fontes filtradas', '0 deixa a lista sem limite', () => kit.prompt('Máximo de fontes filtradas', 'Entre 0 e 100. Zero significa sem limite.', String(pref('maxResults')), value => {
+          const parsed = Math.max(0, Math.min(100, Math.floor(Number(String(value).trim()) || 0)));
+          state.settings.preferences.maxResults = parsed; save('Limite salvo.');
+        }), { value: pref('maxResults') === 0 ? 'Sem limite' : String(pref('maxResults')) }),
+        kit.row('Restaurar preferências do fork', 'Volta aos padrões do código de referência', () => { state.settings.preferences = {}; save('Preferências originais restauradas.'); })),
+      kit.note('Base: ysosrs123/NuvioTV-Fork · 45e0984. Downloads paralelos, debrid direto, torrents e áudio avançado continuam em adaptação.'));
   }
-  for (const [key, label, enumKey] of [['excludedEncodes', 'Codecs excluídos', 'DebridStreamEncode'], ['excludedQualities', 'Qualidades excluídas', 'DebridStreamQuality']]) {
-    const options = el('fieldset', { class: 'chips' }, el('legend', {}, label));
-    for (const entry of enums[enumKey].entries) options.append(el('label', {}, el('input', { type: 'checkbox', checked: (state.settings.preferences[key] ?? defaults[key]).includes(entry.id), onchange: e => { const list = new Set(state.settings.preferences[key] ?? defaults[key]); e.target.checked ? list.add(entry.id) : list.delete(entry.id); state.settings.preferences[key] = [...list]; persist(); } }), entry.label));
-    main.append(options);
-  }
-  const max = el('input', { type: 'number', min: 0, max: 100, value: state.settings.preferences.maxResults ?? defaults.maxResults, 'aria-label': 'Máximo de fontes', onchange: e => { state.settings.preferences.maxResults = Math.max(0, Math.min(100, Math.floor(Number(e.target.value) || 0))); persist(); } });
-  main.append(el('label', { class: 'setting' }, el('span', {}, 'Máximo de fontes filtradas (0 = sem limite)'), max), button('Restaurar preferências do fork', () => { state.settings.preferences = {}; persist(); render(); toast('Preferências originais restauradas.'); }));
-  main.append(el('h2', { class: 'section-title' }, 'Sobre esta prévia'), el('p', { class: 'notice' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984. Interface em 1080p; vídeo em resolução original. Downloads paralelos, debrid direto, torrents, integrações externas de histórico e áudio avançado ainda estão em adaptação.'));
+  main.append(el('div', { class: 'settings-workspace settings-workspace-single' }, pane));
+  draw();
 }
 function clock(value) { const s = Math.max(0, Math.floor(value || 0)); return `${Math.floor(s / 3600) ? Math.floor(s / 3600) + ':' : ''}${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
 function bytes(n) { return Number.isFinite(n) && n > 0 ? `${(n / 1024 ** 3).toFixed(2)} GB` : ''; }

@@ -21,9 +21,11 @@ Descoberta → Coleções**, por perfil.
     que precisa — ID numérico do TMDB, tipo de conteúdo (filmes ou séries) e
     ordem (mais populares, melhor avaliados, mais votados, lançamento recente ou
     a ordem original).
-- **Na Home**, as coleções fixadas vêm primeiro; as demais seguem a ordem do
-  editor, depois dos catálogos dos add-ons. Cada fileira tem **Ver todos**, que
-  abre a pasta com as fontes em abas, como o `FolderDetailScreen`.
+- **Na Home**, as coleções vêm antes dos catálogos dos add-ons — são conteúdo curado pelo
+  usuário — e uma coleção fixada no topo lidera as demais, que seguem a ordem do editor.
+  Cada fileira tem **Ver todos**, que abre a pasta com as fontes em abas, como o
+  `FolderDetailScreen`. A ordem dos add-ons em **Ajustes → Conteúdo e Descoberta → Addons**
+  decide a ordem dos catálogos deles na Home.
 - Um título vindo do TMDB abre a tela de detalhes normalmente e a busca de
   fontes usa os add-ons instalados: a coleção não exige add-on próprio.
 

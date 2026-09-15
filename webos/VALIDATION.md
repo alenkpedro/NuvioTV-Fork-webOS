@@ -1,12 +1,12 @@
-# Checklist de validação na LG 55UT8050 — versão 0.25.0
+# Checklist de validação na LG 55UT8050 — versão 0.27.0
 
 Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
 deve acontecer**; a validação física é a única coisa que os testes de navegador não
 substituem. Veja também as pendências conhecidas no fim: elas já estão documentadas e não
 são falhas novas.
 
-> Esta versão nasceu da sua primeira rodada na TV: o **Bloco R** lista exatamente o que foi
-> corrigido a partir do seu relato, para conferência rápida.
+> Esta versão nasceu das suas rodadas na TV: o **Bloco R** lista exatamente o que foi
+> corrigido a partir do seu relato, para conferência rápida. O **R6** é o desta versão.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -16,7 +16,8 @@ são falhas novas.
 ## Como usar
 
 - **Bloco A (essencial, ~10 min):** o que, se quebrar, quebra o resto.
-- **Bloco B (~15 min):** o que cada versão recente acrescentou (0.20 a 0.25.0).
+- **Bloco R (~20 min):** o que as rodadas na TV corrigiram, da mais recente (R6) para trás.
+- **Bloco B (~15 min):** o que cada versão recente acrescentou (0.20 a 0.24).
 - **Bloco C (~20 min):** fluxos que nunca foram confirmados no aparelho desde a 0.4.
 - **Bloco D:** formatos de vídeo/áudio — só a TV responde.
 - Marque **OK / FALHOU / DÚVIDA** e anote o número do item. Se algo falhar, mande
@@ -30,7 +31,7 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
 ## Antes de começar
 
 1. **Atualizar:** Homebrew Channel → atualize a lista do repositório já salvo →
-   instale **Nuvio Fork**. Confirme a versão **0.24.1** em Ajustes → Sobre.
+   instale **Nuvio Fork**. Confirme a versão **0.27.0** em Ajustes → Sobre.
 2. **Entrar no perfil que você usa de verdade.** Coleções, biblioteca, histórico
    e preferências de reprodução são por perfil.
 3. Anote para o relatório: versão do firmware/webOS da TV, saída de áudio em uso
@@ -38,9 +39,31 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
    de teste você está usando.
 
 
-## Bloco R — correções da 0.25.0 (do seu relato)
+## Bloco R — correções das rodadas na TV (0.27, 0.26 e 0.25)
 
 Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R6. Terceira rodada (0.27.0)
+- [ ] **Legenda sem negrito agora é a Netflix Sans fina de verdade** (o arquivo entrou no
+      pacote). Abrir **Legendas → Ajustes de legenda** num título com legenda, alternar
+      **Negrito** e comparar: esperado dois pesos bem diferentes, sem depender de ajuste da TV.
+- [ ] **Miniaturas ao buscar**: ligar em **Ajustes → Reprodução**, reproduzir uma fonte 4K (ou
+      uma anunciada como HDR) e arrastar o scrubber. Esperado: a prévia aparece **na hora do
+      primeiro arrasto** (não só depois de alguns segundos) e continua funcionando em 4K; se a
+      TV não permitir capturar, o aviso único de sempre.
+- [ ] **Preferências de fontes** (Ajustes → Reprodução): abrir **Grupos excluídos** — esperado
+      um diálogo com o campo já focado; digitar com o teclado da TV e confirmar com **Enter**
+      (ou **Salvar**); reabrir e conferir que a lista voltou. Testar também **Ordem dos grupos
+      preferidos**, **Máximo de fontes filtradas** (0 = sem limite) e os chips de **Codecs** e
+      **Qualidades**.
+- [ ] **Add-ons em ordem** (Ajustes → Conteúdo e Descoberta → **Addons**): com dois ou mais
+      add-ons, usar **↑/↓** em um deles. Esperado: a lista muda de ordem e, no **Início**, os
+      catálogos seguem a nova ordem depois de sair e voltar (ou reiniciar o app).
+- [ ] **Coleções na Home**: esperado que as fileiras das suas coleções apareçam **antes** dos
+      catálogos dos add-ons, e que a coleção **fixada** venha antes das outras.
+- [ ] **Entrar na conta**: entrar com um add-on da conta que não responde. Esperado: chegar ao
+      **Início** sem aviso interrompendo; em **Ajustes → Conta**, o resumo mostra quantos não
+      responderam e **Sincronizar addons** tenta de novo.
 
 ### R1. Ajustes: rolagem, foco e recorte
 - [ ] Abrir **Ajustes → Reprodução**, rolar até o fim e alternar um ajuste que abre linhas
@@ -158,8 +181,8 @@ Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
       aparece como "TMDB · Coleção do TMDB · 10".
 - [ ] O cabeçalho da coleção conta pastas e fontes corretamente; **Fixar no topo**
       muda o rótulo do botão para **Desafixar** (correção 0.24.1).
-- [ ] Ir para **Início**. Esperado: a fileira "Clássicos" aparece depois dos
-      catálogos dos add-ons, com **Ver todos**; abrir Ver todos mostra as fontes
+- [ ] Ir para **Início**. Esperado: a fileira "Clássicos" aparece **antes** dos
+      catálogos dos add-ons (mudança da 0.27), com **Ver todos**; abrir Ver todos mostra as fontes
       em abas e os títulos; um cartão do TMDB abre o detalhe e **Assistir** acha
       fontes nos addons instalados.
 - [ ] Coleção fixada deve vir antes das não fixadas. Renomear, mover ↑/↓ e
@@ -333,7 +356,7 @@ documentos de cada versão:
   YouTube, o sistema pode relançar o app no Início — é o ciclo de vida do webOS, não
   uma ação do port.
 - **Miniaturas de busca**: dependem de a TV permitir capturar o quadro da fonte
-  (conteúdo até 1080p, sem HDR/DV e com origem que autoriza leitura). Quando não
+  (até 4K, inclusive fontes anunciadas como HDR/DV, com origem que autoriza leitura). Quando não
   permite, o port avisa uma vez em vez de falhar em silêncio.
 - **AFR**: um aplicativo web no webOS não troca a frequência do painel.
 - **Velocidade 2×**: o port desliga a correção de tom acima de 1× para aliviar o

@@ -81,10 +81,10 @@ Files in `assets/ratings/` are unmodified copies of the selected fork's
 and `res/drawable/mdblist_{audience,metacritic}.png`. Provider logos remain the
 property of their owners. The MDBList integration reads aggregate ratings only.
 
-Subtitle font: Netflix Sans Medium, supplied by the project owner in
-Netflix Sans-fontiko.zip; bundled unchanged at assets/fonts/NetflixSans-Medium.otf.
-The lighter state falls back to the bundled Inter variable font because the Regular face
-did not arrive in a usable transfer; adding assets/fonts/NetflixSans-Regular.otf switches it.
+Subtitle font: Netflix Sans Medium and Netflix Sans Regular, supplied by the project owner
+in Netflix Sans-fontiko.zip; bundled unchanged at assets/fonts/NetflixSans-Medium.otf and
+assets/fonts/NetflixSans-Regular.otf. They are the bold and the thin states of the subtitle.
+The bundled Inter variable font stays in the stylesheet only as the fallback face.
 Embedded copyright: Copyright (c) 2018. Netflix, Inc. and its affiliates. All rights reserved.
 Embedded license URL: http://www.daltonmaag.com/eula
 No license text accompanied the supplied archive. This font is not covered by

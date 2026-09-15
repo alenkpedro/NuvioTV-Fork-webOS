@@ -92,9 +92,10 @@ test('service failure is actionable and guest path remains usable', async ({ pag
 test('addon failure preserves login, lands on Home and exposes the retry in Ajustes', async ({ page }) => {
   await mockAccount(page, { addonError: true });
   await page.goto('/'); await page.getByRole('button', { name: 'Entrar com Nuvio', exact: true }).click();
-  // Entering the account lands on the Home; a failed import is a message, not a detour.
+  // Entering the account lands on the Home without an interruption; the failed import stays
+  // visible in Ajustes → Conta, where the retry lives.
   await expect(page.getByText('Nenhum addon instalado. Adicione um para começar.')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('#toast')).toContainText('não responderam');
+  await expect(page.locator('#toast')).toBeHidden();
   await accountSettings(page);
   await expect(page.locator('.account-sync-status')).toContainText('1 não responderam');
   await expect(page.getByRole('button', { name: /^Sincronizar addons/ })).toBeVisible();

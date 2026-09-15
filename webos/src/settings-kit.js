@@ -43,5 +43,22 @@ export function createSettingsKit({ el, button, icon = () => null, toast = () =>
     document.querySelector('#app').append(sheet);
     sheet.querySelector('.collection-choice')?.focus();
   };
-  return { header, note, group, row, toggle, chip, choices, card, field, choice };
+  // SettingsTextDialog (fork: DebridTextListDialog): the text field takes the focus as the dialog
+  // opens and Enter saves, so the TV keyboard alone finishes the edit. Release groups and other
+  // text preferences keep the row compact and show the current value beside it.
+  const prompt = (title, subtitle, value, onSave) => {
+    const previous = document.activeElement;
+    const sheet = el('div', { class: 'app-dialog', role: 'dialog', 'aria-modal': true, 'aria-label': title });
+    const area = el('textarea', { rows: 4, 'aria-label': title, spellcheck: 'false', autocomplete: 'off' }, value);
+    const close = () => { sheet.remove(); previous?.focus({ preventScroll: true }); };
+    const commit = () => { const next = area.value; close(); onSave(next); };
+    area.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); commit(); } });
+    sheet.append(el('section', { class: 'dialog-panel' }, el('h2', {}, title),
+      subtitle ? el('p', { class: 'muted' }, subtitle) : null,
+      el('div', { class: 'settings-field' }, area),
+      el('div', { class: 'toolbar' }, button('Salvar', commit, { class: 'primary' }), button('Cancelar', close, { 'data-dismiss': true }))));
+    document.querySelector('#app').append(sheet);
+    area.focus({ preventScroll: true });
+  };
+  return { header, note, group, row, toggle, chip, choices, card, field, choice, prompt };
 }

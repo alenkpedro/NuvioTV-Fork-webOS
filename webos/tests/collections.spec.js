@@ -154,13 +154,14 @@ test('pinning a collection moves its rail to the top of the Home', async ({ page
   ];
   await boot(page, { collections });
   await home(page);
-  // The add-on catalog comes first; the pinned collection keeps its rail above the other.
-  await expect(page.locator('.catalog-section h2')).toHaveText(['Coleção de teste - Filme', 'Fileira dois', 'Fileira um']);
+  // The user-curated collections lead the Home and the pinned one leads them; the add-on
+  // catalog follows the collections, as on the fork.
+  await expect(page.locator('.catalog-section h2')).toHaveText(['Fileira dois', 'Fileira um', 'Coleção de teste - Filme']);
   // Unpin in the management screen and the Home order follows.
   await openCollections(page);
   await page.getByRole('button', { name: 'Fixar Segunda no topo', exact: true }).click();
   await home(page);
-  await expect(page.locator('.catalog-section h2')).toHaveText(['Coleção de teste - Filme', 'Fileira um', 'Fileira dois']);
+  await expect(page.locator('.catalog-section h2')).toHaveText(['Fileira um', 'Fileira dois', 'Coleção de teste - Filme']);
 });
 
 async function home(page) {

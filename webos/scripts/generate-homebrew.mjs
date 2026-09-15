@@ -7,7 +7,7 @@ if (tag !== `webos-v${app.version}`) throw Error('Tag must match package version
 const filename = `${app.id}_${app.version}_all.ipk`, file = `packages/${filename}`;
 const manifest = {
   id: app.id, version: app.version, type: app.type, title: app.title,
-  appDescription: 'Legendas com dois pesos no padrão do app e Voltar pelo controle.',
+  appDescription: 'Legenda fina de verdade, miniaturas até 4K e add-ons em ordem.',
   iconUri: `https://raw.githubusercontent.com/${repo}/${tag}/webos/public/assets/icon.png`,
   sourceUrl: `https://github.com/${repo}/tree/${tag}`,
   rootRequired: false,
@@ -15,7 +15,7 @@ const manifest = {
   ipkHash: { sha256: createHash('sha256').update(readFileSync(file)).digest('hex') },
   ipkSize: statSync(file).size,
 };
-const index = { paging: { page: 1, count: 1, maxPage: 1, itemsTotal: 1 }, packages: [{ id: app.id, title: app.title, iconUri: manifest.iconUri, manifest, pool: 'main', shortDescription: 'Player do fork com coleções sincronizadas, ajustes corrigidos e legendas prontas antes do vídeo.' }] };
+const index = { paging: { page: 1, count: 1, maxPage: 1, itemsTotal: 1 }, packages: [{ id: app.id, title: app.title, iconUri: manifest.iconUri, manifest, pool: 'main', shortDescription: 'Player do fork com miniaturas até 4K, legenda em dois pesos e add-ons reordenáveis.' }] };
 writeFileSync('../apps.json', JSON.stringify(index, null, 2) + '\n');
 writeFileSync(`packages/${app.id}.manifest.json`, JSON.stringify(manifest, null, 2) + '\n');
 console.log(JSON.stringify({ file, bytes: manifest.ipkSize, sha256: manifest.ipkHash.sha256 }));

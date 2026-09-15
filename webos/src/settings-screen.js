@@ -216,7 +216,7 @@ export function settingsScreen(context) {
     return [
       group('Geral', 'Comportamento principal do player',
         toggle('Informações ao pausar', 'Detalhes após 5s de pausa', () => play().pauseOverlay, value => updatePlayback({ pauseOverlay: value })),
-        toggle('Miniaturas ao buscar', 'Prévia dos trechos já reproduzidos em fontes compatíveis.', () => play().seekThumbnails, value => updatePlayback({ seekThumbnails: value })),
+        toggle('Miniaturas ao buscar', 'Prévia dos trechos já reproduzidos; funciona até 4K.', () => play().seekThumbnails, value => updatePlayback({ seekThumbnails: value })),
         toggle('Pular introduções', 'Usar introdb.app para detectar aberturas e resumos', () => play().skipSegments, value => updatePlayback({ skipSegments: value })),
         toggle('Avisos de conteúdo', 'Exibir aviso de classificação indicativa ao iniciar a reprodução.', () => play().parentalGuide, value => updatePlayback({ parentalGuide: value }))),
       group('Pular automaticamente', 'Escolha quais trechos pular automaticamente', ...segmentTypes.map(([type, title, description]) => toggle(title, description, () => play().autoSkipTypes.includes(type), value => { const list = new Set(play().autoSkipTypes); value ? list.add(type) : list.delete(type); updatePlayback({ autoSkipTypes: [...list] }); }))),
