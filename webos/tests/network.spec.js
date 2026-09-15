@@ -79,8 +79,8 @@ test('Buffer e Rede exposes the two durations the TV honours and keeps Media3 ro
   for (let i = 0; i < 8; i++) await guard.click(); // 20 → 60 s, the fork's ceiling
   await expect(page.locator('.settings-threshold-value')).toHaveText(['20s', '5s', '60s']);
   await expect(guard).toBeDisabled();
-  await page.locator('.settings-content').evaluate(node => { node.scrollTop = node.scrollHeight; });
-  await page.waitForTimeout(200);
+  await page.locator('.settings-group', { hasText: 'Buffer de reprodução personalizado' }).evaluate(node => node.scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(250);
   await page.screenshot({ path: 'test-results/settings-buffer-1920.png' });
   // The rows that only exist inside Media3 stay visible and marked.
   const escaped = title => new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
