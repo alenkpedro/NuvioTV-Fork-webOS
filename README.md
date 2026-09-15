@@ -15,9 +15,14 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.13.0
+## Estado: prévia 0.14.0
 
-A 0.13.0 acrescenta **legendas forçadas/SDH**, filtro por idioma no painel e
+A 0.14.0 acrescenta **velocidade de reprodução**, **atraso de legenda salvo por
+filme/episódio e perfil**, **Netflix Sans nas legendas externas** e confirmação
+**“Ainda assistindo?”** configurável. A fonte está incluída no pacote.
+[Uso, comportamento e limites na LG](webos/PLAYBACK_TIMING.md).
+
+A 0.13.0 acrescentou **legendas forçadas/SDH**, filtro por idioma no painel e
 **memória da escolha manual de áudio e legendas por título e perfil**. Ajustes
 em Reprodução → Idiomas e próximo episódio. [Uso e limites](webos/SUBTITLE_PREFERENCES.md).
 

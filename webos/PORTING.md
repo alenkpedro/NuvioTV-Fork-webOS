@@ -110,3 +110,12 @@ principal/secundário e prioridade para escolhas manuais. Validação física pe
 áudio, limpeza SDH de legendas externas, coluna/filtro de idiomas e memória por
 título e perfil. Atualiza as pendências indicadas nas entregas anteriores.
 Faixas internas, formatos e navegação física ainda exigem validação na LG.
+
+## Entrega 0.14 — velocidade, sincronização e continuidade
+
+[PLAYBACK_TIMING.md](PLAYBACK_TIMING.md) registra velocidade por título, atraso
+por vídeo, memória por perfil e confirmação após avanços automáticos. O cartão
+usa geometria do PostPlayOverlay, com foco modal adaptado ao webOS. Netflix Sans
+Regular fornecida pelo usuário é aplicada às externas e solicitada por CSS nas
+nativas; o motor da LG pode ignorar estilos de texto nativo. Velocidade verifica
+aceitação da API, não o decoder. Validação física permanece pendente.

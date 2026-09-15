@@ -602,6 +602,7 @@ async function showStreams(main, signal) {
     if (best && !document.hidden) { navigate({ ...context, name: 'player', stream: best }); return; }
   }
   view.visited = true;
+  if (context.nextPlayback) context.nextPlayback = {...context.nextPlayback,count:0};
   const list = el('div', { class: 'streams' });
   const count = el('p', { class: 'stream-count', role: 'status' });
   const subset = () => all.filter(s => view.provider === null || s.sourceProvider === view.provider);
@@ -838,7 +839,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.13.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.14.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));
@@ -881,7 +882,7 @@ function showPlayer(context) {
   const time = el('span', { class: 'player-time' }, '00:00');
   const stats = el('pre', { class: 'stats', hidden: true });
   const pause = button('Pausar', toggle);
-  const controls = el('div', { class: 'player-controls' }, el('div', { class: 'section-head' }, el('h1', {}, title), time), timeline, el('div', { class: 'toolbar' }, button('Voltar às fontes', back), button('−30 s', () => seek(-30)), pause, button('+30 s', () => seek(30)), button('Áudio', () => tracks.openAudio()), button('Legendas', () => tracks.openSubtitles()), button('Diagnóstico', () => { stats.hidden = !stats.hidden; updateStats(); })));
+  const controls = el('div', { class: 'player-controls' }, el('div', { class: 'section-head' }, el('h1', {}, title), time), timeline, el('div', { class: 'toolbar' }, button('Voltar às fontes', back), button('−30 s', () => seek(-30)), pause, button('+30 s', () => seek(30)), button('Áudio', () => tracks.openAudio()), button('Legendas', () => tracks.openSubtitles()), button('Velocidade', () => tracks.openSpeed()), button('Diagnóstico', () => { stats.hidden = !stats.hidden; updateStats(); })));
   const screen = el('div', { class: 'player-screen controls-visible' }, video, status, stats, controls); root.append(screen);
   let disposed = false, hideTimer, savedAt = 0, resumeApplied = false;
   const listeners = [];
@@ -892,15 +893,16 @@ function showPlayer(context) {
   const upNext = installNextEpisode({screen,video,context,settings:state.settings,el,button,
     loadMeta:async()=> (await loadMeta(context.meta,context.addon,request.signal)).meta,
     modalOpen:()=>tracks.isOpen(), restoreFocus:()=>{reveal();pause.focus();},
-    advance:(episode,auto)=>{
+    stopPlayback:()=>back(),
+    advance:(episode,auto,count)=>{
       // Drop earlier episode routes so binge playback cannot grow navigation indefinitely.
       while (['player','streams'].includes(stack.at(-1)?.route.name)) stack.pop();
       navigate({name:'streams',meta:context.meta,addon:context.addon,id:episode.id,type:context.type,
         episode:{title:episode.title,season:episode.season,episode:episode.episode},
-        nextPlayback:{auto,bingeGroup:context.stream.behaviorHints?.bingeGroup || null}},true);
+        nextPlayback:{auto,count,bingeGroup:context.stream.behaviorHints?.bingeGroup || null}},true);
     }});
   function save() { try {recordProgress(state, { ...context, time: video.currentTime, duration: video.duration });persist();} catch(error){toast(error.message);} }
-  function reveal() { if (tracks.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen()) hideTimer = setTimeout(() => { controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, 4500); }
+  function reveal() { if (tracks.isOpen() || upNext.isOpen()) { clearTimeout(hideTimer); controls.classList.add('faded'); screen.classList.remove('controls-visible'); return; } controls.classList.remove('faded'); screen.classList.add('controls-visible'); clearTimeout(hideTimer); if (!video.paused && !tracks.isOpen()) hideTimer = setTimeout(() => { controls.classList.add('faded'); screen.classList.remove('controls-visible'); }, 4500); }
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
   function seek(delta) { seekTo(video.currentTime + delta); }
   async function play() { try { await video.play(); } catch { if (!disposed) { status.hidden = false; status.textContent = 'Pressione Reproduzir para iniciar.'; pause.textContent = 'Reproduzir'; } } }
@@ -926,6 +928,7 @@ function showPlayer(context) {
   if (issue) status.textContent = issue;
   else { video.src = context.stream.url; play(); }
   player = { key(key, e) {
+    if (upNext.isOpen()) { if (['MediaPlay','MediaPause','MediaStop','MediaRewind','MediaFastForward',' '].includes(key)) { e.preventDefault(); return true; } return false; }
     if (tracks.isOpen()) return false;
     if (['MediaPlay', 'MediaPause', 'MediaStop', 'MediaRewind', 'MediaFastForward', ' '].includes(key)) {
       e.preventDefault(); if (key === 'MediaPlay') play(); else if (key === 'MediaPause') video.pause(); else if (key === 'MediaStop') back(); else if (key === 'MediaRewind') seek(-30); else if (key === 'MediaFastForward') seek(30); else toggle(); return true;

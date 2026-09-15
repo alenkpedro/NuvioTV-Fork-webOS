@@ -21,11 +21,13 @@ export function playbackSettingsScreen({main,settings,persist,el}) {
   toggle('addonSubtitles','Buscar legendas de addons automaticamente');
   main.append(el('p',{class:'muted'},'Forçadas: traduzem trechos pontuais quando o áudio já está no idioma desejado. SDH: descrições de sons e identificação de falantes. A limpeza SDH não altera legendas internas. Sem uma faixa compatível, o áudio da fonte é mantido. Legendas de addons também podem ser buscadas manualmente no player.'));
   toggle('autoNext','Reproduzir próximo episódio automaticamente');
+  toggle('stillWatching','Perguntar se ainda estou assistindo');
+  main.append(el('p',{class:'muted'},'Após a sequência de avanços automáticos, pausa e aguarda sua confirmação por 60 segundos. Sem resposta, encerra a reprodução.'));
   toggle('preferBingeGroup','Preferir o mesmo grupo de reprodução');
   toggle('nextFallback','Usar outra fonte se o grupo não estiver disponível');
   select('thresholdMode','Quando mostrar o próximo episódio',[['percentage','Porcentagem assistida'],['minutes','Minutos antes do fim']]);
-  for (const [key,title,min,max,step] of [['thresholdPercent','Porcentagem assistida',97,100,0.5],['thresholdMinutes','Minutos antes do fim',0,3.5,0.5]]) {
-    const input=el('input',{type:'number',min,max,step,value:prefs[key],'aria-label':title,onchange:e=>{const value=Number(e.target.value);if(Number.isFinite(value))prefs[key]=Math.max(min,Math.min(max,value));e.target.value=prefs[key];persist();}});
+  for (const [key,title,min,max,step] of [['stillWatchingThreshold','Avanços automáticos antes da confirmação',2,6,1],['thresholdPercent','Porcentagem assistida',97,100,0.5],['thresholdMinutes','Minutos antes do fim',0,3.5,0.5]]) {
+    const input=el('input',{type:'number',min,max,step,value:prefs[key],'aria-label':title,onchange:e=>{const value=Number(e.target.value);if(Number.isFinite(value))prefs[key]=Math.max(min,Math.min(max,step===1 ? Math.round(value) : value));e.target.value=prefs[key];persist();}});
     main.append(el('label',{class:'setting'},el('span',{},title),input));
   }
 }

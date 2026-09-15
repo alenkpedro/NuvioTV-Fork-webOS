@@ -29,8 +29,9 @@ mostra texto sobre o vídeo; SRT não depende de suporte nativo do webOS. Aceita
 UTF-8, UTF-16 com BOM e fallback Windows-1252. Formatação HTML/ASS é removida,
 conteúdo é inserido como texto e marcações de posicionamento VTT são ignoradas.
 **Ajustes de legenda** altera tamanho, fundo e atraso de −10 a +10 segundos
-(em passos de 0,5 s). Tamanho/fundo são locais e persistentes; atraso vale para
-a reprodução atual. Ajustes não afetam legendas internas. **Desativadas** remove
+(em passos de 0,5 s). Tamanho/fundo são locais e persistentes; desde a 0.14, o atraso é salvo por
+filme/episódio e perfil. Netflix Sans está incluída para as externas.
+[Velocidade, fonte e continuidade](PLAYBACK_TIMING.md). Ajustes não afetam legendas internas. **Desativadas** remove
 legendas. Se um download falhar, a legenda anterior continua selecionada.
 
 A barra de posição aceita ponteiro e setas esquerda/direita, em passos de 10 s.

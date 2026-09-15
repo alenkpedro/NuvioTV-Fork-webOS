@@ -82,3 +82,9 @@ A memória de idiomas, o filtro por língua, forçadas e SDH foram acrescentados
 na [0.13](SUBTITLE_PREFERENCES.md). A descrição de pendências acima documenta
 a entrega 0.12. Memória por título/perfil agora tem prioridade sobre os idiomas
 gerais; seleções manuais no vídeo atual continuam prevalecendo.
+
+## Atualização 0.14
+
+A confirmação “Ainda assistindo?”, velocidade por título e sincronização por
+vídeo foram acrescentadas na [0.14](PLAYBACK_TIMING.md). A contagem automática
+reinicia após escolha manual; o prazo de confirmação pausa com o app oculto.

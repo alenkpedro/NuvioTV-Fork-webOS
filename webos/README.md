@@ -27,6 +27,14 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Velocidade, legenda e continuidade (0.14)
+
+Player → Velocidade, de 0,25× a 2×, lembrada por título/perfil. Atraso de legenda
+externa salvo por filme/episódio/perfil e Netflix Sans incluída no pacote.
+“Ainda assistindo?” configurável em Reprodução → Idiomas e próximo episódio;
+desativado por padrão, limiar de três avanços automáticos e confirmação de 60 s.
+[Uso e limites de plataforma](PLAYBACK_TIMING.md).
+
 ## Legendas e memória de faixas (0.13)
 
 O painel Legendas tem coluna de idiomas, filtro de preferidos e indicação de
@@ -122,8 +130,8 @@ separadamente. Não há alegação de otimização máxima medida no hardware.
 Downloads paralelos e buffer customizado do fork; teste de velocidade e avaliação
 de dispositivo; Direct Debrid e torrents; plugins Android; listas e rastreamento MDBList/Trakt/Simkl;
 deltas/realtime, gestão de listas externas e edição de perfis; decodificadores FFmpeg/MPV; conversão Dolby Vision;
-passthrough lossless/MAT; legendas ASS/PGS/ZIP, preferências automáticas de idioma,
-ajuste de frequência e Up Next. A versão 0.5.0 acrescenta fontes, áudio e legendas; a
+passthrough lossless/MAT; legendas ASS/PGS/ZIP, ajuste de frequência e paridade
+completa de Up Next. Idiomas, avanço automático e confirmação já estão nas 0.12–0.14. A versão 0.5.0 acrescenta fontes, áudio e legendas; a
 0.4.0 ampliou as opções Modern e os detalhes a partir do código de referência. Temas/fontes alternativos, profundidade, expansão temporizada, trailers internos, coleções pessoais e personalizações adicionais continuam pendentes. Veja [UI_REFERENCE.md](UI_REFERENCE.md)
 para medidas, origem e limitações; ainda não há comparação pixel a pixel com
 uma captura da mesma configuração executada no Android.
@@ -153,7 +161,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.13.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.14.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

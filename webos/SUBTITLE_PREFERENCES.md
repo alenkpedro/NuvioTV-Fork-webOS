@@ -55,7 +55,7 @@ os addons no próximo vídeo mesmo com a busca automática geral desligada.
 Só uma escolha manual bem-sucedida é salva. Falha de download/troca, cancelamento,
 resposta atrasada ou seleção automática não substituem a memória. Perfil alterado
 ou player descartado não recebe gravações de uma consulta anterior. Atrasos
-continuam zerados em uma nova reprodução nesta entrega.
+passam a ser lembrados por vídeo na [entrega 0.14](PLAYBACK_TIMING.md).
 
 Permanecem os limites de 64 faixas internas, 300 externas, arquivo de 2 MiB,
 20 mil cues e até três tentativas automáticas de download por reprodução.
@@ -74,11 +74,11 @@ ponteiro. O editor de estilos conserva o painel de 320 dp existente. Não se
 considera esta geometria uma reprodução integral da tela Android.
 
 Não há limpeza de SDH de imagem/PGS ou faixas nativas, ASS/ZIP, busca por nome de
-legenda, tradução, ou persistência do atraso por vídeo nesta entrega. A memória
+legenda ou tradução nesta entrega. A memória
 não sincroniza com a conta Nuvio, Trakt ou Simkl.
 
 Testes usam mídia sintética, faixas simuladas e fixtures de addons. A validação
 física dos formatos, flags e controle remoto na LG 55UT8050 continua pendente.
 
-Próxima etapa sugerida: velocidade de reprodução, atraso de legenda por episódio
-e confirmação “Ainda assistindo?” em sessões longas.
+Velocidade, atraso por episódio, Netflix Sans e “Ainda assistindo?” foram
+entregues na [0.14](PLAYBACK_TIMING.md).

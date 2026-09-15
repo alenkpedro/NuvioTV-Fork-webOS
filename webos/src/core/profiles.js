@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // ProfileManager (six profiles) + isolated webOS persistence.
 import { enqueueKnown, observeSnapshot } from './outbox.js';
-const fields = ['trackPreferences', 'addons', 'library', 'progress', 'watched', 'libraryOverrides', 'librarySync', 'accountSync', 'historySync', 'historyConflicts', 'historyChoices', 'watchedRecords', 'watchedOverrides', 'historyInitialized', 'outbox', 'outboxInitialized', 'outboxRevision', 'outboxStatus', 'syncBases', 'syncKnown', 'recentSearches', 'discoverSelection', 'catalogOrder', 'hiddenHomeCatalogs'];
+const fields = ['playbackSpeeds', 'subtitleDelays', 'trackPreferences', 'addons', 'library', 'progress', 'watched', 'libraryOverrides', 'librarySync', 'accountSync', 'historySync', 'historyConflicts', 'historyChoices', 'watchedRecords', 'watchedOverrides', 'historyInitialized', 'outbox', 'outboxInitialized', 'outboxRevision', 'outboxStatus', 'syncBases', 'syncKnown', 'recentSearches', 'discoverSelection', 'catalogOrder', 'hiddenHomeCatalogs'];
 const empty = () => ({ addons: [], library: {}, progress: {}, watched: {}, libraryOverrides: {} });
 export const profileKey = (userId, id) => JSON.stringify([userId, id]);
 function snapshot(state) { return Object.fromEntries(fields.filter(k => state[k] !== undefined).map(k => [k, state[k]])); }
