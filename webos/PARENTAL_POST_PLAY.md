@@ -24,6 +24,9 @@ o port consulta o guia do título e desenha o overlay do fork sobre o vídeo:
   busca ou pós-reprodução) ou os dados de reprodução são abertos.
 - Aparece uma vez por reprodução.
 
+O guia é guardado por título na memória da sessão (30 títulos), como o mapa do
+repositório Android, então voltar ao mesmo filme não refaz a consulta.
+
 A gravidade por categoria é a mesma regra do `ParentalGuideRepository`: vence a
 severidade com mais votos, ignorando "none"; se "none" tiver mais votos que
 qualquer nível, a categoria não aparece. Empates mantêm a primeira entrada, como
