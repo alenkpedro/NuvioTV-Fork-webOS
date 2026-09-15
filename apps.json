@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.12.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.13.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.12.0",
+        "version": "0.13.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Idiomas de áudio e legendas, próximo episódio com contagem cancelável e fontes por grupo de reprodução.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.12.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.12.0",
+        "appDescription": "Legendas forçadas/SDH, filtro por idioma e memória de áudio e legendas por título e perfil.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.13.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.13.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.12.0/org.nuviofork.webos_0.12.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.13.0/org.nuviofork.webos_0.13.0_all.ipk",
         "ipkHash": {
-          "sha256": "9053b578b3f1ff770007f06731cdab08b93961e4763a19bc5524f3bba6d5db20"
+          "sha256": "59690927dfc25b7d523d97b4a93df66047403d99f293bfa583397f40c5f6c60c"
         },
-        "ipkSize": 706270
+        "ipkSize": 708708
       },
       "pool": "main",
-      "shortDescription": "Idiomas e próximo episódio para LG webOS 24."
+      "shortDescription": "Legendas e memória de faixas para LG webOS 24."
     }
   ]
 }
