@@ -72,5 +72,12 @@ export async function mapLimit(items, fn, signal, limit = 3) {
   }));
   return result.filter(Boolean);
 }
-export const extraOptions = c => c.extra ?? (c.extraSupported ?? []).map(name => ({ name, isRequired: (c.extraRequired ?? []).includes(name) }));
+export function extraOptions(catalog) {
+  const extras=new Map();
+  for(const e of Array.isArray(catalog.extra)?catalog.extra:[])if(e && typeof e.name==='string')extras.set(e.name.toLowerCase(),{...e,name:e.name.toLowerCase(),options:Array.isArray(e.options)?e.options:[]});
+  for(const raw of [...(Array.isArray(catalog.extraSupported)?catalog.extraSupported:[]),...(Array.isArray(catalog.extraRequired)?catalog.extraRequired:[])])if(typeof raw==='string') {
+    const name=raw.toLowerCase();extras.set(name,{...(extras.get(name) || {name}),isRequired:extras.get(name)?.isRequired || (Array.isArray(catalog.extraRequired)?catalog.extraRequired:[]).some(x=>typeof x==='string' && x.toLowerCase()===name)});
+  }
+  return [...extras.values()];
+}
 export const normalCatalogs = a => (a.manifest.catalogs ?? []).filter(c => !extraOptions(c).some(e => e.isRequired));

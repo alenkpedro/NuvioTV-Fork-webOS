@@ -26,6 +26,7 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
 | 0.6 | Perfis/PIN, addons próprios/herdados, biblioteca nativa da conta e isolamento dos dados locais | Pendente; usuário testará depois |
 | 0.7 | Histórico nativo Nuvio por perfil, retomada e resolução local de conflitos | Pendente; usuário testará depois |
 | 0.8 | Envio nativo Nuvio, fila por perfil, remoções por item e conflitos | Pendente; usuário testará depois |
+| 0.9 | Descobrir, filtros, busca ao digitar, recentes por perfil e organização do início | Pendente; usuário testará depois |
 
 ## Sequência proposta
 
@@ -53,8 +54,13 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    remoções por item, revisão de conflitos e retomada offline. Ver [SYNC.md](SYNC.md).
    Deltas/realtime, remoção de progresso e listas externas ficam pendentes. Gestão de perfis/PIN, avatares de catálogo e
    histórico externo continuam pendentes. Não sobrescrever a nuvem com estado vazio.
-4. **Descoberta e metadados — próxima etapa sugerida.** Busca/Descobrir, organização de todos os catálogos,
-   TMDB/MDBList, elenco/filmografia, recomendações, coleções, trailers e ratings.
+4. **Descoberta e metadados — primeira entrega 0.9.** Descobrir com filtros,
+   busca ao digitar/recentes por perfil e ordem/visibilidade local do início.
+   Ver [DISCOVERY.md](DISCOVERY.md). Paginação manual limitada no webOS; voz,
+   sugestões de títulos, opções por pressão longa e localizações alternativas
+   de Descobrir permanecem pendentes. **Próxima etapa sugerida:** detalhes com
+   elenco/filmografia, recomendações e trailers conforme as fontes do fork.
+   TMDB/MDBList diretos, coleções e ratings adicionais continuam no roteiro.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

@@ -68,3 +68,11 @@ escrita remota. Contratos, limites e fallback de provedores: [HISTORY.md](HISTOR
 revisões locais e confirmações por item. `account.mutate` usa as RPCs de
 `WatchProgressSyncService`, `WatchedItemsSyncService` e
 `SupabaseLibrarySyncRemoteDataSource`. Contratos e limites: [SYNC.md](SYNC.md).
+
+## Descobrir e busca — entrega 0.9
+
+`core/discovery.js`, `discovery-screen.js`, `genre-labels.json`: regras de
+`SearchViewModel`, `CatalogDescriptorExtensions`, `SearchHistoryDataStore` e
+`GenreLabelFormatter`; layout de `SearchDiscoverSection`, `SearchScreen` e
+`SearchUiState`. `genre-labels.json` deriva das chaves do formatter e strings
+pt-BR do commit de referência. Regras e adaptações: [DISCOVERY.md](DISCOVERY.md).

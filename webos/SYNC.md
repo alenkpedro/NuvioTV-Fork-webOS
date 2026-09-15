@@ -83,6 +83,7 @@ durante envio, isolamento por perfil e confirmação após resposta perdida. Nen
 conta real foi usada para escrever dados durante o desenvolvimento. O envio real
 na LG ainda depende do teste do usuário.
 
-**Próxima etapa sugerida:** Descobrir e busca avançada, com filtros por tipo/gênero,
-organização dos catálogos e navegação/retorno fiéis ao fork de referência. Integrações
-externas e pendências de paridade continuam em [ROADMAP.md](ROADMAP.md).
+Descobrir e busca avançada foram acrescentados na 0.9; veja [DISCOVERY.md](DISCOVERY.md).
+A próxima etapa sugerida é ampliar detalhes/metadados: elenco/filmografia,
+recomendações e trailers. Integrações externas e demais pendências continuam
+em [ROADMAP.md](ROADMAP.md).

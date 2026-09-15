@@ -32,6 +32,9 @@ Outras configurações do Android ainda não são sincronizadas.
 - Login Nuvio por QR code, sessão persistente, renovação e logout somente desta TV.
 - Importação dos addons da conta, com opção de repetir a sincronização e erros parciais visíveis.
 - Instalação/remoção local de add-ons, catálogos, busca e detalhes com episódios.
+- Descobrir por tipo/catálogo/gênero; busca após 350 ms, pesquisas recentes por
+  perfil e filtros. Ordem/visibilidade das faixas em Catálogos do início. Ver
+  [DISCOVERY.md](DISCOVERY.md) para geometria, paginação e diferenças pendentes.
 - Perfis da conta com PIN, addons próprios/herdados e biblioteca Nuvio importada.
   Favoritos editados na LG são enviados ao Nuvio e separados por perfil.
   Veja [PROFILES.md](PROFILES.md).
@@ -72,7 +75,7 @@ A compatibilidade real de 4K/HDR/áudio precisa de testes no aparelho.
 - Cache de metadados com TTL de 2 minutos, até 8 entradas e orçamento estimado
   de 2 MiB serializados (isso não é uma medição do heap total).
 - Até seis catálogos na home, 16 cartões por faixa, imagens lazy e decodificação
-  assíncrona. A visualização completa pagina até 200 cartões; episódios mostram
+  assíncrona. Descobrir e Ver todos exibem até 100 cartões por página; episódios mostram
   até 150 itens por temporada. Até 30 add-ons instalados.
 - Até 300 fontes por add-on; a lista renderiza no máximo 100 fontes por vez.
 - Histórico de até 100 itens, gravação no máximo a cada 10 segundos durante a
@@ -121,7 +124,7 @@ Também é possível informar `CHROME_PATH`.
 ```sh
 npm run test:ui
 npm run package:webos
-node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.8.0
+node scripts/generate-homebrew.mjs alenkpedro/NuvioTV-Fork-webOS webos-v0.9.0
 ```
 
 O CLI da LG está instalado localmente. O script de pacote mantém seus dados em

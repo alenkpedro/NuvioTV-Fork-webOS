@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { loadAddon, getJSON, resourceURL, supports, normalCatalogs, extraOptions, mapLimit } from './core/addons.js';
+import { loadAddon, getJSON, resourceURL, supports, mapLimit } from './core/addons.js';
 import { defaults, enums, rankStreams, filterAndSort, factsFor, playbackIssue, sizeBytes } from './core/ranking.js';
 import { readState, saveState, progressKey, recordProgress } from './core/storage.js';
 import { installRemote } from './remote.js';
@@ -10,6 +10,8 @@ import { installTrackControls } from './player-tracks.js';
 import { initializeProfiles, activateProfile, leaveAccountProfiles, mergeLibrary, setLibraryItem } from './core/profiles.js';
 import { initializeHistory, mergeHistory, markWatched, isWatched, continueHistory, progressWithWatched, historySummary, resolveHistoryConflict } from './core/history.js';
 import { initializeOutbox, flushOutbox, syncSummary as outboundSummary, resolveOutbound } from './core/outbox.js';
+import { discoverScreen, searchScreen, catalogManager } from './discovery-screen.js';
+import { homeCatalogEntries } from './core/discovery.js';
 import { profileScreen } from './profile-screen.js';
 import qrcode from 'qrcode-generator';
 import searchIcon from '../public/assets/icons/sidebar_search.svg';
@@ -129,7 +131,7 @@ function focusFirst() { const expectedRoute = route, expectedRequest = request; 
   const restored = route.restoreFocus && [...root.querySelectorAll('[data-focus]')].find(e => e.dataset.focus === route.restoreFocus);
   delete route.restoreFocus;
   (restored || root.querySelector('main [data-initial-focus]') || root.querySelector('main input, main button:not(:disabled)') || root.querySelector('main'))?.focus({ preventScroll: true });
-  if (restored?.classList.contains('source')) restored.scrollIntoView({ block: 'nearest' });
+  if (restored?.classList.contains('source') || (restored && ['discover','catalog','search'].includes(route.name))) restored.scrollIntoView({ block: 'nearest' });
 }); }
 function navigate(next, replace = false) {
   if (!replace) stack.push({ route, focus: document.activeElement?.dataset.focus });
@@ -138,6 +140,8 @@ function navigate(next, replace = false) {
 function back() {
   const dialog = root.querySelector('[role=dialog]');
   if (dialog) { (dialog.querySelector('[data-dismiss]') || dialog.querySelector('button'))?.click(); return; }
+  if(route.name==='discover' && document.activeElement?.closest('.discover-grid')) {root.querySelector('[data-picker]')?.focus();root.querySelector('main').scrollTop=0;return;}
+  if(route.name==='search' && document.activeElement?.closest('.search-results')) {root.querySelector('input[type=search]')?.focus();root.querySelector('main').scrollTop=0;return;}
   if (route.name === 'profiles') { toast('Escolha um perfil para continuar.'); return; }
   if (root.querySelector('.sidebar') && !stack.length) {
     if (!drawerOpen) { setDrawer(true); return; }
@@ -209,16 +213,16 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { discover: showDiscover, 'catalog-manager': showCatalogManager, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
     if (current(signal)) { const main = root.querySelector('main'); if (main) failure(main, error, render); focusFirst(); }
   }
 }
-function card(meta, addon, progress, rowKey = '') {
+function card(meta, addon, progress, rowKey = '', {portrait=false} = {}) {
   const id = text(meta.id), type = text(meta.type || 'movie');
-  const wide = progress ? layout.continueStyle !== 'poster' : layout.landscapePosters;
+  const wide = portrait ? false : progress ? layout.continueStyle !== 'poster' : layout.landscapePosters;
   const image = wide ? meta.background || meta.fanart || meta.poster : meta.poster;
   const node = button([poster(image, meta.name), el('strong', {}, meta.name || id), el('span', { class: 'muted' }, progress ? [progress.episode ? `T${progress.episode.season}:E${progress.episode.episode}` : '', `Retomar em ${clock(progress.time)}`].filter(Boolean).join(' · ') : meta.releaseInfo || '')], () => navigate(progress ? { name: 'streams', meta: { ...meta, type }, addon, type: progress.type, id: progress.id, episode: progress.episode } : { name: 'detail', meta: { ...meta, type }, addon }), { class: `card${progress ? ' continue-card' : ''}`, 'aria-label': meta.name || id, 'data-focus': `card-${rowKey}-${type}-${progress?.id || id}` });
   node.addEventListener('focus', () => {
@@ -313,9 +317,9 @@ async function showHome(main, signal) {
   if (!state.addons.length && !recent.length) {
     main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon instalado. Adicione um para começar.')); return;
   }
-  const catalogs = state.addons.flatMap(addon => normalCatalogs(addon).map(catalog => ({ addon, catalog }))).slice(0, 6);
+  const catalogs = homeCatalogEntries(state).slice(0,6);
   if (!catalogs.length && !recent.length) {
-    main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum addon de catálogo instalado. Instale um para ver conteúdos.')); return;
+    main.append(el('p', { class: 'home-empty', role: 'status' }, 'Nenhum catálogo visível no início. Confira seus addons e a organização dos catálogos.')); return;
   }
   main.append(el('section', { class: 'home-hero', 'aria-label': 'Título em destaque' }, el('div', { class: 'hero-fade' }), el('div', { class: 'hero-copy' })));
   const rows = el('div', { class: 'home-rows' }); main.append(rows);
@@ -463,50 +467,11 @@ function showAddons(main) {
   if (!state.addons.length) notice(main, 'Você ainda não instalou nenhum add-on.');
   for (const a of state.addons) main.append(el('article', { class: 'addon-row' }, poster(a.manifest.logo, a.manifest.name, 'addon-icon'), el('div', { class: 'grow' }, el('h2', {}, a.manifest.name), el('p', { class: 'muted' }, `${a.manifest.version || ''} · ${new URL(a.url).hostname}`), el('p', {}, text(a.manifest.description).slice(0, 250))), button('Remover', () => { state.addons = state.addons.filter(x => x.url !== a.url); persist(); metadataCache.clear(); render(); })));
 }
-async function showCatalog(main, signal) {
-  const { addon, catalog } = route;
-  heading(main, addon.manifest.name, catalog.name || catalog.id);
-  const grid = el('div', { class: 'grid' }); main.append(grid);
-  let skip = 0, loading = false; const seen = new Set();
-  const more = button('Carregar mais', loadMore, { class: 'load-more' });
-  async function loadMore() {
-    if (loading) return; loading = true; more.disabled = true; more.textContent = 'Carregando…';
-    try {
-      const response = await cachedMetaJSON(resourceURL(addon, 'catalog', catalog.type, catalog.id, skip ? { skip } : {}), signal);
-      if (!current(signal)) return;
-      const metas = Array.isArray(response.metas) ? response.metas : [];
-      let added = 0;
-      for (const m of metas.slice(0, 100)) if (!seen.has(m.id)) { seen.add(m.id); grid.append(card({ ...m, type: m.type || catalog.type }, addon)); added++; }
-      skip += metas.length;
-      const canPage = extraOptions(catalog).some(e => e.name === 'skip');
-      more.hidden = !canPage || !added || seen.size >= 200;
-      if (!seen.size) notice(main, 'Nenhum título encontrado neste catálogo.');
-    } catch (e) { if (current(signal)) toast(e.message); }
-    finally { loading = false; more.disabled = false; more.textContent = 'Carregar mais'; }
-  }
-  main.append(more); await loadMore();
-}
-function showSearch(main, signal) {
-  main.classList.add('search-content');
-  const input = el('input', { type: 'search', 'aria-label': 'Buscar título', placeholder: 'Buscar filmes e séries', autocomplete: 'off' });
-  const results = el('div'); let searchController;
-  signal.addEventListener('abort', () => searchController?.abort());
-  const form = el('form', { class: 'inline-form search-form', onsubmit: async e => {
-    e.preventDefault(); const query = input.value.trim(); if (!query) return;
-    searchController?.abort(); const controller = searchController = new AbortController();
-    results.replaceChildren(el('p', { class: 'loading' }, 'Buscando…'));
-    const catalogs = state.addons.flatMap(addon => (addon.manifest.catalogs ?? []).filter(c => extraOptions(c).some(e => e.name === 'search') && !extraOptions(c).some(e => e.isRequired && e.name !== 'search')).map(catalog => ({ addon, catalog })));
-    const rows = await mapLimit(catalogs, async ({ addon, catalog }) => {
-      const data = await getJSON(resourceURL(addon, 'catalog', catalog.type, catalog.id, { search: query }), { signal: controller.signal });
-      return { addon, catalog, metas: (Array.isArray(data.metas) ? data.metas : []).map(m => ({ ...m, type: m.type || catalog.type })) };
-    }, controller.signal);
-    if (!current(signal) || controller.signal.aborted) return; results.replaceChildren();
-    for (const r of rows) if (r.value?.metas.length) catalogSection(results, r.value.addon.manifest.name, r.value.metas, r.value.addon);
-    if (!results.childElementCount) notice(results, catalogs.length ? 'Nenhum resultado. Verifique também se seus add-ons responderam.' : 'Instale um add-on com catálogo de busca.');
-    const failed = rows.filter(r => r.error).length; if (failed) notice(results, `${failed} catálogo(s) não responderam.`);
-  } }, input, button('Buscar', null, { type: 'submit', class: 'primary' }));
-  main.append(form, results);
-}
+function discoveryContext(main,signal) {return {main,signal,el,button,card,state,route,root,persist,navigate};}
+function showDiscover(main,signal) {return discoverScreen(discoveryContext(main,signal));}
+function showCatalog(main,signal) {return discoverScreen(discoveryContext(main,signal));}
+function showSearch(main,signal) {return searchScreen(discoveryContext(main,signal));}
+function showCatalogManager(main,signal) {return catalogManager(discoveryContext(main,signal));}
 function textDialog(title, body) {
   const previous = document.activeElement;
   const dialog = el('div', { class: 'app-dialog', role: 'dialog', 'aria-modal': true, 'aria-label': title },
@@ -819,7 +784,7 @@ function showSettings(main, signal) {
         content.append(el('p', { class: 'muted' }, 'Criação, edição de perfis e alteração de PIN ainda devem ser feitas no Nuvio de referência.'));
         break;
       case 'discovery':
-        content.append(row('Addons', 'Gerenciar add-ons, ordem dos catálogos e coleções', () => navigate({ name: 'addons' })));
+        content.append(row('Addons', 'Gerenciar add-ons instalados', () => navigate({ name: 'addons' })),row('Catálogos do início','Ordem e visibilidade neste perfil',()=>navigate({name:'catalog-manager'})),row('Descobrir','Explorar por tipo, catálogo e gênero',()=>navigate({name:'discover'})));
         break;
       case 'playback': case 'integration':
         content.append(row('Preferências de fontes', 'Filtros, grupos de release e reprodução automática', () => navigate({ name: 'preferences' })));
@@ -858,7 +823,7 @@ function showSettings(main, signal) {
         content.append(row('Limpar cache', 'Limpar metadados carregados nesta sessão', () => { metadataCache.clear(); toast('Cache limpo.'); }));
         break;
       case 'about':
-        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.8.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
+        content.append(el('img', { class: 'about-brand', src: 'assets/wordmark.png', alt: 'Nuvio' }), el('p', {}, 'Nuvio Fork · webOS 0.9.0'), el('p', { class: 'muted' }, 'Base: ysosrs123/NuvioTV-Fork · 45e0984'), el('p', { class: 'notice' }, 'Port em desenvolvimento. Login Nuvio, perfis, biblioteca e histórico da conta disponíveis. Envio de progresso, assistidos e favoritos ao Nuvio disponível. Integrações externas, plugins Android e debrid direto ainda estão em adaptação.'));
         break;
       default:
         content.append(el('p', { class: 'notice' }, 'Esta integração do fork ainda não está disponível no port para webOS.'));

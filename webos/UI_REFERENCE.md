@@ -116,3 +116,16 @@ Tela adicional Sincronização, acessível por Biblioteca, Histórico e Conta, m
 pendências e até 20 conflitos por vez. Usa os componentes existentes; é uma
 adaptação de gerenciamento webOS, sem redesenhar home, detalhes ou player.
 O fluxo completo de Descobrir/Busca do Android é a próxima etapa sugerida.
+
+## Entrega 0.9 — Descobrir e busca
+
+`SearchDiscoverSection`: margem 48 dp, título 28/36, três filtros com gap 12,
+raio 14, padding 14×10; menu máximo 320; cartões 126×189, raio 12, grade com
+gap horizontal 10/vertical 16. Busca usa ação Descobrir de 56 dp, pesquisa viva
+350 ms e oito recentes por perfil. Gêneros traduzidos pelos recursos pt-BR do fork,
+sem alterar o valor usado na consulta. Ver [DISCOVERY.md](DISCOVERY.md).
+
+Diferenças: paginação explícita e lotes de seis catálogos na busca, filtros de
+busca adicionais, teclado nativo webOS, sem voz/sugestões/menus long-press.
+A organização de catálogos usa controles web de ordem/visibilidade por perfil.
+A comparação visual Android/webOS com dados idênticos ainda está pendente.
