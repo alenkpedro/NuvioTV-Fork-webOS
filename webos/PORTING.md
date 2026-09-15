@@ -127,3 +127,11 @@ EpisodesSidePanel, navegação/consulta de fontes sem sair do player e seleção
 manual com retomada e retorno para o episódio correto. As sete fórmulas de
 PlayerAspectScaleUtils foram transpostas para CSS sobre o vídeo. Paginação de
 50 cartões adapta a lista lazy; geometria do compositor LG ainda não validada.
+
+## Correção 0.15.1 — fonte das legendas internas
+
+[SUBTITLE_FONT.md](SUBTITLE_FONT.md): texto nativo exposto por TextTrack agora
+usa a camada do app com Netflix Sans, após verificar carregamento e modo hidden.
+Faixas opacas/imagens e plataformas que recusam hidden continuam nativas,
+com aviso. Prévia e estado real do carregamento disponíveis no painel.
+Validação física da fonte na LG permanece pendente.

@@ -57,7 +57,8 @@ A LG pode limitar velocidades, áudio e formatos. O teste de `playbackRate`
 confirma a aceitação da API, sem medir o ritmo real do decoder ou a saída sonora.
 A regra CSS `video::cue` também solicita Netflix Sans para texto nativo, mas o
 motor de legendas da LG pode ignorá-la. Não é possível trocar a fonte de legendas
-em imagem/PGS. Tamanho, fundo, SDH e atraso continuam exclusivos das externas.
+em imagem/PGS. Desde a 0.15.1, texto nativo acessível usa a camada personalizada com Netflix Sans,
+tamanho, fundo e SDH; atraso continua exclusivo das externas. Ver [SUBTITLE_FONT.md](SUBTITLE_FONT.md).
 Não há transcodificação, download paralelo ou alteração de buffer nesta etapa.
 
 ## Validação e continuação

@@ -15,7 +15,13 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.15.0
+## Estado: prévia 0.15.1
+
+A 0.15.1 corrige **Netflix Sans nas legendas internas de texto acessível**.
+O app desenha o texto e evita a fonte do player nativo. Legendas externas
+continuam com a fonte fornecida. O menu mostra a fonte em uso e uma prévia;
+faixas não personalizáveis permanecem com o player da TV e recebem um aviso.
+[Correção e limites](webos/SUBTITLE_FONT.md).
 
 A 0.15.0 acrescenta **episódios e fontes dentro do player**, navegação por
 temporada e **sete modos de proporção/zoom da imagem**. Abra Episódios durante
@@ -72,7 +78,7 @@ Validação: testes de regras, conta e navegação com dados sintéticos; instal
 
 ## Próxima etapa
 
-**Player:** velocidade de reprodução, atraso de legenda por episódio e confirmação “Ainda assistindo?” em sessões longas. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
+**Player:** validar a fonte na TV, depois avançar no painel de fontes do vídeo atual e na ocultação de spoilers. O [roteiro completo](webos/ROADMAP.md) mantém as entregas e diferenças pendentes. Ao concluir cada etapa, a próxima será sugerida.
 
 ## Base e créditos
 

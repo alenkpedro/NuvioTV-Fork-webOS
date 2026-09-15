@@ -3,7 +3,8 @@ import { playbackSpeeds, readSpeed, saveSpeed, readDelay, saveDelay, setPlayback
 import { discoverSubtitles, normalizeSubtitles, fetchSubtitles, subtitleFrame } from './core/subtitles.js';
 import { subtitleFlags, stripSdhText, subtitlePolicy, subtitleScoreFor, readTrackMemory, saveTrackMemory, clearTrackMemory } from './core/subtitle-options.js';
 import { readPlayback, preferredLanguages, languageScore, languageCode } from './core/playback.js';
-import { languageName, mediaTracks, selectAudioTrack, selectTextTrack } from './core/media-tracks.js';
+import { languageName, mediaTracks, selectAudioTrack } from './core/media-tracks.js';
+import { nativeSubtitles } from './core/native-subtitles.js';
 
 export function installTrackControls({ screen, video, context, addons, settings, memoryState = {}, persist, el, button, extraActions, onOpen, onClose }) {
   let dialog, panelKind, returnFocus, editor = false, discovery, download, downloading = '', error = '', info = '', found = false;
@@ -36,17 +37,37 @@ export function installTrackControls({ screen, video, context, addons, settings,
   const attemptedAudio = new Set(), attemptedText = new Set(), attemptedExternal = new Set();
   const storedStyle = settings.subtitleStyle || {};
   const style = settings.subtitleStyle = { size: [18, 24, 30].includes(storedStyle.size) ? storedStyle.size : 24, background: storedStyle.background !== false };
-  const overlay = el('div', { class: 'subtitle-overlay', hidden: true, 'aria-label': 'Legenda externa' }); screen.append(overlay);
+  const overlay = el('div', { class: 'subtitle-overlay', hidden: true, 'aria-label': 'Legenda' }); screen.append(overlay);
+  const native = nativeSubtitles(video, renderCue);
+  let fontStatus = 'loading', lastCaptionStatus = '';
+  // Check the actual bundled face, not just the CSS family (which can fall back).
+  Promise.resolve().then(()=>document.fonts.load('24px "Netflix Sans"')).then(faces=>{
+    if (disposed) return;
+    fontStatus = faces.some(face=>face.status==='loaded') ? 'loaded' : 'error';
+    native.setFontReady(fontStatus === 'loaded'); renderCue(); draw();
+  }).catch(()=>{ if (!disposed) { fontStatus='error'; renderCue(); draw(); } });
+  function textTracks() { const active=native.selected(); return mediaTracks(video,'text').map(row=>({...row,selected:row.selected || row.track===active})); }
+  function captionStatus() {
+    if (fontStatus === 'error') return 'Netflix Sans não carregou. Feche e reabra o app; se persistir, reinstale a versão atual.';
+    if (fontStatus === 'loading') return 'Carregando Netflix Sans…';
+    if (selected || native.custom) return 'Fonte em uso: Netflix Sans';
+    if (textTracks().some(row=>row.selected)) return 'Legenda pelo player da TV. Se a fonte não mudar, escolha uma legenda externa de um addon: esta faixa ainda não disponibilizou texto personalizável.';
+    return 'Netflix Sans pronta. Selecione uma legenda para assistir.';
+  }
   function renderCue() {
     clearTimeout(timer);
     if (disposed) return;
-    const frame = subtitleFrame(cues, (video.currentTime || 0) - delay);
+    const frame = selected ? subtitleFrame(cues, (video.currentTime || 0) - delay) : {text:native.text(),next:Infinity};
     if (previousCue !== frame.text || previousStrip !== preferences.stripSdh) {
       previousCue = frame.text; previousStrip = preferences.stripSdh; renderedCue = preferences.stripSdh ? stripSdhText(frame.text) : frame.text;
     }
     const text = renderedCue;
     if (overlay.textContent !== text) overlay.textContent = text;
     overlay.hidden = !text;
+    overlay.dataset.renderer = selected ? 'external' : native.custom ? 'native-text' : 'tv';
+    overlay.dataset.fontStatus = fontStatus;
+    const status = captionStatus();
+    if (status !== lastCaptionStatus) { lastCaptionStatus = status; draw(); }
     overlay.style.fontSize = `${style.size}px`; overlay.classList.toggle('subtitle-background', style.background);
     if (!video.paused && !video.seeking && Number.isFinite(frame.next)) {
       timer = setTimeout(renderCue, Math.max(20, Math.min(10000, ((frame.next + delay - video.currentTime) / (video.playbackRate || 1)) * 1000 + 12)));
@@ -84,7 +105,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
       const loaded = await fetchSubtitles(item, controller.signal);
       if (disposed || controller.signal.aborted || download !== controller) return;
       if (!guard()) { downloading = ''; download = null; return; }
-      selectTextTrack(video); cues = loaded; selected = item; renderCue(); downloading = ''; download = null; if (manual) remember('subtitles',{kind:'external',language:item.lang,...subtitleFlags(item)}); draw(); return true;
+      native.select(); cues = loaded; selected = item; renderCue(); downloading = ''; download = null; if (manual) remember('subtitles',{kind:'external',language:item.lang,...subtitleFlags(item)}); draw(); return true;
     } catch (failure) {
       if (disposed || controller.signal.aborted || download !== controller) return;
       error = failure.message; downloading = ''; download = null; draw();
@@ -92,7 +113,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
   }
   function chooseNative(track) {
     stopDownload();
-    try { selectTextTrack(video, track); selected = null; cues = []; error = ''; remember('subtitles',track ? {kind:'native',language:track.language,...subtitleFlags(track)} : {kind:'off'}); renderCue(); draw(); }
+    try { native.select(track); selected = null; cues = []; error = ''; remember('subtitles',track ? {kind:'native',language:track.language,...subtitleFlags(track)} : {kind:'off'}); renderCue(); draw(); }
     catch (failure) { error = failure.message; draw(); }
   }
   async function discover() {
@@ -132,16 +153,18 @@ export function installTrackControls({ screen, video, context, addons, settings,
       for (const speed of playbackSpeeds) list.append(row(`${speed}×`, speed===1 ? 'Normal' : '',()=>chooseSpeed(speed),`speed-${speed}`,Math.abs(video.playbackRate-speed)<0.001));
       list.append(el('p',{class:'track-notice'},'Velocidade lembrada para este título neste perfil. A disponibilidade depende da fonte e do player da TV.'));
     } else {
+      panel.append(el('p',{class:'track-notice subtitle-font-status',role:'status'},captionStatus()));
       panel.append(row('Ajustes de legenda', editor ? 'Voltar à lista' : 'Tamanho, fundo e sincronização', () => { editor = !editor; draw(); }, 'style'));
       if (editor) {
+        list.append(el('p',{class:'subtitle-font-preview'},'Netflix Sans · A próxima história começa aqui.'));
         list.append(row('Tamanho', { 18: 'Pequeno', 24: 'Médio', 30: 'Grande' }[style.size], () => { const sizes = [18, 24, 30]; style.size = sizes[(sizes.indexOf(style.size) + 1) % 3]; persist(); renderCue(); draw(); }, 'size'));
-        list.append(row('Remover descrições SDH', 'Apenas legendas externas', () => { setPreference('stripSdh',!preferences.stripSdh); renderCue(); draw(); }, 'sdh-cleanup', preferences.stripSdh));
+        list.append(row('Remover descrições SDH', 'Legendas desenhadas pelo app', () => { setPreference('stripSdh',!preferences.stripSdh); renderCue(); draw(); }, 'sdh-cleanup', preferences.stripSdh));
         list.append(row('Fundo da legenda', style.background ? 'Ativado' : 'Desativado', () => { style.background = !style.background; persist(); renderCue(); draw(); }, 'background', style.background));
         list.append(el('p', { class: 'track-notice' }, `Atraso: ${delay > 0 ? '+' : ''}${delay.toFixed(1)} s. Valores positivos atrasam a legenda.`));
         for (const [key, title, change] of [['earlier', 'Adiantar 0,5 s', -.5], ['later', 'Atrasar 0,5 s', .5], ['reset', 'Zerar atraso', 0]]) list.append(row(title, '', () => { delay = change ? Math.max(-10, Math.min(10, delay + change)) : 0; if (profileKey === memoryState.profileStore?.activeKey) { saveDelay(memoryState,context,delay); persist(); } renderCue(); draw(); }, key));
-        list.append(el('p', { class: 'track-notice' }, 'Netflix Sans · Ajustes para legendas externas. Atraso salvo para este filme ou episódio neste perfil. Outro episódio começa sem atraso.'));
+        list.append(el('p', { class: 'track-notice' }, 'Tamanho, fundo e SDH: legendas desenhadas pelo app. Atraso: apenas externas, salvo para este filme ou episódio neste perfil.'));
       } else {
-        const native = mediaTracks(video, 'text');
+        const native = textTracks();
         const entries = [
           ...native.map(entry=>({key:`native-${entry.index}`,name:entry.name,lang:entry.track.language,source:'Interna',...subtitleFlags(entry.track),selected:!selected && entry.selected,action:()=>{manualSubtitles=true;chooseNative(entry.track);}})),
           ...external.map((item,index)=>({key:`external-${index}`,name:item.name || languageName(item.lang),lang:item.lang,source:item.source,...subtitleFlags(item),selected:selected?.url === item.url,action:()=>{manualSubtitles=true;chooseExternal(item,`external-${index}`,true);}})),
@@ -200,16 +223,16 @@ export function installTrackControls({ screen, video, context, addons, settings,
       const revision = JSON.stringify(currentPolicy);
       if (policyKey !== revision) {
         policyKey = revision; subtitleScore = selected ? subtitleScoreFor(selected,currentPolicy,'external') : Infinity; attemptedText.clear();
-        if (!Number.isFinite(subtitleScore) && (selected || mediaTracks(video,'text').some(row=>row.selected))) { try { selectTextTrack(video); selected=null; cues=[]; renderCue(); } catch (failure) { error=failure.message; } }
+        if (!Number.isFinite(subtitleScore) && (selected || textTracks().some(row=>row.selected))) { try { native.select(); selected=null; cues=[]; renderCue(); } catch (failure) { error=failure.message; } }
       }
       if (currentPolicy.defer) { info='Aguardando o idioma do áudio para selecionar legendas forçadas. Você pode escolher manualmente.'; return; }
       if (info.startsWith('Aguardando o idioma do áudio')) info = '';
-      if (currentPolicy.off) { try { if (mediaTracks(video,'text').some(row=>row.selected)) selectTextTrack(video); } catch (failure) { error = failure.message; } return; }
-      const rows = mediaTracks(video,'text').map(row=>({...row,score:subtitleScoreFor(row.track,currentPolicy,'native')})).sort((a,b)=>a.score-b.score);
+      if (currentPolicy.off) { try { if (textTracks().some(row=>row.selected)) native.select(); } catch (failure) { error = failure.message; } return; }
+      const rows = textTracks().map(row=>({...row,score:subtitleScoreFor(row.track,currentPolicy,'native')})).sort((a,b)=>a.score-b.score);
       for (const row of rows) {
         if (row.score >= subtitleScore || attemptedText.has(row.track)) continue;
         attemptedText.add(row.track);
-        try { selectTextTrack(video,row.track); selected = null; cues = []; subtitleScore = row.score; renderCue(); break; } catch (failure) { error = failure.message; }
+        try { native.select(row.track); selected = null; cues = []; subtitleScore = row.score; renderCue(); break; } catch (failure) { error = failure.message; }
       }
       const candidates = external.map((item,index)=>({item,index,score:subtitleScoreFor(item,currentPolicy,'external')})).sort((a,b)=>a.score-b.score);
       for (const candidate of candidates) {
@@ -223,7 +246,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
       if (!manualSubtitles && !disposed && (preferences.addonSubtitles || remembered.subtitles?.kind === 'external') && currentPolicy.languages.length && subtitleScore > 0 && !autoDiscoveryAttempted && !found && !discovery) { autoDiscoveryAttempted = true; discover(); }
     } finally { autoBusy = false; draw(); if (autoDirty) { autoDirty = false; scheduleAutomatic(); } }
   }
-  function tracksChanged() { if (dialog) draw(); scheduleAutomatic(); }
+  function tracksChanged() { renderCue(); if (dialog) draw(); scheduleAutomatic(); }
   function bindTracks() {
     for (const list of watchedLists) for (const event of ['addtrack', 'removetrack', 'change']) list.removeEventListener?.(event, tracksChanged);
     watchedLists = [video.audioTracks, video.textTracks].filter(Boolean);
@@ -235,7 +258,7 @@ export function installTrackControls({ screen, video, context, addons, settings,
   return {
     openMore: () => open('more'), openSpeed: () => open('speed'), openAudio: () => open('audio'), openSubtitles: () => open('subtitles'), isOpen: () => Boolean(dialog),
     dispose() {
-      disposed = true; stopDownload(); discovery?.abort(); clearTimeout(timer); dialog?.remove(); overlay.remove();
+      disposed = true; native.dispose(); stopDownload(); discovery?.abort(); clearTimeout(timer); dialog?.remove(); overlay.remove();
       videoEvents.forEach(name => video.removeEventListener(name, renderCue)); video.removeEventListener('loadedmetadata', ready); video.removeEventListener('ratechange',rateChanged);
       for (const list of watchedLists) for (const event of ['addtrack', 'removetrack', 'change']) list.removeEventListener?.(event, tracksChanged);
     },
