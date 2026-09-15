@@ -85,16 +85,23 @@ test('a catalog source becomes a Home rail with its own see-all screen', async (
   await page.getByRole('dialog', { name: 'Nova coleção' }).getByRole('button', { name: 'Salvar', exact: true }).click();
   await page.locator('.collection-open').click();
   await expect(page.getByRole('heading', { name: 'Sagas' })).toBeVisible();
+  await expect(page.locator('.collections-head .muted')).toHaveText('0 pasta(s) · 0 fonte(s) · na ordem da Home');
   // Folder, then the add-on catalog source: add-on → catalog.
   await page.getByRole('button', { name: 'Nova pasta', exact: true }).click();
   await page.getByRole('dialog', { name: 'Nova pasta' }).getByRole('textbox').fill('Clássicos');
   await page.getByRole('dialog', { name: 'Nova pasta' }).getByRole('button', { name: 'Salvar', exact: true }).click();
   await expect(page.locator('.collection-folder')).toContainText('Clássicos');
+  // The header follows the edits instead of freezing at the first render.
+  await expect(page.locator('.collections-head .muted')).toHaveText('1 pasta(s) · 0 fonte(s) · na ordem da Home');
   await page.getByRole('button', { name: 'Adicionar fonte em Clássicos', exact: true }).click();
   await page.getByRole('dialog', { name: 'Adicionar fonte' }).getByRole('button', { name: 'Catálogo de add-on', exact: true }).click();
   await page.getByRole('dialog', { name: 'Add-on' }).getByRole('button', { name: 'Catálogo de teste', exact: true }).click();
   await page.getByRole('dialog', { name: 'Catálogo de teste' }).getByRole('button', { name: /Coleção de teste/ }).click();
   await expect(page.locator('.collection-source')).toContainText('Catálogo de teste · Coleção de teste');
+  await expect(page.locator('.collections-head .muted')).toHaveText('1 pasta(s) · 1 fonte(s) · na ordem da Home');
+  await page.getByRole('button', { name: 'Fixar no topo', exact: true }).click();
+  await expect(page.locator('.collections-head .muted')).toContainText('fixada no topo da Home');
+  await expect(page.getByRole('button', { name: 'Desafixar do topo', exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/collections-editor-1920.png' });
   // The Home shows the folder as a rail, and "Ver todos" opens the folder screen.
   await home(page);

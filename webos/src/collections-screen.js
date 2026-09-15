@@ -151,17 +151,23 @@ export function collectionEditorScreen(context) {
   function draw() {
     const collection = current();
     if (!collection) return;
+    // The header is created once, so its counters and the pin label follow the edits.
+    summary.textContent = `${collection.folders.length} pasta(s) · ${collectionSourceCount(collection)} fonte(s) · ${collection.pinToTop ? 'fixada no topo da Home' : 'na ordem da Home'}`;
+    pinButton.textContent = collection.pinToTop ? 'Desafixar' : 'Fixar no topo';
+    pinButton.setAttribute('aria-label', collection.pinToTop ? 'Desafixar do topo' : 'Fixar no topo');
     if (!collection.folders.length) { host.replaceChildren(el('p', { class: 'notice' }, 'Nenhuma pasta ainda. Adicione uma pasta e depois as fontes dela.')); return; }
     host.replaceChildren(...collection.folders.map((folder, index) => folderBlock(collection, folder, index)));
   }
   const collection = current();
+  const summary = el('p', { class: 'muted' });
+  const pinButton = button(collection.pinToTop ? 'Desafixar' : 'Fixar no topo', () => save(list => togglePin(list, collection.id)), { class: 'collection-action', 'aria-label': collection.pinToTop ? 'Desafixar do topo' : 'Fixar no topo' });
   main.append(el('div', { class: 'screen-collections' },
     el('div', { class: 'collections-head' }, el('h1', {}, collection.title),
-      el('p', { class: 'muted' }, `${collection.folders.length} pasta(s) · ${collectionSourceCount(collection)} fonte(s) · ${collection.pinToTop ? 'fixada no topo da Home' : 'na ordem da Home'}`),
+      summary,
       el('div', { class: 'toolbar' },
         button('Nova pasta', () => { if (collection.folders.length >= collectionLimits.folders) { toast(`Limite de ${collectionLimits.folders} pastas por coleção.`); return; } inputDialog(el, button, { title: 'Nova pasta', label: 'Nome da pasta', value: '', onSave: value => save(list => addFolder(list, collection.id, createFolder(value))) }); }, { class: 'primary', 'aria-label': 'Nova pasta', 'data-focus': 'folder-new' }),
         button('Renomear coleção', () => inputDialog(el, button, { title: 'Renomear coleção', label: 'Coleção', value: collection.title, onSave: value => save(list => renameCollection(list, collection.id, value)) }), { class: 'collection-action', 'aria-label': 'Renomear coleção' }),
-        button(collection.pinToTop ? 'Desafixar' : 'Fixar no topo', () => save(list => togglePin(list, collection.id)), { class: 'collection-action', 'aria-label': 'Alternar fixação no topo' }),
+        pinButton,
         button('Voltar', () => navigate({ name: 'collections' }), { class: 'collection-action', 'aria-label': 'Voltar para Coleções' }))),
     host));
   draw();

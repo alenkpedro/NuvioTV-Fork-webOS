@@ -15,7 +15,10 @@ Atualize a lista e instale **Nuvio Fork**.
 
 [Releases e IPK](https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases) · [Instruções e recursos](webos/README.md) · [Rastreabilidade do port](webos/PORTING.md)
 
-## Estado: prévia 0.24.0
+## Estado: prévia 0.24.1
+
+A 0.24.1 corrige o cabeçalho do editor de coleção, que mostrava contadores
+congelados depois de adicionar pasta ou fonte.
 
 A 0.24.0 acrescenta **Coleções** em **Ajustes → Conteúdo e Descoberta**: fileiras
 extras na Home montadas com catálogos de add-ons e fontes do TMDB (coleção, lista,

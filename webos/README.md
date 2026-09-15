@@ -42,7 +42,8 @@ add-ons instalados. **Ver todos** abre a pasta com as fontes em abas.
 Entrar na conta agora leva direto para a Home: uma falha ao importar add-ons vira
 mensagem, e a nova tentativa continua em **Ajustes → Conta**.
 
-[Gerenciamento, fontes e limites](COLLECTIONS.md).
+[Gerenciamento, fontes e limites](COLLECTIONS.md). A 0.24.1 corrige o cabeçalho
+do editor, que mostrava contadores congelados depois de editar.
 
 ## Buffer e Rede (0.23)
 
