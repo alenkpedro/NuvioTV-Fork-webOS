@@ -318,7 +318,7 @@ Os testes de fluxo usam um vídeo sintético de 60 segundos, gerado com FFmpeg,
 e respostas de add-on locais interceptadas no navegador. Não acessam conteúdo
 de terceiros. Isso comprova o fluxo no navegador, não a reprodução na TV.
 
-Veja [PORTING.md](PORTING.md) para rastreabilidade e [ROADMAP.md](ROADMAP.md) para etapas, pendências e próxima entrega sugerida.
+Veja [PORTING.md](PORTING.md) para rastreabilidade e [ROADMAP.md](ROADMAP.md) para etapas, pendências e próxima entrega sugerida. Antes de testar na TV, use [VALIDATION.md](VALIDATION.md): o checklist de validação no aparelho, bloco por bloco, com o que observar em cada entrega.
 
 ## Licença
 

@@ -110,3 +110,5 @@ Os testes de navegador não substituem a validação na TV. Toda diferença aind
 aberta deve continuar visível neste roteiro ou em `UI_REFERENCE.md`/`PORTING.md`.
 “Todo o fork” permanece o objetivo; isso não significa que os binários ou APIs
 exclusivos do Android possam ser executados diretamente no webOS.
+
+O que conferir na TV, item por item, está em [VALIDATION.md](VALIDATION.md).
