@@ -45,7 +45,10 @@ export function installRemote({ root, back, playerKey, boundaryLeft, onLeftColum
       const forward = (horizontal ? dx : dy) * sign, cross = Math.abs(horizontal ? dy : dx);
       if (forward <= 2) continue;
       const overlap = horizontal ? b.bottom > a.top && b.top < a.bottom : b.right > a.left && b.left < a.right;
-      const value = forward + cross * 3 + (overlap ? 0 : 3000);
+      // Aligned neighbours win over far ones: with the same weight for both axes a narrow
+      // control directly below (the bold toggle of the subtitle editor) used to be skipped
+      // in favour of a wide row much further down.
+      const value = forward + cross * (overlap ? 0.75 : 3) + (overlap ? 0 : 3000);
       if (value < score) { best = el; score = value; }
     }
     if (!best && key === 'ArrowLeft') boundaryLeft?.();

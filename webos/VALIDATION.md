@@ -60,6 +60,8 @@ Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
       reprodução.
 
 ### R3. Legendas, velocidade e avisos no player
+- [ ] Ajustes → Reprodução → **Aparência das legendas**: com a seta para baixo, alcançar
+      **Negrito** e alternar com o OK (correção da 0.25.1), e o mesmo em **Contorno**.
 - [ ] Reproduzir um título com legenda escolhida e observar o começo. Esperado: aparece
       "Preparando legendas…" por instantes e o vídeo começa **já com a legenda**.
 - [ ] Painel **Mais → Velocidade**: escolher **2×**. Esperado: sem travar como antes; se a
