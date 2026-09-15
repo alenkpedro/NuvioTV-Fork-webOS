@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.23.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.24.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.23.0",
+        "version": "0.24.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Buffer e Rede: buffer inicial e após travamento e teste de velocidade real.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.23.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.23.0",
+        "appDescription": "Coleções na Home a partir de catálogos e do TMDB, buffer e medição de fonte.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.24.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.24.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.23.0/org.nuviofork.webos_0.23.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.24.0/org.nuviofork.webos_0.24.0_all.ipk",
         "ipkHash": {
-          "sha256": "49971af9bf7969001ec1b8b618e506116e91ec7f573d689858e22ef09e78e8cc"
+          "sha256": "ed1432e150dea14af49779739259307f1eed4e0f55acca9a63c08e561bafda8c"
         },
-        "ipkSize": 833944
+        "ipkSize": 839704
       },
       "pool": "main",
-      "shortDescription": "Player do fork com buffer, medição de fonte, reprodução automática e legendas para LG webOS 24."
+      "shortDescription": "Player do fork com coleções, buffer, reprodução automática e legendas para LG webOS 24."
     }
   ]
 }
