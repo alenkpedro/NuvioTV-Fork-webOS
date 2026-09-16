@@ -1,1 +1,1 @@
-{"id":"org.nuviofork.webos.segments","description":"Read-only IntroDB episode segments","services":[{"name":"org.nuviofork.webos.segments","commands":[{"name":"segments","public":true}]}]}
+{"id":"org.nuviofork.webos.segments","description":"Serviço local do port: trechos do IntroDB e requisições HTTP com cabeçalhos","services":[{"name":"org.nuviofork.webos.segments","commands":[{"name":"segments","public":true},{"name":"fetch","public":true}]}]}

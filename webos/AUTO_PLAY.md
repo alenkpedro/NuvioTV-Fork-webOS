@@ -49,6 +49,36 @@ Os quatro modos do fork estão disponíveis com os mesmos textos:
 - Nem a URL nem o nome da fonte escolhida entram no histórico: o arquivo de
   histórico continua sem endereços de vídeo.
 
+## Serviço de rede local (0.31.0)
+
+`service/net.js` + o comando `fetch` do serviço `org.nuviofork.webos.segments` dão ao app o que
+a página da TV não tem: **requisições com cabeçalhos próprios e sem CORS**. Métodos GET/POST/
+PUT/PATCH/DELETE/HEAD, cabeçalhos do chamador (os de conexão são removidos), redirecionamento
+limitado a 5 saltos, resposta de até 8 MiB, gzip/deflate/brotli decodificados, `text` para
+JSON/texto e `bodyBase64` para binário. É a base para Trakt/Simkl, debrid e plugins; no
+navegador (testes e desenvolvimento) o mesmo cliente cai para `fetch`. Ver
+[REFERENCE_SMART.md](REFERENCE_SMART.md) para o que ainda depende do proxy de mídia local.
+
+## Trailer
+
+- **O trailer agora toca dentro do app.** O botão Trailers, o cartão de trailer e o trailer
+  automático abrem uma janela com o player do YouTube em `public/youtube-proxy.html`: a página
+  roda na mesma origem, hospeda o player pela `iframe_api` e conversa por `postMessage`
+  (`ready`, `state`, `firstFrame`, `fallback`, `error`, além dos comandos
+  play/pause/mute/seek/captions). O estado é enviado a cada 500 ms, então os botões
+  **Reproduzir/Pausar**, **Com som/Mudo** e **Legendas** seguem o que o player responde. O
+  trailer começa **mudo** (é o único jeito de o navegador da TV iniciar sozinho) e o botão
+  liga o som.
+- **O controle remoto navega pelos botões; Voltar fecha a janela** e o foco volta ao cartão que
+  abriu o trailer.
+- **Fallback em camadas:** se a TV não carregar a API do YouTube, o proxy avisa e troca para o
+  embed direto (que ainda toca, sem controle pelo controle), a janela passa a mostrar **Abrir
+  no YouTube da TV** (o aplicativo nativo, como antes), **Abrir no navegador da TV** e **Ver QR
+  code** (o diálogo antigo, com o código para o celular). Um temporizador de 12 s também cobre
+  o caso de o player nem responder.
+- O port pede **uma vez** o trailer do título ao TMDB (`videos`) e usa os trailers do add-on
+  quando existem, como antes.
+
 ## Trailer automático
 
 - **Trailer automático após assistir** liga os dois caminhos que o fork governa

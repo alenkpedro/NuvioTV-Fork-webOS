@@ -190,6 +190,16 @@ progress::-webkit-progress-value{background:var(--accent)}
 .hide-poster-labels .card:not(.continue-card):not(.more-card)>strong,.hide-poster-labels .card:not(.continue-card)>.muted{display:none}
 .landscape-posters .grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}.landscape-posters .grid .card{width:210px}.landscape-posters .grid .card .art{height:118.64px}
 .catalog-section .section-head{justify-content:flex-start;gap:8px}.collection-unavailable .notice{margin:0 0 8px}
+/* TrailerPlayer: the trailer runs inside the packaged proxy page, in a dialog the size of the
+   panel, with the fork's controls underneath and the external options one key away. */
+.trailer-player{padding:0;background:#000}
+.trailer-panel{width:100%;height:100%;padding:20px 32px 24px;display:flex;flex-direction:column;gap:12px;background:#0d0d0d}
+.trailer-stage{position:relative;flex:1;min-height:0;background:#000;border-radius:12px;overflow:hidden}
+.trailer-frame{width:100%;height:100%;border:0;background:#000}
+.trailer-status{font-size:12px;line-height:18px;color:#b3b3b3;margin:0}
+.trailer-status[data-tone=warn]{color:#e6ba8b}
+.trailer-controls{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+.trailer-fallbacks{display:flex;gap:8px;flex-wrap:wrap}
 /* CollectionRowSection.kt FolderCard: the tile follows the folder shape —
    POSTER = --width × --height, SQUARE = --width × --width and LANDSCAPE = --width × 16/9 wide,
    --width tall. The cover is cropped inside the tile (the fork uses ContentScale.Crop). */

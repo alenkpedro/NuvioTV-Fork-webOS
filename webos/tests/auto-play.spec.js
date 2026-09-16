@@ -247,14 +247,16 @@ test('the post-play window counts the last five seconds and starts the trailer a
   await page.locator('video').evaluate(v => { v.pause(); Object.defineProperty(v, 'ended', { configurable: true, get: () => true }); v.dispatchEvent(new Event('ended')); });
   await expect(overlay.locator('.post-play-countdown')).toHaveText('Trailer em 5s');
   await page.clock.runFor(6000);
-  await expect.poll(() => page.evaluate(() => window.__luna.length)).toBeGreaterThan(0);
-  const [uri, payload] = await page.evaluate(() => window.__luna[0]);
-  expect(uri).toBe('luna://com.webos.applicationManager/launch');
-  expect(JSON.parse(payload)).toEqual({ id: 'youtube.leanback.v4', params: { contentId: 'abc12345678' } });
+  // The trailer opens inside the port: the post-play window stays and nothing is launched.
+  // The post-play path knows the video id only, so the trailer window is just 'Trailer'.
+  const trailerOverlay = page.getByRole('dialog', { name: 'Trailer' });
+  await expect(trailerOverlay).toBeVisible();
+  await expect(trailerOverlay.locator('iframe.trailer-frame')).toBeVisible();
+  expect(await page.evaluate(() => window.__luna)).toEqual([]);
   // The window is still there after the trailer was offered, and it does not fire twice.
   await expect(overlay.locator('.post-play-countdown')).toBeHidden();
   await page.clock.runFor(6000);
-  expect((await page.evaluate(() => window.__luna)).length).toBe(1);
+  await expect(page.getByRole('dialog', { name: 'Trailer' })).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 test('with the trailer setting off the post-play window stays silent', async ({ page }) => {
@@ -274,6 +276,7 @@ test('staying on Assistir opens the trailer of the title after the configured de
   await page.clock.install();
   await tmdb(page);
   await parental(page);
+  await page.route('**/youtube.com/**', r => r.abort());
   await boot(page, { bridge: true, playback: { trailerAutoPlay: true, trailerDelay: 3 } });
   await openMovie(page);
   const trailerDialog = page.getByRole('dialog', { name: 'Trailer oficial' });
@@ -282,7 +285,9 @@ test('staying on Assistir opens the trailer of the title after the configured de
   await page.clock.runFor(3000);
   await expect(trailerDialog).toBeVisible();
   await page.screenshot({ path: 'test-results/detail-trailer-idle-1920.png' });
-  await expect(page.getByRole('button', { name: 'Abrir no YouTube', exact: true })).toBeFocused();
+  // The automatic trailer plays inside the port, so the panel offers its own player.
+  await expect(trailerDialog.locator('iframe.trailer-frame')).toBeVisible();
+  await expect(trailerDialog.getByRole('button', { name: 'Fechar', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'Fechar', exact: true }).click();
   await expect(trailerDialog).toBeHidden();
   // Once the trailer was offered for this title it is not offered again.

@@ -27,6 +27,15 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Trailer no app e serviço de rede (0.31)
+
+O **trailer toca dentro do app** (página local com o player do YouTube e protocolo por
+postMessage), com Reproduzir/Pausar, Com som/Mudo e Legendas; se a TV não carregar o player, a
+mesma janela oferece o **YouTube da TV**, o navegador da TV e o QR code. O port ganhou também um
+**serviço de rede local** (comando `fetch`), que faz requisições **com cabeçalhos próprios e sem
+CORS** — a base para integrações e plugins. Ver [AUTO_PLAY.md](AUTO_PLAY.md) e
+[REFERENCE_SMART.md](REFERENCE_SMART.md).
+
 ## Abertura, carregamento e resposta (0.28–0.29)
 
 O app abre com a **tela do fork**: wordmark do Nuvio e anel de carregamento cobrindo o painel

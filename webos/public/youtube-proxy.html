@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trailer</title>
+  <style>html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}#yt{width:100%;height:100%}</style>
+</head>
+<body>
+  <div id="yt"></div>
+  <script>
+    // Local page that hosts the YouTube player. The TV's own page cannot embed youtube.com/watch
+    // (frame denial) and cannot drive a cross-origin player, so the port talks to this same-origin
+    // page through postMessage: commands in, player state out. Approach adapted from
+    // NuvioMedia/NuvioTVSmart (GPL-3.0), rewritten here for this port.
+    (function () {
+      'use strict';
+      var params = new URLSearchParams(location.search);
+      var videoId = String(params.get('v') || '');
+      var muted = params.get('muted') === '1';
+      var autoplay = params.get('autoplay') !== '0';
+      var loop = params.get('loop') !== '0';
+      var cc = params.get('cc') === '1';
+      var direct = params.get('direct') === '1';
+      var player = null, ready = false, fallback = false, watchdog = null, firstFrame = false, last = '';
+      function post(type, extra) {
+        var payload = { source: 'nuvio-youtube-proxy', type: type };
+        Object.keys(extra || {}).forEach(function (key) { payload[key] = extra[key]; });
+        try { window.parent.postMessage(payload, '*'); } catch (_) {}
+      }
+      function state() {
+        var status = -1, current = 0, duration = 0, isMuted = muted;
+        try { if (player && player.getPlayerState) status = Number(player.getPlayerState()); } catch (_) {}
+        try { if (player && player.getCurrentTime) current = Number(player.getCurrentTime()) || 0; } catch (_) {}
+        try { if (player && player.getDuration) duration = Number(player.getDuration()) || 0; } catch (_) {}
+        try { if (player && player.isMuted) isMuted = Boolean(player.isMuted()); } catch (_) {}
+        return { playerState: status, ended: status === 0, paused: status !== 1, currentTime: current, duration: duration, muted: isMuted, captionsEnabled: cc, loading: !ready || status === -1 || status === 3, controllable: !fallback };
+      }
+      function push(force) {
+        var value = state(), serialized = JSON.stringify(value);
+        if (!firstFrame && value.playerState === 1 && value.currentTime > 0) { firstFrame = true; post('firstFrame', { videoId: videoId, currentTime: value.currentTime }); }
+        if (!force && serialized === last) return;
+        last = serialized;
+        post('state', { videoId: videoId, state: value });
+      }
+      function setCaptions(enabled) {
+        cc = Boolean(enabled);
+        if (!player || fallback) return;
+        try {
+          if (cc) { if (player.loadModule) { player.loadModule('captions'); player.loadModule('cc'); } }
+          else if (player.unloadModule) { player.unloadModule('captions'); player.unloadModule('cc'); }
+        } catch (_) {}
+      }
+      function useDirectEmbed(reason) {
+        if (fallback) return;
+        fallback = true;
+        clearTimeout(watchdog);
+        post('fallback', { videoId: videoId, reason: reason });
+        var frame = document.createElement('iframe');
+        frame.src = 'https://www.youtube.com/embed/' + encodeURIComponent(videoId) +
+          '?autoplay=' + (autoplay ? 1 : 0) + '&mute=' + (muted ? 1 : 0) + '&loop=' + (loop ? 1 : 0) +
+          '&playlist=' + encodeURIComponent(videoId) + '&cc_load_policy=' + (cc ? 1 : 0) + '&rel=0&playsinline=1';
+        frame.allow = 'autoplay; encrypted-media; picture-in-picture';
+        frame.setAttribute('allowfullscreen', '');
+        frame.style.cssText = 'width:100%;height:100%;border:0';
+        document.getElementById('yt').replaceChildren(frame);
+        setTimeout(function () { push(true); }, 500);
+      }
+      function command(data) {
+        var payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
+        if (String(data.command || '') === 'captions') { setCaptions(Boolean(payload.enabled)); push(true); return; }
+        if (!ready || !player || fallback) return;
+        try {
+          switch (String(data.command || '')) {
+            case 'play': player.playVideo(); break;
+            case 'pause': player.pauseVideo(); break;
+            case 'mute': muted = true; player.mute(); break;
+            case 'unmute': muted = false; player.unMute(); break;
+            case 'seek': if (Number.isFinite(Number(payload.seconds))) player.seekTo(Number(payload.seconds), true); break;
+          }
+        } catch (_) {}
+        push(true);
+      }
+      window.addEventListener('message', function (event) {
+        var data = event && event.data;
+        if (!data || typeof data !== 'object' || data.type !== 'command') return;
+        command(data);
+      });
+      window.onYouTubeIframeAPIReady = function () {
+        player = new YT.Player('yt', {
+          videoId: videoId,
+          playerVars: {
+            autoplay: autoplay ? 1 : 0, controls: 0, disablekb: 1, modestbranding: 1, rel: 0, playsinline: 1,
+            loop: loop ? 1 : 0, playlist: loop ? videoId : undefined, mute: muted ? 1 : 0, cc_load_policy: cc ? 1 : 0
+          },
+          events: {
+            onReady: function () {
+              ready = true; clearTimeout(watchdog);
+              if (muted && player.mute) player.mute();
+              if (autoplay && player.playVideo) player.playVideo();
+              if (cc) setCaptions(true);
+              post('ready', { videoId: videoId });
+              push(true);
+            },
+            onStateChange: function () { push(true); },
+            onError: function (event) { post('error', { videoId: videoId, code: Number(event && event.data) }); useDirectEmbed('error'); }
+          }
+        });
+      };
+      if (!videoId) post('error', { videoId: '', code: 0 });
+      else if (direct) useDirectEmbed('requested');
+      else {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        tag.onerror = function () { useDirectEmbed('script'); };
+        document.head.append(tag);
+        watchdog = setTimeout(function () { if (!ready) useDirectEmbed('watchdog'); }, 8000);
+      }
+      setInterval(function () { push(false); }, 500);
+    })();
+  </script>
+</body>
+</html>

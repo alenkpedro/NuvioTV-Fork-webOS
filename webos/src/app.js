@@ -3,6 +3,7 @@ import { loadAddon, getJSON, resourceURL, supports, mapLimit, eachLimit } from '
 import { defaults, enums, rankStreams, filterAndSort, factsFor, playbackIssue, sizeBytes } from './core/ranking.js';
 import { readState, saveState, progressKey, recordProgress } from './core/storage.js';
 import { installLoadingOverlay } from './player-loading.js';
+import { installTrailerPlayer } from './trailer-player.js';
 import { railSkeleton, detailSkeleton, streamsSkeleton } from './skeletons.js';
 import { installRemote } from './remote.js';
 import { createAccountClient } from './core/account.js';
@@ -1140,6 +1141,9 @@ function showPlayer(context) {
   // LoadingOverlay.kt + PlayerBufferingIndicator: the loading screen replaces the old status bar
   // that floated at the top of the panel.
   const loading = installLoadingOverlay({ el, context });
+  // TrailerPlayer: the post-play trailer plays inside the port, and the TV's YouTube app and the
+  // TV browser stay one key away when the proxy cannot present a frame.
+  const trailerPlayer = installTrailerPlayer({ root, el, button, signal: request.signal, external: { launch: (id, options) => launchTrailer(id, { signal: request.signal, ...options }) } });
   const stats = el('pre', { class: 'stats', hidden: true });
   const chrome=playerUI({el,button,context,video,toggle,restart:()=>{seekTo(0);play();},audio:()=>tracks.openAudio(),subtitles:()=>tracks.openSubtitles(),sources:()=>episodes.openCurrent(),episodes:()=>episodes.open(),speed:()=>tracks.openSpeed(),aspect:()=>aspect.cycle(),stats:()=>{stats.hidden=!stats.hidden;screen.classList.toggle('stats-visible',!stats.hidden);chrome.info.setAttribute('aria-pressed',String(!stats.hidden));updateStats();}});
   const {controls,timeline,pause}=chrome;
@@ -1196,7 +1200,7 @@ function showPlayer(context) {
     trailer:{
       enabled:()=>readPlayback(state.settings.playback).trailerAutoPlay,
       resolve:async item=>{ if(!metadata.configured())return ''; const data=await metadata.detail({...item,id:item.id,type:item.type},request.signal); const list=data?trailers(data.meta):[]; return list[0]?.ytId || ''; },
-      launch:ytId=>launchTrailer(ytId,{signal:request.signal}).catch(()=>{})
+      launch:ytId=>{ if(!trailerPlayer.open({ytId},{})) throw Error('Trailer indisponível.'); }
     },
     // The fork resolves the candidate through the addons before playing it. The port
     // asks TMDB for the same title so the detail screen gets the IMDb id addons route by.
@@ -1317,7 +1321,7 @@ function showPlayer(context) {
     if(chrome.key(key,hideControls)){e.preventDefault();return true;}
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; loading.dispose(); segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; trailerPlayer.close(); loading.dispose(); segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   const controlSize=new ResizeObserver(()=>screen.style.setProperty('--subtitle-control-clearance',`${controls.offsetHeight+8}px`));controlSize.observe(controls);
   const disposeBase=cleanupPlayer;cleanupPlayer=()=>{controlSize.disconnect();disposeBase();};
   const artworkSignal=request.signal;

@@ -3,6 +3,7 @@ import {enrichPlayerMetadata} from './core/player-artwork.js';
 import {people,trailers,readMetadataSettings,saveMetadataSettings,youtubeId} from './core/metadata.js';
 import {installRatings,collectionSection} from './ratings-screen.js';
 import {createSettingsKit} from './settings-kit.js';
+import {installTrailerPlayer} from './trailer-player.js';
 const roles={Creator:'Criação',Director:'Direção',Writer:'Roteiro',Acting:'Atuação',Directing:'Direção',Writing:'Roteiro'};
 export function launchTrailer(ytId,{signal,Bridge=globalThis.PalmServiceBridge,timeout=8000,browser=false}={}) {
   if(!youtubeId(ytId))return Promise.reject(Error('Trailer inválido.'));
@@ -34,7 +35,12 @@ export function detailExtras(ctx,meta,addon) {
   section.addEventListener('focusin',()=>{main.scrollTop=Math.max(0,section.offsetTop-24);},{signal});
   let members=people(meta),videos=trailers(meta),recommendations=[],loading=metadata.configured(),error='';
   route.extraTab ||= members.length?'cast':videos.length?'trailers':'related';
-  const heroTrailer=button(el('img',{src:'assets/icons/trailer_play_button.svg',alt:'',class:'trailer-action-icon'}),()=>{if(videos.length)trailerDialog(ctx,videos[0]);},{class:'round-button detail-trailer-button','aria-label':'Trailer','data-focus':'detail-trailer'});main.querySelector('.detail-actions')?.append(heroTrailer);heroTrailer.addEventListener('focus',()=>{main.scrollTop=0;},{signal});
+  const heroTrailer=button(el('img',{src:'assets/icons/trailer_play_button.svg',alt:'',class:'trailer-action-icon'}),()=>{if(videos.length)trailerPlayer.open(videos[0]);},{class:'round-button detail-trailer-button','aria-label':'Trailer','data-focus':'detail-trailer'});main.querySelector('.detail-actions')?.append(heroTrailer);heroTrailer.addEventListener('focus',()=>{main.scrollTop=0;},{signal});
+  // TrailerPlayer: the port plays the trailer in-app through the packaged proxy page, and keeps
+  // the TV's YouTube app, the TV browser and the QR dialog one key away.
+  const trailerPlayer=installTrailerPlayer({root:ctx.root,el,button,signal,
+    external:{launch:(id,options)=>launchTrailer(id,{signal,...options})},
+    more:{open:trailer=>trailerDialog(ctx,trailer||videos[0])}});
   const labels={cast:'Elenco',related:'Semelhantes',trailers:'Trailers'};
   const configure=()=>navigate({name:'metadata-settings'});
   // MetaDetailsViewModel.startIdleTimer: with "Trailer automático" on, the trailer
@@ -54,7 +60,7 @@ export function detailExtras(ctx,meta,addon) {
       if(signal.aborted || trailerOffered)return;
       if(!playButton.isConnected || document.activeElement!==playButton)return;
       trailerOffered=true;
-      trailerDialog(ctx,videos[0]);
+      trailerPlayer.open(videos[0]);
     },settings.trailerDelay*1000);
   }
   playButton?.addEventListener('focus',armIdleTimer,{signal});
@@ -74,7 +80,7 @@ export function detailExtras(ctx,meta,addon) {
       if(members.length)panel.append(el('div',{class:'cast-rail'},members.map((member,i)=>button([poster(member.photo,member.name,'cast-photo'),el('strong',{},member.name),el('small',{class:'muted'},roles[member.character] || member.character)],()=>navigate({name:'person',member,addon}),{class:'cast-card','data-focus':`cast-${member.name}`}))));
       else panel.append(el('p',{class:'notice'},loading?'Carregando elenco…':'O catálogo não informou o elenco.'));
     }else if(route.extraTab==='trailers') {
-      if(videos.length)panel.append(el('div',{class:'trailer-rail'},videos.map(t=>button([poster(t.photo,t.name,'trailer-art'),el('strong',{},t.name),el('small',{class:'muted'},[t.type,t.lang.toUpperCase()].filter(Boolean).join(' • '))],()=>trailerDialog(ctx,t),{class:'trailer-card','data-focus':`trailer-${t.ytId}`}))));
+      if(videos.length)panel.append(el('div',{class:'trailer-rail'},videos.map(t=>button([poster(t.photo,t.name,'trailer-art'),el('strong',{},t.name),el('small',{class:'muted'},[t.type,t.lang.toUpperCase()].filter(Boolean).join(' • '))],()=>trailerPlayer.open(t),{class:'trailer-card','data-focus':`trailer-${t.ytId}`}))));
       else panel.append(el('p',{class:'notice'},loading?'Carregando trailers…':'Nenhum trailer disponível nas fontes consultadas.'));
     }else {
       if(recommendations.length)panel.append(el('div',{class:'rail related-rail'},recommendations.map(m=>card({...m,poster:m.background || m.poster},null,null,'related',{portrait:true}))));

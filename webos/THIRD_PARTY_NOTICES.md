@@ -94,3 +94,10 @@ Player controls: `assets/icons/player/{play,pause,episodes,aspect_ratio}.svg` ar
 unmodified copies of `app/src/main/res/raw/ic_player_*.svg` in the selected fork.
 Their embedded provenance comments are preserved. Layout and remote scrub rules
 are derived from PlayerScreen.kt, SpacingTokens.kt, Type.kt and PlayerScrubRates.kt.
+
+webOS mechanisms: the in-app trailer (`public/youtube-proxy.html`, the postMessage
+protocol and its embed fallback) and the local network service's shape (bounded
+headers, redirects, size and timeout) are adapted from **NuvioMedia/NuvioTVSmart**,
+GPL-3.0, rewritten for this port; the trailer plays through the YouTube IFrame
+Player API loaded from youtube.com. No code from that project is used as a base:
+the port's base remains the Android fork above. See REFERENCE_SMART.md.

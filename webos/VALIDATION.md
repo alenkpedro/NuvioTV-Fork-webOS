@@ -1,4 +1,4 @@
-# Checklist de validação na LG 55UT8050 — versão 0.30.0
+# Checklist de validação na LG 55UT8050 — versão 0.31.0
 
 Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
 deve acontecer**; a validação física é a única coisa que os testes de navegador não
@@ -6,7 +6,7 @@ substituem. Veja também as pendências conhecidas no fim: elas já estão docum
 são falhas novas.
 
 > Esta versão nasceu das suas rodadas na TV: o **Bloco R** lista exatamente o que foi
-> corrigido a partir do seu relato, para conferência rápida. O **R9** é o desta versão.
+> corrigido a partir do seu relato, para conferência rápida. O **R10** é o desta versão.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -16,7 +16,7 @@ são falhas novas.
 ## Como usar
 
 - **Bloco A (essencial, ~10 min):** o que, se quebrar, quebra o resto.
-- **Bloco R (~25 min):** o que as rodadas na TV corrigiram, da mais recente (R9) para trás.
+- **Bloco R (~25 min):** o que as rodadas na TV corrigiram, da mais recente (R10) para trás.
 - **Bloco B (~15 min):** o que cada versão recente acrescentou (0.20 a 0.24).
 - **Bloco C (~20 min):** fluxos que nunca foram confirmados no aparelho desde a 0.4.
 - **Bloco D:** formatos de vídeo/áudio — só a TV responde.
@@ -31,7 +31,7 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
 ## Antes de começar
 
 1. **Atualizar:** Homebrew Channel → atualize a lista do repositório já salvo →
-   instale **Nuvio Fork**. Confirme a versão **0.30.0** em Ajustes → Sobre.
+   instale **Nuvio Fork**. Confirme a versão **0.31.0** em Ajustes → Sobre.
 2. **Entrar no perfil que você usa de verdade.** Coleções, biblioteca, histórico
    e preferências de reprodução são por perfil.
 3. Anote para o relatório: versão do firmware/webOS da TV, saída de áudio em uso
@@ -39,9 +39,19 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
    de teste você está usando.
 
 
-## Bloco R — correções das rodadas na TV (0.30 a 0.25)
+## Bloco R — correções das rodadas na TV (0.31 a 0.25)
 
 Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R10. Sétima rodada (0.31.0)
+- [ ] **Abrir um trailer** (botão Trailer no detalhe ou um cartão da aba Trailers): esperado o
+      trailer **tocar dentro do app**, com os botões Reproduzir/Pausar, Com som/Mudo e Legendas
+      respondendo. Voltar fecha e o foco volta ao cartão.
+- [ ] **Som do trailer**: esperado começar mudo e o botão **Com som** ligar o áudio.
+- [ ] **Se a TV não carregar o player**: esperado o aviso e as opções **Abrir no YouTube da TV**,
+      **Abrir no navegador da TV** e **Ver QR code** na mesma janela.
+- [ ] **Trailer automático** (Ajustes → Reprodução ligado): esperado o mesmo trailer tocando no
+      app depois do tempo configurado, e no fim do filme na janela de recomendações.
 
 ### R9. Sexta rodada (0.30.0)
 - [ ] **Tamanho das capas das coleções**: na Home, conferir as pastas quadradas, de pôster e de
