@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.30.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.31.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.30.0",
+        "version": "0.31.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Coleções com o tamanho do fork, abas com Filme/Série e a pasta em grade.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.30.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.30.0",
+        "appDescription": "Trailer tocando dentro do app e serviço de rede local com cabeçalhos.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.31.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.31.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.30.0/org.nuviofork.webos_0.30.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.31.0/org.nuviofork.webos_0.31.0_all.ipk",
         "ipkHash": {
-          "sha256": "9d6315353730ef21d271ea46cae29bf798493f331d5ef0534b5ebd9f9f1b8897"
+          "sha256": "4fb25b9788379b3d6a8ff7dca26e5c0a1dc8ff267752c89e9ad39954b1235373"
         },
-        "ipkSize": 933364
+        "ipkSize": 940062
       },
       "pool": "main",
-      "shortDescription": "Player do fork com coleções no tamanho do fork, pasta em grade e abas com o tipo."
+      "shortDescription": "Player do fork com trailer no app, coleções no tamanho do fork e serviço de rede."
     }
   ]
 }
