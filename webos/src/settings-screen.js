@@ -113,7 +113,8 @@ export function settingsScreen(context) {
       ];
     }
     return [
-      group(null, null, row('Entrar com Nuvio', 'Vincular a TV pelo celular e carregar seus addons', () => navigate({ name: 'account-login' }), { leading: 'profile' })),
+      group(null, null, row('Entrar com Nuvio', 'Vincular a TV pelo celular e carregar seus addons', () => navigate({ name: 'account-login' }), { leading: 'profile' }),
+        row('Transferência de biblioteca', 'Copiar ou mover favoritos entre esta TV e a conta', () => navigate({ name: 'library-transfer' }), { leading: 'library' })),
       note('A sincronia não é em tempo real. Reinicie o app para atualizar as mudanças feitas em outros dispositivos.')
     ];
   }

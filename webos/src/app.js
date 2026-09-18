@@ -24,6 +24,7 @@ import { createStreamPrewarmer } from './core/stream-prewarm.js';
 import { createMdbListTracker, readTrackingSettings, saveTrackingSettings } from './core/mdblist-tracking.js';
 import { createNetwork } from './core/net-service.js';
 import { assessmentPatch, assessmentSources, assessmentSummary, buildAssessment } from './core/device-assessment.js';
+import { libraryTransferScreen } from './library-transfer-screen.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -306,7 +307,11 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el,button,icon,toast}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), assessment: showAssessment, person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, collections: showCollections, 'collection-editor': showCollectionEditor, 'collection-source': showCollectionSource, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el,button,icon,toast}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), assessment: showAssessment,
+    'library-transfer':(main,signal)=>libraryTransferScreen({ main, el, button, icon, toast, state, persist, navigate, profileAccess, requestSync: () => scheduleSync(),
+      loadAccountLibrary: async () => { if (!profileAccess) throw Error('Entre na conta Nuvio para usar a conta como origem.'); const cloud = await account.library(profileAccess.id, signal); return Object.values(cloud || {}); },
+      applyLibraryEntries: entries => { for (const entry of entries) setLibraryItem(state, progressKey(entry.type, entry.id), entry); },
+      removeLibraryKeys: keys => { for (const key of keys) setLibraryItem(state, key, null); } }), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, collections: showCollections, 'collection-editor': showCollectionEditor, 'collection-source': showCollectionSource, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {

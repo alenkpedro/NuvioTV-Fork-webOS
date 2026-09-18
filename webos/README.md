@@ -27,6 +27,13 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Transferência de biblioteca (0.37)
+
+**Ajustes → Conta → Transferência de biblioteca** copia ou move favoritos entre a biblioteca
+desta TV e a conta Nuvio, no fluxo do fork: origem → destino → **revisão** (um *dry-run* com
+“a escrever”, “já presentes”, “sem id” e “duplicadas”) e só então Copiar/Mover. Sem IMDb/TMDB a
+entrada não é escrita; mover só remove o que foi escrito. [Regras e testes](LIBRARY_TRANSFER.md).
+
 ## Avaliação do dispositivo (0.36)
 
 **Ajustes → Avançado → Diagnóstico → Avaliação do dispositivo** ajusta transporte, janela e

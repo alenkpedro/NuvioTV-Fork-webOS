@@ -237,6 +237,15 @@ recomendações e `PostPlayRecommendationOverlay.kt`/`PostPlayOverlay.kt` o layo
 `PlayerSettingsDataStore.kt` fornece os padrões e a faixa de 80–100% do limite.
 Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).
 
+## Entrega 0.37 — transferência de biblioteca
+
+`data/repository/LibraryTransfer.kt`, `LibraryTransferService.kt` e
+`ui/screens/settings/LibraryTransferFlow.kt`: o plano de dry-run puro (identidade canônica,
+dedup, já presentes, sem id, duplicadas), o fluxo origem → destino → revisão e as regras de
+copiar/mover. `src/core/library-transfer.js` e `src/library-transfer-screen.js`. As fontes
+disponíveis nesta TV são a biblioteca local e a conta Nuvio. Ver
+[LIBRARY_TRANSFER.md](LIBRARY_TRANSFER.md).
+
 ## Entrega 0.36 — avaliação do dispositivo
 
 `core/assessment/DeviceAssessmentEngine.kt` e `DeviceAssessmentApplier.kt` reduzidos ao que

@@ -124,8 +124,12 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    janela e buffer com a origem de cada linha (medido / do hardware / escolha sua / não dá para
    saber aqui), aplica tudo de uma vez e reverte. Cinco recursos do fork aparecem como “não dá
    para saber aqui” em vez de sumirem. Ver [DEVICE_ASSESSMENT.md](DEVICE_ASSESSMENT.md).
-   **Próxima prioridade:** a transferência de biblioteca — o último item da lista de paridade.
-   Depois, validação na LG.
+   **Transferência 0.37:** copiar/mover favoritos entre a biblioteca desta TV e a conta Nuvio com
+   o *dry-run* do fork (dedup, já presentes, sem id, duplicadas) antes de escrever; mover só
+   remove o que foi escrito. Trakt/Simkl/MDBList não entram como origem nesta TV, e a tela diz
+   por quê. Ver [LIBRARY_TRANSFER.md](LIBRARY_TRANSFER.md).
+   **Próxima prioridade:** validação na LG com o checklist ([VALIDATION.md](VALIDATION.md)) — a
+   lista de paridade do item 2 está cumprida, com o que o webOS não expõe documentado.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.
