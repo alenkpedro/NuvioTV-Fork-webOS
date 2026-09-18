@@ -12,21 +12,21 @@
       "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTVSmart-Fork-webOS/main/assets/images/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "1.8.0",
+        "version": "1.9.0",
         "type": "web",
         "title": "Nuvio Fork",
         "appDescription": "Nuvio TV com os recursos do fork Android",
         "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTVSmart-Fork-webOS/main/assets/images/icon.png",
         "sourceUrl": "https://github.com/alenkpedro/NuvioTVSmart-Fork-webOS/tree/main",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTVSmart-Fork-webOS/releases/download/webos-v1.8.0/org.nuviofork.webos_1.8.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTVSmart-Fork-webOS/releases/download/webos-v1.9.0/org.nuviofork.webos_1.9.0_all.ipk",
         "ipkHash": {
-          "sha256": "a64897b8f55983a69b09451b9132ca70214595f564ac607153fe7b1ea183c7a3"
+          "sha256": "180c024da865aefd070e873ed5a2f0941ce69d30d47855228b5fd757d27869fa"
         },
-        "ipkSize": 6097472
+        "ipkSize": 6097600
       },
       "pool": "main",
-      "shortDescription": "Base oficial com a legenda e a barra do player do fork, runtime env, buffer, ranking e teste de velocidade."
+      "shortDescription": "Barra do player do fork, legenda Netflix Sans com o preset do fork, runtime env, buffer, ranking e teste de velocidade."
     }
   ]
 }
