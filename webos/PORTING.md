@@ -237,6 +237,14 @@ recomendações e `PostPlayRecommendationOverlay.kt`/`PostPlayOverlay.kt` o layo
 `PlayerSettingsDataStore.kt` fornece os padrões e a faixa de 80–100% do limite.
 Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).
 
+## Entrega 0.38 — áudio e receiver por formato
+
+`ui/screens/settings/PlaybackAudioSettings.kt` (as cinco perguntas sobre o receiver) e
+`DiagnosticsCard.kt` (a linha que mostra o que a cadeia declara aceitar). Sem decodificador
+próprio no webOS, o formato desligado vira desvio da escolha automática e marcação da fonte,
+com a leitura de sinais do nome feita pelos mesmos tags do fork. `src/core/audio-compat.js`.
+Ver [AUDIO_COMPAT.md](AUDIO_COMPAT.md).
+
 ## Entrega 0.37 — transferência de biblioteca
 
 `data/repository/LibraryTransfer.kt`, `LibraryTransferService.kt` e

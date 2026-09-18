@@ -128,8 +128,13 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    o *dry-run* do fork (dedup, já presentes, sem id, duplicadas) antes de escrever; mover só
    remove o que foi escrito. Trakt/Simkl/MDBList não entram como origem nesta TV, e a tela diz
    por quê. Ver [LIBRARY_TRANSFER.md](LIBRARY_TRANSFER.md).
+   **Áudio por formato 0.38:** os cinco switches do fork (Dolby Digital, DD+, TrueHD/Atmos, DTS,
+   DTS-HD) com um master desligado por padrão; sem decodificador próprio, um formato desligado
+   desvia a escolha automática e marca a fonte na lista, e a linha de diagnóstico mostra o que a
+   TV **declara** decodificar. Ver [AUDIO_COMPAT.md](AUDIO_COMPAT.md).
    **Próxima prioridade:** validação na LG com o checklist ([VALIDATION.md](VALIDATION.md)) — a
-   lista de paridade do item 2 está cumprida, com o que o webOS não expõe documentado.
+   lista de paridade do item 2 está cumprida, com o que o webOS não expõe documentado linha por
+   linha (Dolby Vision, Media3, memória nativa, AFR, passthrough, HTTP/2, cache em disco).
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

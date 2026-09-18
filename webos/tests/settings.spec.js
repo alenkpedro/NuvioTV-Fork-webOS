@@ -82,7 +82,7 @@ test('settings style Barra Superior keeps every category reachable and restores 
 test('playback groups follow the fork, keep the port toggles working and mark Android-only rows', async ({ page }) => {
   await install(page, { playback: { autoSkipTypes: ['intro'] } });
   await settings(page, 'Reprodução');
-  await expect(page.locator('.settings-content .settings-group-title')).toHaveText(['Geral', 'Pular automaticamente', 'Player e Seleção de Fontes', 'Legendas', 'Buffer e Rede', 'Reprodução automática']);
+  await expect(page.locator('.settings-content .settings-group-title')).toHaveText(['Geral', 'Pular automaticamente', 'Player e Seleção de Fontes', 'Legendas', 'Áudio e receiver', 'Buffer e Rede', 'Reprodução automática']);
   const pause = page.getByRole('switch', { name: 'Informações ao pausar', exact: true });
   await expect(pause).toHaveAttribute('aria-checked', 'false');
   await pause.click();

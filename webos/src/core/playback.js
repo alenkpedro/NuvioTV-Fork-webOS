@@ -6,13 +6,14 @@ import { linkCacheHours, linkCacheDefaultHours } from './link-cache.js';
 import { trailerDelayRange, trailerDelayDefault } from './trailer.js';
 import { bufferDefaults, readBufferSeconds, readWaitTimeout } from './buffer.js';
 import { mediaTransportDefaults, readMediaTransport } from './media-service.js';
+import { audioFormatIds, readPlaybackFormat } from './audio-compat.js';
 const aliases = { por:'pt', pob:'pt-br', eng:'en', spa:'es', fre:'fr', fra:'fr', ger:'de', deu:'de', ita:'it', jpn:'ja', kor:'ko', zho:'zh', chi:'zh', rus:'ru', ara:'ar', hin:'hi', dut:'nl', nld:'nl' };
 export function languageCode(value) {
   const code = String(value || '').trim().toLowerCase().replaceAll('_','-');
   if (!/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(code) || ['und','unk'].includes(code)) return '';
   const [base,...rest] = code.split('-'); return [aliases[base] || base,...rest].join('-');
 }
-export const playbackDefaults = Object.freeze({ pauseOverlay:false, skipSegments:true, seekThumbnails:false, autoSkipTypes:[], audio:'device', secondaryAudio:'', subtitles:'device', secondarySubtitles:'', addonSubtitles:false, forcedSubtitles:false, stripSdh:false, onlyPreferredSubtitles:false, rememberTracks:true, autoNext:false, stillWatching:false, stillWatchingThreshold:3, preferBingeGroup:true, nextFallback:true, thresholdMode:'percentage', thresholdPercent:99, thresholdMinutes:2, parentalGuide:true, postPlayRecommendations:false, postPlayMovieThreshold:90, autoPlayMode:'manual', autoPlayRegex:'', autoPlayAddons:[], reuseLastLink:false, reuseLastLinkHours:linkCacheDefaultHours, trailerAutoPlay:false, trailerDelay:trailerDelayDefault, customBuffer:bufferDefaults.custom, bufferInitial:bufferDefaults.initial, bufferAfterRebuffer:bufferDefaults.afterRebuffer, bufferWaitTimeout:bufferDefaults.waitTimeout, prewarmStreams:true, localMediaService:false, mediaConnections:mediaTransportDefaults.connections, mediaChunkMb:mediaTransportDefaults.chunkMb, mediaWindowMb:mediaTransportDefaults.windowMb });
+export const playbackDefaults = Object.freeze({ pauseOverlay:false, skipSegments:true, seekThumbnails:false, autoSkipTypes:[], audio:'device', secondaryAudio:'', subtitles:'device', secondarySubtitles:'', addonSubtitles:false, forcedSubtitles:false, stripSdh:false, onlyPreferredSubtitles:false, rememberTracks:true, autoNext:false, stillWatching:false, stillWatchingThreshold:3, preferBingeGroup:true, nextFallback:true, thresholdMode:'percentage', thresholdPercent:99, thresholdMinutes:2, parentalGuide:true, postPlayRecommendations:false, postPlayMovieThreshold:90, autoPlayMode:'manual', autoPlayRegex:'', autoPlayAddons:[], reuseLastLink:false, reuseLastLinkHours:linkCacheDefaultHours, trailerAutoPlay:false, trailerDelay:trailerDelayDefault, customBuffer:bufferDefaults.custom, bufferInitial:bufferDefaults.initial, bufferAfterRebuffer:bufferDefaults.afterRebuffer, bufferWaitTimeout:bufferDefaults.waitTimeout, prewarmStreams:true, localMediaService:false, audioSwitchesEnabled:false, mediaConnections:mediaTransportDefaults.connections, mediaChunkMb:mediaTransportDefaults.chunkMb, mediaWindowMb:mediaTransportDefaults.windowMb });
 // PlayerSettings: MIN/MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT
 export const postPlayThresholdRange = Object.freeze([80, 100]);
 // StreamAutoPlaySelectedAddons: an empty list means "todos os addons instalados".
@@ -23,7 +24,7 @@ export function readPlayback(value = {}) {
     const allowed = key === 'audio' ? ['device','default','original'] : key === 'subtitles' ? ['device','off'] : [''];
     if (typeof value?.[key] === 'string' && (allowed.includes(value[key]) || languageCode(value[key]))) result[key] = value[key];
   }
-  for (const key of ['skipSegments','seekThumbnails','pauseOverlay','forcedSubtitles','stripSdh','onlyPreferredSubtitles','rememberTracks','addonSubtitles','autoNext','stillWatching','preferBingeGroup','nextFallback','parentalGuide','postPlayRecommendations','reuseLastLink','trailerAutoPlay','customBuffer','prewarmStreams','localMediaService']) if (typeof value?.[key] === 'boolean') result[key] = value[key];
+  for (const key of ['skipSegments','seekThumbnails','pauseOverlay','forcedSubtitles','stripSdh','onlyPreferredSubtitles','rememberTracks','addonSubtitles','autoNext','stillWatching','preferBingeGroup','nextFallback','parentalGuide','postPlayRecommendations','reuseLastLink','trailerAutoPlay','customBuffer','prewarmStreams','localMediaService','audioSwitchesEnabled']) if (typeof value?.[key] === 'boolean') result[key] = value[key];
   if (Number.isFinite(value?.postPlayMovieThreshold)) result.postPlayMovieThreshold = Math.max(postPlayThresholdRange[0], Math.min(postPlayThresholdRange[1], Math.round(value.postPlayMovieThreshold)));
   result.autoSkipTypes=Array.isArray(value?.autoSkipTypes)?[...new Set(value.autoSkipTypes.filter(t=>['intro','recap','outro'].includes(t)))]:[];
   if (value?.thresholdMode === 'minutes') result.thresholdMode = 'minutes';
@@ -44,6 +45,8 @@ export function readPlayback(value = {}) {
   result.mediaChunkMb = transport.chunkMb;
   result.mediaWindowMb = transport.windowMb;
   if (!transport.fitsWindow) result.mediaWindowMb = Math.min(mediaTransportDefaults.windowMb * 4, transport.cellMb * 4);
+  // Áudio por formato: os switches do fork, com 'true' significando que o receiver aceita.
+  for (const id of audioFormatIds) result[`audio${id[0].toUpperCase()}${id.slice(1)}`] = readPlaybackFormat(id, value || {});
   return result;
 }
 export function preferredLanguages(primary, secondary, device = [], original = '') {

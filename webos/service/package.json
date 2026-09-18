@@ -1,6 +1,6 @@
 {
   "name": "org.nuviofork.webos.segments",
-  "version": "0.37.0",
+  "version": "0.38.0",
   "main": "service.js",
   "license": "GPL-3.0-only"
 }

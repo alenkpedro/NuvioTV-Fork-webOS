@@ -145,7 +145,9 @@ test('Reutilizar último link plays the cached URL without asking the add-on aga
   page.on('request', request => { if (request.url().includes('/stream/')) calls.push(request.url()); });
   await tmdb(page);
   await parental(page);
-  await boot(page, { playback: { reuseLastLink: true, reuseLastLinkHours: 24 }, linkCache: { [`movie|${imdb}`]: { url: origin + '/clip-cached.mp4', streamName: 'Movie 1080p WEB-DL-FLUX', addonName: 'Catálogo de teste' } } });
+  // O pré-aquecimento da tela de detalhes fica desligado neste teste: ele é um recurso com
+  // ajuste próprio (coberto em tests/stream-prewarm.test.mjs) e este teste mede o cache de link.
+  await boot(page, { playback: { reuseLastLink: true, reuseLastLinkHours: 24, prewarmStreams: false }, linkCache: { [`movie|${imdb}`]: { url: origin + '/clip-cached.mp4', streamName: 'Movie 1080p WEB-DL-FLUX', addonName: 'Catálogo de teste' } } });
   await openMovie(page);
   await page.getByRole('button', { name: 'Assistir', exact: true }).click();
   // The cached entry wins: no source list and no stream request for this title.

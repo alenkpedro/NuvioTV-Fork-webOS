@@ -497,7 +497,9 @@ test('automatic next waits while paused or in track menu, can be cancelled, and 
 });
 test('automatic next resolves the same binge group, advances once, and does not mark next watched',async({page})=>{
   const ids=[];await page.route('**/stream/series/**',r=>{ids.push(decodeURIComponent(r.request().url()));return r.fulfill({json:{streams:[{name:'1080p WEB-DL',url:origin+'/clip.mp4',behaviorHints:{bingeGroup:'fixture-binge'}}]}});});
-  await startSeriesForNext(page,{autoNext:true});
+  // prewarmStreams off: a busca antecipada da tela de detalhes é medida em
+  // tests/stream-prewarm.test.mjs; aqui o teste conta as requisições do fluxo de reprodução.
+  await startSeriesForNext(page,{autoNext:true,prewarmStreams:false});
   await page.locator('video').evaluate(v=>{Object.defineProperty(v,'ended',{get:()=>true});v.dispatchEvent(new Event('ended'));});
   await page.clock.runFor(6500);await expect(page.locator('.player-controls h1')).toHaveText('Série de teste');await expect(page.locator('.player-episode-title')).toContainText('T2 E1');
   await page.locator('video').evaluate(v=>v.pause());expect(ids).toHaveLength(2);

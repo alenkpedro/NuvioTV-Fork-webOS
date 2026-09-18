@@ -10,6 +10,7 @@ import { trailerDelayRange } from './core/trailer.js';
 import { bufferRanges, readBufferSeconds, readWaitTimeout } from './core/buffer.js';
 import { readTrackingSettings, saveTrackingSettings } from './core/mdblist-tracking.js';
 import { readRatingsSettings } from './core/ratings.js';
+import { audioFormatIds, audioFormats, capabilityText, platformCapabilities, playbackPatchFor, readPlaybackFormat } from './core/audio-compat.js';
 import { mediaTransportLimits, readMediaTransport, transportLabel } from './core/media-service.js';
 import { themes, settingsStyles, readAppearance } from './core/appearance.js';
 export const settingsCategories = Object.freeze([
@@ -251,6 +252,11 @@ export function settingsScreen(context) {
       group('Legendas', 'Idioma, estilo e renderização',
         row('Aparência das legendas', 'Tamanho, cores, contorno e posição', () => navigate({ name: 'subtitle-appearance' })),
         pending('Renderização avançada', 'Usar libass para ASS/SSA', 'ASS/SSA com libass depende do decodificador Android; o webOS renderiza SRT e WebVTT.')),
+      group('Áudio e receiver', 'O que a sua cadeia de áudio aceita (AudioFormatSwitches do fork)',
+        toggle('Usar os switches de formato', 'Desligado, o port não filtra nenhuma fonte por formato de áudio.', () => play().audioSwitchesEnabled === true, value => { updatePlayback({ audioSwitchesEnabled: value }); redraw('button[aria-label=\"Usar os switches de formato\"]'); }),
+        play().audioSwitchesEnabled ? audioFormats.map(format => toggle(format.question, readPlaybackFormat(format.id, play()) ? 'O receiver decodifica este formato.' : 'Marcado como não suportado: fontes só com este áudio ficam marcadas na lista.', () => readPlaybackFormat(format.id, play()), value => { updatePlayback(playbackPatchFor(format.id, value)); redraw(`button[aria-label=\"${format.question}\"]`); })) : null,
+        row('O que a TV declara decodificar', 'Consulta da própria TV (não é medição da saída)', () => textDialog('Áudio: o que a TV declara', `${capabilityText(platformCapabilities())}\n\nÉ uma declaração da plataforma, não uma medição da sua saída: um EDID mentiroso se parece com uma limitação real. O port usa esta lista apenas como informação; o filtro acima é a sua escolha de receiver.`), { value: 'Consultar' }),
+        note('O fork decodifica no aparelho os formatos que o receiver não aceita. Um aplicativo web não tem decodificador próprio aqui, então o port faz o que pode: marca as fontes que só trazem aquele áudio como indisponíveis e desvia a escolha automática, em vez de prometer conversão.')),
       group('Buffer e Rede', 'Quanto conteúdo manter na memória e como buscar os streams.',
         toggle('Buffer de reprodução personalizado', 'Substitui o buffer padrão do player pelos valores abaixo. Se desativado, o player usa os valores padrão da TV.', () => play().customBuffer, value => { updatePlayback({ customBuffer: value }); redraw('button[aria-label="Buffer de reprodução personalizado"]'); }),
         play().customBuffer ? el('div', { class: 'settings-threshold' },

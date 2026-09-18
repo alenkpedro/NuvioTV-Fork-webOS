@@ -27,6 +27,16 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Áudio e receiver (0.38)
+
+**Ajustes → Reprodução → Áudio e receiver** traz os cinco switches do fork (Dolby Digital, DD+,
+TrueHD/Atmos, DTS, DTS-HD) como perguntas sobre o seu receiver, com um master desligado por
+padrão. Como aqui não existe decodificador próprio, um formato desligado vira **desvio**: as
+fontes cujo áudio reconhecível está todo naquele formato ficam marcadas como indisponíveis e a
+escolha automática as ignora — sem prometer conversão. A linha de diagnóstico consulta o que a
+**TV declara** decodificar e diz que é declaração, não medição.
+[Regras e testes](AUDIO_COMPAT.md).
+
 ## Transferência de biblioteca (0.37)
 
 **Ajustes → Conta → Transferência de biblioteca** copia ou move favoritos entre a biblioteca

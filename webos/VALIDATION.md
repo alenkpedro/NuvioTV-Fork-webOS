@@ -1,4 +1,4 @@
-# Checklist de validação na LG 55UT8050 — versão 0.37.0
+# Checklist de validação na LG 55UT8050 — versão 0.38.0
 
 Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
 deve acontecer**; a validação física é a única coisa que os testes de navegador não
@@ -6,7 +6,7 @@ substituem. Veja também as pendências conhecidas no fim: elas já estão docum
 são falhas novas.
 
 > Esta versão nasceu das suas rodadas na TV: o **Bloco R** lista exatamente o que foi
-> corrigido a partir do seu relato, para conferência rápida. O **R16** é o desta versão.
+> corrigido a partir do seu relato, para conferência rápida. O **R17** é o desta versão.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -42,6 +42,19 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
 ## Bloco R — correções das rodadas na TV (0.31 a 0.25)
 
 Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R17. Décima quarta rodada (0.38.0)
+- [ ] **Ligar os switches** (Ajustes → Reprodução → Áudio e receiver → Usar os switches de formato) e
+      desmarcar **Dolby TrueHD / Atmos**. Esperado aparecerem as cinco perguntas com o estado de cada uma.
+- [ ] **Uma fonte só com TrueHD** (ex.: um remux TrueHD sem DD+ no nome): esperado o cartão da fonte
+      aparecer como indisponível, dizendo que o áudio está em um formato marcado como não suportado.
+- [ ] **Uma fonte com TrueHD e DD+** no mesmo nome: esperado continuar disponível (o port não bloqueia
+      na dúvida) — confirme que ela toca.
+- [ ] **Reproduzir melhor fonte** com o switch desligado: esperado escolher outra fonte, sem travar.
+- [ ] **Diagnóstico**: a linha **O que a TV declara decodificar** deve listar os cinco formatos como
+      *declarado* / *não declarado*, e o texto deve deixar claro que é declaração da TV, não medição da
+      sua saída.
+- [ ] **Desligar o master** e repetir: esperado nenhuma fonte ser filtrada por formato de áudio.
 
 ### R16. Décima terceira rodada (0.37.0)
 - [ ] **Abrir a transferência** (Ajustes → Conta → Transferência de biblioteca): esperado ver Origem,

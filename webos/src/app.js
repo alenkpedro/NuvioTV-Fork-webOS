@@ -25,6 +25,7 @@ import { createMdbListTracker, readTrackingSettings, saveTrackingSettings } from
 import { createNetwork } from './core/net-service.js';
 import { assessmentPatch, assessmentSources, assessmentSummary, buildAssessment } from './core/device-assessment.js';
 import { libraryTransferScreen } from './library-transfer-screen.js';
+import { audioCompatIssue } from './core/audio-compat.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -70,7 +71,10 @@ const state = readState(localStorage);
 // aplicativo web possui; o índice final de MP4 não-faststart pertence ao analisador do
 // elemento de mídia e não é prometido aqui.
 const prewarmEnabled = () => readPlayback(state.settings.playback).prewarmStreams !== false;
-const playbackRanking = rows => rankStreams(rows.filter(stream => !playbackIssue(stream, state.settings.avoidDvOnly)), state.settings.preferences);
+// Um problema de fonte é o do fork (Dolby Vision sem camada utilizável) ou o do áudio que o
+// receiver não aceita: os dois desviam a escolha automática e marcam o cartão na lista.
+const sourceIssue = stream => playbackIssue(stream, state.settings.avoidDvOnly) || audioCompatIssue(stream, readPlayback(state.settings.playback));
+const playbackRanking = rows => rankStreams(rows.filter(stream => !sourceIssue(stream)), state.settings.preferences);
 const prewarm = createStreamPrewarmer({
   loadStreams: (context, options) => loadStreamRows(context, options),
   rank: rows => ({ best: playbackRanking(rows)[0] || null })
@@ -874,11 +878,11 @@ async function showStreams(main, signal) {
     view.failed = loaded.failed ?? 0; view.loadedAt = Date.now();
   }
   const all = view.rows;
-  const chooseBest = rows => rankStreams(rows.filter(s => !playbackIssue(s, state.settings.avoidDvOnly)), state.settings.preferences)[0];
+  const chooseBest = rows => rankStreams(rows.filter(s => !sourceIssue(s)), state.settings.preferences)[0];
   if ((context.nextPlayback ? context.nextPlayback.auto : autoPlayConfigured(sourcePrefs())) && !view.visited) {
     view.visited = true;
     const prefs = sourcePrefs();
-    const best = context.nextPlayback ? nextSource(rankStreams(all.filter(s=>!playbackIssue(s,state.settings.avoidDvOnly)),state.settings.preferences),context.nextPlayback.bingeGroup,state.settings.playback) : selectAutoPlayStream(all, { mode: prefs.autoPlayMode, regex: prefs.autoPlayRegex, preferences: state.settings.preferences, avoidDvOnly: state.settings.avoidDvOnly, allowedAddons: prefs.autoPlayAddons });
+    const best = context.nextPlayback ? nextSource(rankStreams(all.filter(s=>!sourceIssue(s)),state.settings.preferences),context.nextPlayback.bingeGroup,state.settings.playback) : selectAutoPlayStream(all.filter(s=>!sourceIssue(s)), { mode: prefs.autoPlayMode, regex: prefs.autoPlayRegex, preferences: state.settings.preferences, avoidDvOnly: state.settings.avoidDvOnly, allowedAddons: prefs.autoPlayAddons });
     if (best && !document.hidden) { playStream(context, best); return; }
   }
   view.visited = true;
@@ -921,7 +925,7 @@ async function showStreams(main, signal) {
   // A medição roda sobre a fonte real, pelo mesmo transporte do player. O orçamento é
   // pequeno de propósito: são bytes do usuário (e do debrid), não um benchmark de banda.
   async function runSpeedTest() {
-    const candidates = subset().filter(s => /^https?:/i.test(s?.url || '') && !playbackIssue(s, state.settings.avoidDvOnly)).slice(0, speedBudget.maxSources);
+    const candidates = subset().filter(s => /^https?:/i.test(s?.url || '') && !sourceIssue(s)).slice(0, speedBudget.maxSources);
     if (!candidates.length) { toast('Nenhuma fonte HTTP(S) elegível para medir nesta seleção.'); return; }
     speedButton.disabled = true;
     speedNote.textContent = `Medindo ${candidates.length} fonte(s) com até ${Math.round(speedBudget.measureBytes / 1048576)} MB cada…`;
@@ -954,7 +958,7 @@ async function showStreams(main, signal) {
   }
   async function runTransportSweep(trigger) {
     const settings = readMediaTransport(readPlayback(state.settings.playback));
-    const candidates = subset().filter(s => directFileURL(s?.url) && !playbackIssue(s, state.settings.avoidDvOnly));
+    const candidates = subset().filter(s => directFileURL(s?.url) && !sourceIssue(s));
     const target = rankStreams(candidates, state.settings.preferences)[0];
     if (!target) { toast('Nenhuma fonte HTTP(S) direta nesta seleção. Playlists e torrents não passam pelo serviço.'); return; }
     const bitrate = sourceBitrateMbps(target, context.meta);
@@ -1000,7 +1004,7 @@ async function showStreams(main, signal) {
   }
 }
 function sourceCard(s,providers,choose,initial=false) {
-  const f=factsFor(s,state.settings.preferences),issue=playbackIssue(s,state.settings.avoidDvOnly);
+  const f=factsFor(s,state.settings.preferences),issue=sourceIssue(s);
   const badges=[labels[f.resolution],labels[f.quality],labels[f.encode],...(f.visualTags || []).map(v=>labels[v]),...(f.audioTags || []).map(v=>labels[v]),...(f.audioChannels || []).map(v=>labels[v]),f.releaseGroup,bytes(sizeBytes(s))].filter(v=>v && !/unknown|desconhecid|not available/i.test(v));
   const logo=providers[s.sourceProvider]?.manifest.logo;
   return button([el('div',{class:'source-heading'},el('div',{class:'grow'},el('strong',{},s.name || s.title || 'Fonte'),el('span',{class:'source-addon'},s.addonName)),logo?poster(logo,s.addonName,'source-icon'):null),el('p',{},s.description || s.title || ''),el('div',{class:'source-badges'},[...new Set(badges)].map(value=>el('span',{},value))),issue?el('small',{class:'warning'},issue):null],()=>issue?toast(issue):choose(),{class:`source ${issue?'unavailable':''}`,'aria-disabled':issue?'true':null,'data-focus':s.sourceKey,'data-initial-focus':initial});
