@@ -377,6 +377,7 @@ export function settingsScreen(context) {
         pending('Rolagem de foco Nuvio', 'Usa animação de foco personalizada do Nuvio', 'A animação de foco do fork é desenhada pelo Compose.'),
         pending('Lembrar último perfil selecionado', 'Abre com o último perfil usado ao iniciar o app', 'A escolha de perfil nesta TV passa pela conta Nuvio e continua exigindo confirmação.')),
       group('Diagnóstico', 'Versão e dados desta instalação',
+        row('Avaliação do dispositivo', 'Ajusta transporte e buffer a partir da medição', () => navigate({ name: 'assessment' }), { value: state.transportSweep?.at ? 'Medição disponível' : 'Sem medição' }),
         row('Versão do app', 'Pacote instalado nesta TV', () => textDialog('Versão do app', `Nuvio Fork para webOS ${version}\n${base}\nAlvo: LG 55UT8050 / webOS 25`), { value: version }),
         row('Addons instalados', 'Add-ons desta TV', () => textDialog('Addons instalados', state.addons.map(addon => `${addon.manifest.name} · ${new URL(addon.url).hostname}`).join('\n') || 'Nenhum add-on instalado.'), { value: String(state.addons.length) }),
         row('Teste de velocidade', 'Mede a fonte real pelo mesmo transporte do player', () => textDialog('Teste de velocidade', 'Abra um título, entre em Assistir e use “Testar velocidade” na lista de fontes. A medição roda sobre a fonte HTTP(S) real, com um orçamento de poucos MB por fonte, e não altera a ordem da lista nem a escolha automática.'), { value: 'Na lista de fontes' })),

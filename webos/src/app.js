@@ -23,6 +23,7 @@ import { runSweep, stabilityText, sweepTarget } from './core/transport-sweep.js'
 import { createStreamPrewarmer } from './core/stream-prewarm.js';
 import { createMdbListTracker, readTrackingSettings, saveTrackingSettings } from './core/mdblist-tracking.js';
 import { createNetwork } from './core/net-service.js';
+import { assessmentPatch, assessmentSources, assessmentSummary, buildAssessment } from './core/device-assessment.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -305,7 +306,7 @@ async function render() {
   try {
     if (route.name === 'player') { showPlayer(route); return; }
     const main = shell(route.name);
-    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el,button,icon,toast}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, collections: showCollections, 'collection-editor': showCollectionEditor, 'collection-source': showCollectionSource, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
+    const screens = { 'subtitle-appearance': showSubtitleAppearance, 'playback-settings': main => playbackSettingsScreen({main,settings:state.settings,persist,el,button,icon,toast}), 'ratings-settings':(main,signal)=>ratingsSettingsScreen(metadataContext(main,signal)), assessment: showAssessment, person: (main,signal)=>personScreen(metadataContext(main,signal)), 'metadata-settings':(main,signal)=>metadataSettingsScreen(metadataContext(main,signal)), discover: showDiscover, 'catalog-manager': showCatalogManager, collections: showCollections, 'collection-editor': showCollectionEditor, 'collection-source': showCollectionSource, sync: showSync, history: showHistory, profiles: showProfiles, home: showHome, addons: showAddons, search: showSearch, settings: showSettings, library: showLibrary, preferences: showPreferences, catalog: showCatalog, detail: showDetail, streams: showStreams, welcome: showWelcome, 'account-login': showAccountLogin };
     await (screens[route.name] ?? showHome)(main, signal);
     if (current(signal) && route.name !== 'profiles') {focusFirst();scheduleSync();}
   } catch (error) {
@@ -794,6 +795,37 @@ function rememberLink(context, stream) {
 function cachedStream(link) {
   return { name: link.streamName, url: link.url, addonName: link.addonName || 'Link anterior', sourceKey: 'cached-link' };
 }
+// Avaliação do dispositivo: DeviceAssessmentEngine.kt. Cada linha diz de onde veio (medição,
+// hardware, escolha sua ou o que não dá para saber aqui) e o que recomenda; Aplicar escreve o
+// patch e Reverter devolve todos os valores anteriores.
+function showAssessment(main, signal) {
+  heading(main, 'Avançado', 'Avaliação do dispositivo');
+  const assessment = state.assessment || buildAssessment({ sweep: state.transportSweep || null, playback: readPlayback(state.settings.playback) });
+  const rowsHost = el('div', { class: 'assessment-rows' });
+  const patch = assessmentPatch(assessment);
+  const status = el('p', { class: 'muted', role: 'status' }, assessmentSummary(assessment));
+  rowsHost.replaceChildren(...assessment.rows.map(row => el('div', { class: 'assessment-row' },
+    el('div', { class: 'grow' }, el('strong', {}, row.label), el('small', { class: 'muted' }, row.reason)),
+    el('span', { class: 'assessment-value' }, row.value),
+    el('span', { class: `assessment-source assessment-source-${row.source}` }, assessmentSources[row.source]))));
+  const apply = button('Aplicar recomendações', () => {
+    // Applier: the snapshot is what makes Revert restore every previous value, even after a restart.
+    state.assessmentSnapshot = readPlayback(state.settings.playback);
+    state.settings.playback = { ...readPlayback(state.settings.playback), ...patch };
+    state.assessment = assessment;
+    persist();
+    toast(`Aplicado: ${Object.keys(patch).length} ajuste(s). Use Reverter para voltar atrás.`);
+    render();
+  }, { class: 'primary', disabled: !Object.keys(patch).length });
+  const revert = button('Reverter', () => {
+    if (!state.assessmentSnapshot) { toast('Nada para reverter.'); return; }
+    state.settings.playback = readPlayback(state.assessmentSnapshot);
+    delete state.assessmentSnapshot;
+    persist(); toast('Valores anteriores restaurados.'); render();
+  }, { disabled: !state.assessmentSnapshot });
+  main.append(el('section', { class: 'assessment' }, rowsHost, el('div', { class: 'toolbar' }, apply, revert), status,
+    el('p', { class: 'muted' }, 'A avaliação usa a última varredura de transporte desta TV (lista de fontes → Varredura de transporte). Linhas marcadas como “não dá para saber aqui” documentam recursos do fork que o webOS não expõe e não são aplicadas.')));
+}
 async function showStreams(main, signal) {
   // Ephemeral route state preserves selection on Back; signed source URLs are not persisted.
   route.sourceView ||= { showAll: false, provider: null };
@@ -942,6 +974,13 @@ async function showStreams(main, signal) {
       const outcome = await runSweep({ windowMb: settings.windowMb, targetMbps, signal, onCell: renderRow, measure: cell => measureTransport({ stream: target, ...cell, signal }) });
       if (signal.aborted) return;
       verdictHost.textContent = outcome.verdict.text;
+      // A avaliação do dispositivo consome esta medição: só o que foi medido vira recomendação.
+      state.transportSweep = {
+        at: Date.now(), source: target.name || target.title || 'fonte', targetMbps: outcome.targetMbps ?? null,
+        best: outcome.best ? { connections: outcome.best.connections, chunkMb: outcome.best.chunkMb, mbps: outcome.best.mbps, stability: outcome.best.stability } : null,
+        rows: outcome.rows.map(row => ({ label: row.label, mbps: row.mbps, note: row.note, skipped: Boolean(row.skipped) }))
+      };
+      persist();
       const winner = outcome.verdict.apply ? outcome.verdict.settings : null;
       if (winner) sweepPanel.append(el('div', { class: 'toolbar' }, button(`Usar ${winner.connections}× ${winner.chunkMb} MB`, () => {
         const prefs = readPlayback(state.settings.playback);

@@ -237,6 +237,13 @@ recomendações e `PostPlayRecommendationOverlay.kt`/`PostPlayOverlay.kt` o layo
 `PlayerSettingsDataStore.kt` fornece os padrões e a faixa de 80–100% do limite.
 Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).
 
+## Entrega 0.36 — avaliação do dispositivo
+
+`core/assessment/DeviceAssessmentEngine.kt` e `DeviceAssessmentApplier.kt` reduzidos ao que
+esta TV mede e muda: as linhas carregam a origem (medido / hardware / escolha / desconhecido) e
+o motivo, o patch só toca ajustes que existem aqui e o Reverter restaura o retrato anterior.
+`src/core/device-assessment.js`. Ver [DEVICE_ASSESSMENT.md](DEVICE_ASSESSMENT.md).
+
 ## Entrega 0.35 — acompanhamento MDBList
 
 `data/repository/MDBListScrobbleService.kt` e `MDBListTrackingProvider.kt`: as chamadas de

@@ -1,6 +1,6 @@
 {
   "id": "org.nuviofork.webos",
-  "version": "0.35.0",
+  "version": "0.36.0",
   "vendor": "NuvioTV-Fork community port",
   "type": "web",
   "main": "index.html",

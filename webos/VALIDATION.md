@@ -1,4 +1,4 @@
-# Checklist de validação na LG 55UT8050 — versão 0.35.0
+# Checklist de validação na LG 55UT8050 — versão 0.36.0
 
 Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
 deve acontecer**; a validação física é a única coisa que os testes de navegador não
@@ -6,7 +6,7 @@ substituem. Veja também as pendências conhecidas no fim: elas já estão docum
 são falhas novas.
 
 > Esta versão nasceu das suas rodadas na TV: o **Bloco R** lista exatamente o que foi
-> corrigido a partir do seu relato, para conferência rápida. O **R14** é o desta versão.
+> corrigido a partir do seu relato, para conferência rápida. O **R15** é o desta versão.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -42,6 +42,21 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
 ## Bloco R — correções das rodadas na TV (0.31 a 0.25)
 
 Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R15. Décima segunda rodada (0.36.0)
+- [ ] **Sem varredura**: Ajustes → Avançado → Diagnóstico → **Avaliação do dispositivo**. Esperado a
+      primeira linha dizer **sem medição**, nenhum botão aplicar habilitado e o texto explicando que a
+      varredura é que fornece os números.
+- [ ] **Rodar a varredura** (lista de fontes) e voltar à avaliação: esperado as linhas com valores
+      (transporte, janela, buffer), cada uma com a etiqueta de origem e o motivo.
+- [ ] **Aplicar**: esperado o aviso de quantos ajustes foram escritos e, ao reproduzir, o serviço de
+      mídia local com a configuração recomendada (o HUD mostra `N×`).
+- [ ] **Reverter**: esperado voltar exatamente aos valores anteriores (confira em Reprodução → Buffer e
+      Rede) e o botão Reverter ficar desabilitado depois.
+- [ ] **Linhas “não dá para saber aqui”**: Dolby Vision, conexões do Media3, memória nativa, AFR e
+      passthrough devem aparecer com o motivo, sem botão e sem alterar nada.
+- [ ] **Reiniciar o app depois de aplicar**: esperado os valores aplicados persistirem e o Reverter
+      continuar disponível.
 
 ### R14. Décima primeira rodada (0.35.0)
 - [ ] **Ligar o acompanhamento**: Ajustes → Rastreamento → **MDBList → Acompanhar no MDBList**

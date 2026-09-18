@@ -27,6 +27,14 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Avaliação do dispositivo (0.36)
+
+**Ajustes → Avançado → Diagnóstico → Avaliação do dispositivo** ajusta transporte, janela e
+buffer a partir da **última varredura de transporte**. Cada linha diz de onde veio (medido, do
+hardware, escolha sua ou “não dá para saber aqui”) e por quê; **Aplicar** escreve tudo de uma
+vez e **Reverter** devolve os valores anteriores. Sem medição, nada é aplicado — o port não
+inventa recomendação. [Regras e testes](DEVICE_ASSESSMENT.md).
+
 ## Acompanhamento MDBList (0.35)
 
 O port passou a **enviar progresso e assistidos para o MDBList**, como o fork: um `start` no

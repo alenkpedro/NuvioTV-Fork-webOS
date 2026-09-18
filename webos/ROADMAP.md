@@ -120,8 +120,12 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    mais marca assistido), com as regras do fork: sem IMDb/TMDB não envia, progresso truncado
    em duas casas, dedup de 8 s/1,5 ponto, 5xx repete duas vezes, 404/429 não repetem. Leitura
    do MDBList como fonte de progresso continua pendente. Ver [MDBLIST_TRACKING.md](MDBLIST_TRACKING.md).
-   **Próxima prioridade:** a avaliação do dispositivo e a transferência de biblioteca — o resto
-   da lista de paridade. Depois, validação na LG.
+   **Avaliação do dispositivo 0.36:** a partir da última varredura, o port recomenda transporte,
+   janela e buffer com a origem de cada linha (medido / do hardware / escolha sua / não dá para
+   saber aqui), aplica tudo de uma vez e reverte. Cinco recursos do fork aparecem como “não dá
+   para saber aqui” em vez de sumirem. Ver [DEVICE_ASSESSMENT.md](DEVICE_ASSESSMENT.md).
+   **Próxima prioridade:** a transferência de biblioteca — o último item da lista de paridade.
+   Depois, validação na LG.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.
