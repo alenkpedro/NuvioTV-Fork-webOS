@@ -27,6 +27,15 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Acompanhamento MDBList (0.35)
+
+O port passou a **enviar progresso e assistidos para o MDBList**, como o fork: um `start` no
+primeiro quadro, um `stop` na pausa e no fim — e um stop com **80% ou mais marca assistido**.
+Itens sem IMDb/TMDB não são enviados, o progresso vai truncado em duas casas, a janela de
+dedup é 8 s/1,5 ponto, 5xx repete duas vezes com os atrasos do fork, e 404/429 não repetem.
+A chave é a mesma de **Integrações → Avaliações MDBList**; ligue em **Ajustes → Rastreamento →
+MDBList**. [Regras, limites e testes](MDBLIST_TRACKING.md).
+
 ## Início rápido das fontes (0.34)
 
 Abrir os **detalhes** de um título já busca e ranqueia as fontes em segundo plano: entrar em

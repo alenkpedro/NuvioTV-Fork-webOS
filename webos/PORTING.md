@@ -237,6 +237,15 @@ recomendações e `PostPlayRecommendationOverlay.kt`/`PostPlayOverlay.kt` o layo
 `PlayerSettingsDataStore.kt` fornece os padrões e a faixa de 80–100% do limite.
 Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).
 
+## Entrega 0.35 — acompanhamento MDBList
+
+`data/repository/MDBListScrobbleService.kt` e `MDBListTrackingProvider.kt`: as chamadas de
+start/stop, o truncamento do progresso em duas casas, a janela de dedup (8 s e 1,5 ponto), a
+escada de retry (5 s para 502-504, 1,5 s × tentativa, 404 e 429 terminais), a regra de 80% para
+assistido e o item sem id ignorado. `src/core/mdblist-tracking.js`. A leitura do MDBList
+(biblioteca, assistidos, progresso, watchlist) permanece pendente. Ver
+[MDBLIST_TRACKING.md](MDBLIST_TRACKING.md).
+
 ## Entrega 0.34 — início rápido das fontes
 
 `ui/screens/player/PlayerRuntimeControllerStreams.kt` e o pré-carregamento enquanto se

@@ -21,6 +21,8 @@ import { directFileURL, localTransportEnabled, measureTransport, readLocalMediaS
 import { mediaTracks } from './core/media-tracks.js';
 import { runSweep, stabilityText, sweepTarget } from './core/transport-sweep.js';
 import { createStreamPrewarmer } from './core/stream-prewarm.js';
+import { createMdbListTracker, readTrackingSettings, saveTrackingSettings } from './core/mdblist-tracking.js';
+import { createNetwork } from './core/net-service.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -90,6 +92,16 @@ const appearance = () => applyAppearance(root, state.settings.appearance);
 const appVersion = `webOS ${appinfo.version}`;
 const account = createAccountClient({ storage: localStorage });
 const ratings=createRatingsClient({settings:()=>readRatingsSettings(localStorage)});
+// MDBList como fonte de acompanhamento: MDBListScrobbleService.kt do fork. A chave é a mesma
+// que já existe em Integrações → Avaliações MDBList; o interruptor de acompanhamento é
+// separado (o fork tem "enabled" e "tracking").
+const mdblistNetwork = createNetwork();
+const mdbListTracker = createMdbListTracker({
+  network: mdblistNetwork,
+  settings: () => ({ ...readRatingsSettings(localStorage), ...readTrackingSettings(localStorage) }),
+  version: appinfo.version,
+  onResult: result => { state.mdblistTracking = result; persist(); }
+});
 const metadata=createMetadataClient({settings:()=>readMetadataSettings(localStorage)});
 initializeProfiles(state);
 let profileAccess = null;
@@ -1367,11 +1379,19 @@ function showPlayer(context) {
   }
   on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; if (pendingStart) { const target = pendingStart; pendingStart = 0; (async () => { try { await waitBuffer(target); } catch { return; } if (!disposed) await beginPlayback(); })(); } });
   // Buffer e Rede: the visual series needs the initial play, not a stall before it started.
-  on('playing', () => { hasStarted = true; loading.ready(); chrome.setPlaying(true); reveal(); });
+  on('playing', () => { hasStarted = true; loading.ready(); chrome.setPlaying(true); reveal(); trackingStart(); });
   // Buffer e Rede: with the custom buffer on, the TV waits for the configured amount of
   // loaded media before starting, and holds the resume after a stall until the same
   // target is back. Values come from PlayerSettings' bufferForPlayback(AfterRebuffer)Ms.
   const playbackPrefs = () => readPlayback(state.settings.playback);
+  // MDBList (MDBListScrobbleService.kt): start ao começar, stop ao pausar, sair ou concluir. O
+  // servidor marca assistido quando o stop chega com 80% ou mais; abaixo disso guarda a sessão
+  // pausada. Sem ids (IMDb/TMDB) nada é enviado, e a janela de dedup evita repetir a mesma ação.
+  const trackingContext = () => ({ type: context.type, meta: context.meta, episode: context.episode, profileId: profileAccess?.id ?? null });
+  const progressPercent = () => Number.isFinite(video.duration) && video.duration > 0 ? (video.currentTime / video.duration) * 100 : 0;
+  let trackingStarted = false, trackingStopped = false;
+  function trackingStart() { if (trackingStarted || disposed) return; trackingStarted = true; trackingStopped = false; mdbListTracker.start(trackingContext(), progressPercent()); }
+  function trackingStop() { if (!trackingStarted || trackingStopped) return; trackingStopped = true; mdbListTracker.stop(trackingContext(), progressPercent()); }
   let pendingStart = 0, bufferHold = false, hasStarted = false;
   async function waitBuffer(target) {
     if (!(target > 0)) return 'ready';
@@ -1395,7 +1415,7 @@ function showPlayer(context) {
     } catch { /* o controle remoto ou a navegação cancelaram a espera */ }
     finally { bufferHold = false; loading.buffer(false); }
   });
-  on('pause', () => { chrome.setPlaying(false); if(!manuallyHidden)reveal(); save(); });
+  on('pause', () => { chrome.setPlaying(false); if(!manuallyHidden)reveal(); save(); if (!bufferHold) trackingStop(); });
   function updateTimeline() {
     const duration=video.duration,position=seekPreview.position();
     timeline.disabled=!Number.isFinite(duration)||duration<=0;timeline.max=timeline.disabled?1:duration;timeline.value=position;
@@ -1406,7 +1426,7 @@ function showPlayer(context) {
   function updateMetadata(){const chips=[];if(video.videoWidth&&video.videoHeight)chips.push(`${video.videoWidth} × ${video.videoHeight}`);const size=sizeBytes(context.stream);if(size>0)chips.push(size>=1024**3?`${(size/1024**3).toFixed(1)} GB`:`${Math.round(size/1024**2)} MB`);chrome.meta.replaceChildren(...chips.map(text=>el('span',{},text)));updateTimeline();}
   on('loadedmetadata',updateMetadata);on('resize',updateMetadata);on('progress',updateTimeline);on('durationchange',updateTimeline);on('ratechange',()=>chrome.updateClock());
   on('timeupdate', () => {updateTimeline();updateStats();if(Date.now()-savedAt>10000){save();savedAt=Date.now();}});
-  on('ended', () => { save(); loading.show('Reprodução concluída.'); reveal(); });
+  on('ended', () => { save(); trackingStop(); loading.show('Reprodução concluída.'); reveal(); });
   on('error', () => { loading.show('Não foi possível reproduzir esta fonte. O link pode ter expirado ou o formato não ser compatível. Volte e escolha outra fonte.'); controls.classList.remove('faded'); controls.inert=false; clearTimeout(hideTimer); });
   const visibility = () => { if (document.hidden) { video.pause(); save(); } };
   document.addEventListener('visibilitychange', visibility);
@@ -1470,7 +1490,7 @@ function showPlayer(context) {
     if(chrome.key(key,hideControls)){e.preventDefault();return true;}
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; if (localMedia) { stopLocalMedia(localMedia.token); localMedia = null; localStats = null; } trailerPlayer.close(); loading.dispose(); segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; trackingStop(); if (localMedia) { stopLocalMedia(localMedia.token); localMedia = null; localStats = null; } trailerPlayer.close(); loading.dispose(); segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   const controlSize=new ResizeObserver(()=>screen.style.setProperty('--subtitle-control-clearance',`${controls.offsetHeight+8}px`));controlSize.observe(controls);
   const disposeBase=cleanupPlayer;cleanupPlayer=()=>{controlSize.disconnect();disposeBase();};
   const artworkSignal=request.signal;

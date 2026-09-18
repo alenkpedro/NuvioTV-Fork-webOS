@@ -116,9 +116,12 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    lê, a lista de fontes usa essa busca (sem esqueleto e sem uma segunda requisição) e a
    conexão é aberta no toque com um `Range` de um byte; cache de 2 minutos, 3 títulos, por
    título/episódio, com ajuste em Reprodução. Ver [START_SPEED.md](START_SPEED.md).
-   **Próxima prioridade:** o acompanhamento MDBList como fonte de progresso, a avaliação do
-   dispositivo e a transferência de biblioteca — o resto da lista de paridade. Depois,
-   validação na LG.
+   **Acompanhamento MDBList 0.35:** start no primeiro quadro, stop na pausa e no fim (80% ou
+   mais marca assistido), com as regras do fork: sem IMDb/TMDB não envia, progresso truncado
+   em duas casas, dedup de 8 s/1,5 ponto, 5xx repete duas vezes, 404/429 não repetem. Leitura
+   do MDBList como fonte de progresso continua pendente. Ver [MDBLIST_TRACKING.md](MDBLIST_TRACKING.md).
+   **Próxima prioridade:** a avaliação do dispositivo e a transferência de biblioteca — o resto
+   da lista de paridade. Depois, validação na LG.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

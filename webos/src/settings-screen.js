@@ -8,6 +8,8 @@ import { autoPlayModes, compileRegex } from './core/auto-play.js';
 import { cacheDurationLabel, clearLinkCache, linkCacheHours } from './core/link-cache.js';
 import { trailerDelayRange } from './core/trailer.js';
 import { bufferRanges, readBufferSeconds, readWaitTimeout } from './core/buffer.js';
+import { readTrackingSettings, saveTrackingSettings } from './core/mdblist-tracking.js';
+import { readRatingsSettings } from './core/ratings.js';
 import { mediaTransportLimits, readMediaTransport, transportLabel } from './core/media-service.js';
 import { themes, settingsStyles, readAppearance } from './core/appearance.js';
 export const settingsCategories = Object.freeze([
@@ -340,6 +342,10 @@ export function settingsScreen(context) {
       group('Contas', 'Conectar e gerenciar serviços de rastreamento',
         row('Trakt', 'Conectar ou gerenciar conta Trakt', null, { pending: true, value: 'Não conectado', pendingMessage: 'O login OAuth do Trakt acontece no app Android; o port lê apenas a fonte escolhida nesta conta.' }),
         row('Simkl', 'Configurações específicas do Simkl', null, { pending: true, value: 'Não conectado', pendingMessage: 'O login OAuth do Simkl acontece no app Android; o port lê apenas a fonte escolhida nesta conta.' })),
+      group('MDBList', 'Acompanhamento de progresso e assistidos (MDBListTrackingProvider)',
+        toggle('Acompanhar no MDBList', 'Envia início, pausa e fim de reprodução para a sua conta MDBList, usando a mesma chave das avaliações.', () => readTrackingSettings(localStorage).tracking, value => { saveTrackingSettings(localStorage, { tracking: value }); redraw('button[aria-label="Acompanhar no MDBList"]'); }),
+        row('Chave do MDBList', 'Usada pelas avaliações e pelo acompanhamento', () => navigate({ name: 'ratings-settings' }), { value: readRatingsSettings(localStorage).key ? 'Configurada' : 'Não configurada' }),
+        row('Último envio', 'Diagnóstico do acompanhamento', () => textDialog('Acompanhamento MDBList', `${state.mdblistTracking ? `Ação: ${state.mdblistTracking.action} · ${state.mdblistTracking.item} · HTTP ${state.mdblistTracking.status ?? '—'}${state.mdblistTracking.outcome ? ` (${state.mdblistTracking.outcome})` : ''}` : 'Nenhum envio ainda nesta TV.'}\n\nRegras do fork: título sem IMDb/TMDB não é enviado; um stop com 80% ou mais marca assistido e abaixo disso fica uma sessão pausada; 404 (fora do banco do MDBList) e 429 (limite diário) não são repetidos; 5xx é repetido até duas vezes. O progresso vai truncado em duas casas.`), { value: state.mdblistTracking?.status ? `HTTP ${state.mdblistTracking.status}` : '—' })),
       group('Fontes', 'Escolha de onde o Nuvio lê sua biblioteca e progresso de reprodução. O scrobbling é enviado para todos os serviços conectados.',
         row('Progresso de assistidos', 'Fonte usada para retomar e Continuar Assistindo', () => textDialog('Progresso de assistidos', `Fonte lida do seu perfil Nuvio: ${source}. A escolha é feita no app de referência e chega nesta TV pela sincronização da conta.`), { value: source }),
         row('Biblioteca', 'Fonte usada para a biblioteca e favoritos', () => textDialog('Biblioteca', `O port grava a biblioteca no perfil Nuvio desta TV e reproduz a fonte informada pela conta: ${source}.`), { value: source })),
