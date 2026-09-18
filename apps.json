@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.31.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.38.0/webos/public/assets/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.31.0",
+        "version": "0.38.0",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Trailer tocando dentro do app e serviço de rede local com cabeçalhos.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.31.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.31.0",
+        "appDescription": "Faixas paralelas com serviço de mídia local, varredura de transporte, início rápido das fontes, acompanhamento MDBList, avaliação do dispositivo, transferência de biblioteca e switches de áudio por formato.",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.38.0/webos/public/assets/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.38.0",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.31.0/org.nuviofork.webos_0.31.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.38.0/org.nuviofork.webos_0.38.0_all.ipk",
         "ipkHash": {
-          "sha256": "4fb25b9788379b3d6a8ff7dca26e5c0a1dc8ff267752c89e9ad39954b1235373"
+          "sha256": "488a9fb2e276e1a961b28084afa5b758d0265e51d3ede8f185913dd8c17e3962"
         },
-        "ipkSize": 940062
+        "ipkSize": 963052
       },
       "pool": "main",
-      "shortDescription": "Player do fork com trailer no app, coleções no tamanho do fork e serviço de rede."
+      "shortDescription": "Player do fork com transporte local medido, varredura e recursos de paridade."
     }
   ]
 }
