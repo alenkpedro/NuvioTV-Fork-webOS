@@ -1,4 +1,4 @@
-# Checklist de validação na LG 55UT8050 — versão 0.31.0
+# Checklist de validação na LG 55UT8050 — versão 0.32.0
 
 Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
 deve acontecer**; a validação física é a única coisa que os testes de navegador não
@@ -6,7 +6,7 @@ substituem. Veja também as pendências conhecidas no fim: elas já estão docum
 são falhas novas.
 
 > Esta versão nasceu das suas rodadas na TV: o **Bloco R** lista exatamente o que foi
-> corrigido a partir do seu relato, para conferência rápida. O **R10** é o desta versão.
+> corrigido a partir do seu relato, para conferência rápida. O **R11** é o desta versão.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -42,6 +42,23 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
 ## Bloco R — correções das rodadas na TV (0.31 a 0.25)
 
 Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R11. Oitava rodada (0.32.0)
+- [ ] **Ligar o transporte local**: Ajustes → Reprodução → Buffer e Rede → **Serviço de mídia local**.
+      Esperado: aparecerem os três passos (Conexões paralelas, Tamanho da faixa, Janela na memória)
+      com 2× 1 MB e janela 24 MB, e o texto explicando quando o serviço recusa a fonte.
+- [ ] **Reproduzir um filme com o transporte ligado**: esperado abrir normalmente. Se a fonte recusar
+      (sem `Range`, playlist ou sem memória), esperado o aviso no player dizendo o motivo e o vídeo
+      tocando pela URL original — nunca tela preta.
+- [ ] **HUD medido** (ícone de informações no player): esperado mostrar resolução, **bitrate de vídeo
+      e áudio como média medida** (com "≈"), buffer, frames perdidos, faixa de áudio, fonte e a linha
+      do transporte com **Mbps medidos**, bytes buscados/entregues e blocos descartados. HDR e saída de
+      áudio devem dizer **não medidos pela TV**.
+- [ ] **Voltar e avançar no filme**: com o transporte ligado, esperado voltar a uma posição já vista
+      **sem travar** (o bloco está na janela). Ao passar da janela, esperado só um pequeno atraso.
+- [ ] **Trocar as conexões para 4** e reproduzir de novo: esperado não travar e o HUD mostrar `4×`.
+- [ ] **Uma fonte que não responde a `Range`** (se você tiver uma): esperado o aviso com o motivo e a
+      reprodução direta funcionando como antes.
 
 ### R10. Sétima rodada (0.31.0)
 - [ ] **Abrir um trailer** (botão Trailer no detalhe ou um cartão da aba Trailers): esperado o

@@ -8,6 +8,7 @@ import { autoPlayModes, compileRegex } from './core/auto-play.js';
 import { cacheDurationLabel, clearLinkCache, linkCacheHours } from './core/link-cache.js';
 import { trailerDelayRange } from './core/trailer.js';
 import { bufferRanges, readBufferSeconds, readWaitTimeout } from './core/buffer.js';
+import { mediaTransportLimits, readMediaTransport, transportLabel } from './core/media-service.js';
 import { themes, settingsStyles, readAppearance } from './core/appearance.js';
 export const settingsCategories = Object.freeze([
   { id: 'account', title: 'Conta', subtitle: 'Conta e status de sincronização', icon: 'profile' },
@@ -203,6 +204,26 @@ export function settingsScreen(context) {
         redraw(`button[aria-label="${label}"]`);
       }, { class: 'settings-threshold-step', 'aria-label': label, disabled: delta < 0 ? value <= min : value >= max });
     };
+    // Parallel range transport: connections, chunk size and the memory window of the local
+    // service, in the same step-row grammar as the buffer values. The window must fit the
+    // blocks in flight, so the window step never goes below connections × chunk.
+    const transportPrefs = () => readMediaTransport(play());
+    const transportStep = (label, delta, key, limits, suffix = '') => {
+      const current = transportPrefs()[key];
+      const [min, max] = limits;
+      return button(delta < 0 ? '−' : '+', () => {
+        const value = transportPrefs()[key];
+        let next = Math.max(min, Math.min(max, value + delta));
+        const patch = { mediaConnections: transportPrefs().connections, mediaChunkMb: transportPrefs().chunkMb, mediaWindowMb: transportPrefs().windowMb };
+        patch[key === 'connections' ? 'mediaConnections' : key === 'chunkMb' ? 'mediaChunkMb' : 'mediaWindowMb'] = next;
+        const window = readMediaTransport({ mediaConnections: patch.mediaConnections, mediaChunkMb: patch.mediaChunkMb, mediaWindowMb: patch.mediaWindowMb });
+        // MemoryBudget: a cell that does not fit its window would evict blocks still in flight.
+        if (!window.fitsWindow && key !== 'windowMb') patch.mediaWindowMb = Math.min(mediaTransportLimits.windowMb[1], window.cellMb * 4);
+        if (!readMediaTransport(patch).fitsWindow) return;
+        updatePlayback(patch);
+        redraw(`button[aria-label="${label}"]`);
+      }, { class: 'settings-threshold-step', 'aria-label': label, disabled: delta < 0 ? current <= min : current >= max });
+    };
     // SettingsTextInputDialog: the fork stores the pattern as typed, so an invalid
     // expression is refused here instead of silently never matching a source.
     function promptRegex() {
@@ -244,10 +265,27 @@ export function settingsScreen(context) {
           el('span', { class: 'settings-threshold-value' }, `${play().bufferWaitTimeout}s`),
           bufferStep('Aumentar tempo limite de espera', 5, 'bufferWaitTimeout')) : null,
         play().customBuffer ? note('Estas configurações afetam o comportamento do buffer. Valores incorretos podem causar problemas na reprodução. O player nativo da TV só obedece a estas duas durações; os tamanhos em MB do Media3 não existem aqui.') : null,
+        toggle('Serviço de mídia local', 'Busca as faixas do arquivo em paralelo, com os cabeçalhos da fonte, e entrega ao player por 127.0.0.1. Vale para arquivos HTTP(S) diretos; playlists HLS/DASH seguem diretas.', () => play().localMediaService, value => { updatePlayback({ localMediaService: value }); redraw('button[aria-label="Serviço de mídia local"]'); }),
+        play().localMediaService ? el('div', { class: 'settings-threshold' },
+          el('span', { class: 'grow' }, el('strong', {}, 'Conexões paralelas'), el('small', { class: 'muted' }, 'Quantas faixas do arquivo buscar ao mesmo tempo. Mais conexões ajudam quando uma só não alimenta o título.')),
+          transportStep('Diminuir conexões paralelas', -1, 'connections', mediaTransportLimits.connections),
+          el('span', { class: 'settings-threshold-value' }, String(transportPrefs().connections)),
+          transportStep('Aumentar conexões paralelas', 1, 'connections', mediaTransportLimits.connections)) : null,
+        play().localMediaService ? el('div', { class: 'settings-threshold' },
+          el('span', { class: 'grow' }, el('strong', {}, 'Tamanho da faixa'), el('small', { class: 'muted' }, 'Tamanho de cada pedido parcial. Faixas maiores reduzem o número de requisições; menores começam a reproduzir mais rápido.')),
+          transportStep('Diminuir tamanho da faixa', -1, 'chunkMb', mediaTransportLimits.chunkMb),
+          el('span', { class: 'settings-threshold-value' }, `${transportPrefs().chunkMb} MB`),
+          transportStep('Aumentar tamanho da faixa', 1, 'chunkMb', mediaTransportLimits.chunkMb)) : null,
+        play().localMediaService ? el('div', { class: 'settings-threshold' },
+          el('span', { class: 'grow' }, el('strong', {}, 'Janela na memória'), el('small', { class: 'muted' }, 'Quanto do arquivo pode ser guardado para voltar atrás sem baixar de novo. Precisa caber todas as faixas em paralelo.')),
+          transportStep('Diminuir janela na memória', -8, 'windowMb', mediaTransportLimits.windowMb),
+          el('span', { class: 'settings-threshold-value' }, `${transportPrefs().windowMb} MB`),
+          transportStep('Aumentar janela na memória', 8, 'windowMb', mediaTransportLimits.windowMb)) : null,
+        play().localMediaService ? note(`Configuração atual: ${transportLabel(transportPrefs())}. O serviço só abre a fonte quando ela responde a pedidos parciais (Range) e há memória para as faixas; fora disso o player usa a URL original. O HUD do player (ícone de informações) mostra o que foi medido.`) : null,
         pending('Duração mínima e máxima do buffer', 'Quanto manter carregado antes e depois da posição atual', 'São janelas do Media3 em bytes; o player da TV decide o próprio buffer. O port controla apenas o início e a retomada.'),
         pending('Gerenciamento de uso de memória', 'Limita o buffer a uma parcela segura da memória do dispositivo', 'O orçamento de memória do ExoPlayer não existe no elemento de mídia da TV.'),
         pending('Cache em disco', 'Salva bytes baixados para voltar sem baixar de novo', 'O cache de disco do Media3 é um armazenamento próprio; o webOS usa o cache do navegador.'),
-        pending('Rede personalizada', 'Múltiplas conexões paralelas e HTTP/2', 'Conexões paralelas e HTTP/2 são do cliente OkHttp; a TV usa o transporte do navegador.'),
+        pending('Rede personalizada (HTTP/2)', 'Negociação HTTP/2 e prioridades de fluxo', 'Conexões paralelas ficam no serviço local abaixo; HTTP/2 é do cliente OkHttp e a TV negocia o protocolo sozinha.'),
         pending('Memória nativa do ExoPlayer', 'Alocador off-heap e otimizações de busca', 'Recurso do ExoPlayer Android, sem equivalente no webOS.'),
         pending('Ajuste automático de taxa de quadros (AFR)', 'Alterar a taxa de atualização da tela conforme o vídeo', 'Um aplicativo web no webOS não pode trocar a frequência do painel; o recurso do fork é do modo Android.')),
       group('Reprodução automática', 'Fila, maratona e recomendações',

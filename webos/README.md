@@ -27,6 +27,23 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Serviço de mídia local (0.32)
+
+O port ganhou o **transporte de faixas paralelas** do fork. Em **Ajustes → Reprodução →
+Buffer e Rede**, **Serviço de mídia local** faz o player ler de `127.0.0.1`: o serviço
+empacotado busca o arquivo em blocos paralelos (1–8 conexões, 1–8 MB por faixa) com os
+**cabeçalhos da fonte** e mantém uma janela de blocos na memória (8–128 MB), que precisa
+caber tudo o que está em voo. Fontes que recusam o navegador da TV passam a ser
+buscadas; voltar a uma posição já vista custa zero de rede.
+
+Nada é obrigatório: fora dos arquivos HTTP(S) diretos (HLS/DASH seguem como playlist),
+sem suporte a `Range` na fonte, sem memória para as faixas ou sem o serviço na TV, o
+player toca a URL original e o motivo aparece na tela. O HUD do player (ícone de
+informações) passou a medir: bitrate médio de vídeo e áudio pelos bytes decodificados,
+buffer com os alvos, frames perdidos, faixa de áudio e os contadores do transporte
+(buscados, entregues, descartados). HDR e saída de áudio continuam declarados como não
+medidos. [Regras, recusas e testes](MEDIA_SERVICE.md).
+
 ## Trailer no app e serviço de rede (0.31)
 
 O **trailer toca dentro do app** (página local com o player do YouTube e protocolo por

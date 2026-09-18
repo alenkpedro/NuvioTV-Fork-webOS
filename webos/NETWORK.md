@@ -41,8 +41,9 @@ Port do que o player da TV consegue obedecer de `PlayerSettingsDataStore`
   valor sai com `~`, marcando que é aproximado.
 - **A lista não muda**: a medição é informação, não um novo ranking. O port não
   tem o `StreamSweepEngine` do fork (que testa conexões paralelas para escolher
-  uma configuração de rede), porque um aplicativo web não abre sockets paralelos
-  para o elemento de mídia.
+  uma configuração de rede) — as faixas paralelas vivem agora no
+  [serviço de mídia local](MEDIA_SERVICE.md), e a varredura de configurações é a
+  próxima entrega sobre aquele serviço.
 - Falha por fonte é reportada por fonte (`HTTP 403`, `tempo esgotado`, `falha de
   rede`, `nenhum byte recebido`) sem interromper a lista, como o fork registra uma
   célula que falhou e continua a varredura.
@@ -61,15 +62,19 @@ o motivo:
   aceita alvo de bytes.
 - Cache em disco de VOD: o Media3 tem um cache próprio; aqui quem cacheia é o
   navegador da TV.
-- Rede personalizada (conexões paralelas) e HTTP/2: dependem do cliente OkHttp;
-  o transporte é do navegador.
+- HTTP/2 e prioridades de fluxo: dependem do cliente OkHttp; o transporte é do
+  navegador. As **conexões paralelas** passaram a existir no
+  [serviço de mídia local](MEDIA_SERVICE.md).
 - Memória nativa do ExoPlayer: alocador off-heap do Android.
 - AFR (taxa de quadros automática): um aplicativo web no webOS não pode trocar a
   frequência do painel.
 
 O ajuste de velocidade do fork vive dentro do próprio Media3; aqui o diagnóstico
-do player continua mostrando apenas o que é medido no webOS (resolução
-decodificada, buffer temporal e frames perdidos) e não declara bitrate da fonte.
+do player mede o que o webOS deixa medir — resolução decodificada, bitrate médio de
+vídeo e áudio pelos bytes decodificados, buffer temporal com os alvos do buffer
+personalizado, frames perdidos, faixa de áudio e os contadores do transporte local
+(buscados, entregues e descartados). HDR e saída de áudio continuam **não medidos**
+porque a TV não os expõe. Detalhes em [MEDIA_SERVICE.md](MEDIA_SERVICE.md).
 
 ## Testes
 

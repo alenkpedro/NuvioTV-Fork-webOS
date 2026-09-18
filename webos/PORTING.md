@@ -15,6 +15,7 @@ Os caminhos de origem abaixo são relativos a `app/src/main/java/com/nuvio/tv/`.
 | `src/core/trailer.js` | Port de `data/local/TrailerSettingsDataStore.kt` e de `PostPlayRecommendationState.kt` (contador de 5 s). O player trabalha em segundos; o fork em milissegundos. |
 | `src/core/buffer.js` | Port das duas durações de `PlayerSettingsDataStore.BufferSettings` que o elemento de mídia da TV obedece (`bufferForPlaybackMs`, `bufferForPlaybackAfterRebufferMs`), com os padrões e faixas do fork e o tempo limite de espera. Ver [NETWORK.md](NETWORK.md). |
 | `src/core/speed-test.js` | Port de `core/network/StreamSpeedTester.kt` sobre o transporte do port: aquecimento, orçamento de bytes, janela e sub-janelas. O `StreamSweepEngine` (conexões paralelas) não tem equivalente. |
+| `service/media.js`, `service/media-core.js`, `src/core/media-service.js` | Port de `ui/screens/player/ParallelRangeDataSource.kt` (faixas paralelas, blocos retidos, limites de `MemoryBudget.kt`) executado no serviço Node do port: o player lê de `127.0.0.1` e o serviço busca as faixas com os cabeçalhos da fonte. Ver [MEDIA_SERVICE.md](MEDIA_SERVICE.md). |
 | `src/core/collections.js`, `collections-screen.js` | Port de `data/local/CollectionsDataStore.kt`, `domain/model/Collection.kt`, `CollectionManagementScreen.kt` e `CollectionEditorScreen.kt`: coleções, pastas, fontes de catálogo/TMDB e as fileiras da Home. A resolução de cada tipo de fonte do TMDB segue `core/tmdb/TmdbCollectionSourceResolver.kt`. Ver [COLLECTIONS.md](COLLECTIONS.md). |
 | `src/core/addons.js` | Contratos de `data/remote/api/AddonApi.kt` e comportamento de URLs de `data/repository/AddonRepositoryImpl.kt`; transporte substituído por fetch limitado/cancelável. |
 | `src/core/account.js`, `account-sync.js` | `core/auth/AuthManager.kt`, `ui/screens/account/AccountViewModel.kt`, `core/sync/AddonSyncService.kt`: vinculação, renovação, resolução de proprietário e leitura de addons do perfil principal. Ver [ACCOUNT.md](ACCOUNT.md). |
@@ -235,3 +236,16 @@ define os limiares, `PostPlayRecommendationController.kt` o ciclo de vida das
 recomendações e `PostPlayRecommendationOverlay.kt`/`PostPlayOverlay.kt` o layout.
 `PlayerSettingsDataStore.kt` fornece os padrões e a faixa de 80–100% do limite.
 Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).
+
+## Entrega 0.32 — serviço de mídia local
+
+`ui/screens/player/ParallelRangeDataSource.kt` abre várias conexões por faixa e só
+serve bytes que o leitor pediu. Um aplicativo web não pode fazer isso pelo elemento de
+mídia, então o mesmo comportamento passou para o serviço Node do port
+(`service/media.js`, `service/media-core.js`): o player requisita
+`http://127.0.0.1:<porta>/m/<token>` e o serviço busca as faixas em paralelo, com os
+cabeçalhos da fonte, mantendo a janela de blocos dentro do teto de memória
+(`MemoryBudget.kt`). O HUD do player passou a mostrar o que é medido (bitrate médio dos
+bytes decodificados, buffer, frames, transporte) em vez de declarar valores de
+cabeçalho. Recusas são explícitas e o player volta à URL original. Ver
+[MEDIA_SERVICE.md](MEDIA_SERVICE.md).

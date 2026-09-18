@@ -100,7 +100,16 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    rede local** (`fetch` com cabeçalhos e sem CORS, a base para Trakt/Simkl, debrid e plugins).
    O que falta para paridade com o webOS de referência, com o arquivo de cada mecanismo, está em
    [REFERENCE_SMART.md](REFERENCE_SMART.md). Ver [AUTO_PLAY.md](AUTO_PLAY.md).
-   **Próxima prioridade:** validação na LG, sincronização das coleções com a conta, avaliação do dispositivo e as integrações que ainda dependem de serviço Android. A tabela de paridade mantém os recursos pendentes.
+   **Transporte 0.32:** o port passou a ter o **serviço de mídia local** — faixas
+   paralelas com os cabeçalhos da fonte servidas em `127.0.0.1` para o player, com a
+   janela de blocos limitada pela memória (`ParallelRangeDataSource.kt`,
+   `MemoryBudget.kt`), ajuste em Reprodução → Buffer e Rede — e o **HUD do player**
+   passou a medir bitrate de vídeo/áudio pelos bytes decodificados, buffer, frames,
+   faixa de áudio e os contadores do transporte. Ver [MEDIA_SERVICE.md](MEDIA_SERVICE.md).
+   **Próxima prioridade:** a varredura de transporte (`StreamSweepEngine`) sobre este
+   serviço, o início rápido (busca de fontes antecipada), o acompanhamento MDBList como
+   fonte de progresso, a avaliação do dispositivo e a transferência de biblioteca — a
+   lista do que falta para paridade. Depois, validação na LG.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

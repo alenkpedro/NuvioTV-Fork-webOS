@@ -17,6 +17,8 @@ import { cacheDurationLabel, clearLinkCache, linkKey, readLink, writeLink } from
 import { postPlayCountdown, postPlayTrailerCountdown, shouldCountTrailer } from './core/trailer.js';
 import { bufferedAhead, bufferStatusText, initialTarget, rebufferTarget, waitForBuffer } from './core/buffer.js';
 import { formatSpeed, measureSources, speedBudget } from './core/speed-test.js';
+import { directFileURL, localTransportEnabled, readLocalMediaStats, startLocalMedia, stopLocalMedia, transportLabel } from './core/media-service.js';
+import { mediaTracks } from './core/media-tracks.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -1149,6 +1151,10 @@ function showPlayer(context) {
   const {controls,timeline,pause}=chrome;
   const screen = el('div', { class: 'player-screen controls-visible' }, video, chrome.top, loading.element, stats, controls); root.append(screen);
   let disposed = false, manuallyHidden=false, hideTimer, savedAt = 0, resumeApplied = false, episodes, seekPreview, pauseOverlay, segments, thumbnails, parental, postPlay, postPlayCandidates = [];
+  // Local media transport (ParallelRangeDataSource): when the user turns it on the player reads
+  // from 127.0.0.1 and the service pulls the ranges. `localMedia` keeps the handle so it can be
+  // reported in the HUD and stopped with the player.
+  let localMedia = null, localStats = null, localStatsAt = 0;
   const aspect=installAspect({video,settings:state.settings,persist,notify:toast});
   const listeners = [];
   const on = (event, fn) => { video.addEventListener(event, fn); listeners.push([event, fn]); };
@@ -1221,12 +1227,55 @@ function showPlayer(context) {
   function seekTo(target) { if (Number.isFinite(target) && Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.max(0, Math.min(video.duration - 0.1, target)); reveal(); }
   async function play() { try { await video.play(); } catch { if (!disposed) { loading.show('Pressione Reproduzir para iniciar.'); chrome.setPlaying(false); } } }
   function toggle() { video.paused ? play() : pauseOverlay.manualPause(); reveal(); }
+  // Stats for nerds: only what the TV can be measured to do. The decoded byte counters are
+  // the only honest bitrate source in a web player, so they are labelled as an average of
+  // what was decoded, not as a header value; what the platform does not expose stays
+  // "não medido" instead of being invented.
+  function decodedMbps(bytes) {
+    const seconds = video.currentTime;
+    if (!Number.isFinite(bytes) || bytes <= 0 || !(seconds > 1)) return null;
+    return (bytes * 8) / seconds / 1000;
+  }
+  function refreshLocalStats() {
+    if (!localMedia) return Promise.resolve(null);
+    if (localStats && Date.now() - localStatsAt < 2000) return Promise.resolve(localStats);
+    return readLocalMediaStats(localMedia.token).then(result => {
+      if (result && !disposed) { localStats = result; localStatsAt = Date.now(); }
+      return localStats;
+    });
+  }
+  function transportText() {
+    if (!localMedia) return 'Transporte: player nativo / HTTP(S)';
+    const measured = transportLabel(localMedia.settings);
+    if (!localStats) return `Transporte: local · ${measured}`;
+    const rows = [measured];
+    if (localStats.mbps > 0) rows.push(`${formatSpeed({ mbps: localStats.mbps, latencyMs: null }).split(' · ')[0]} medidos`);
+    rows.push(`${formatBytes(localStats.bytesFetched)} buscados`, `${formatBytes(localStats.bytesServed)} entregues`);
+    if (localStats.discardedBytes > 0) rows.push(`${formatBytes(localStats.discardedBytes)} descartados`);
+    if (localStats.failed > 0) rows.push(`${localStats.failed} bloco(s) com falha`);
+    return `Transporte: local · ${rows.join(' · ')}`;
+  }
   function updateStats() {
+    refreshLocalStats();
     if (stats.hidden) return;
     let buffered = 0;
     for (let i = 0; i < video.buffered.length; i++) if (video.buffered.start(i) <= video.currentTime && video.buffered.end(i) >= video.currentTime) buffered = video.buffered.end(i) - video.currentTime;
     const q = video.getVideoPlaybackQuality?.();
-    stats.textContent = `Resolução decodificada: ${video.videoWidth || '—'} × ${video.videoHeight || '—'}\nBuffer disponível: ${buffered.toFixed(1)} s\nFrames perdidos: ${q?.droppedVideoFrames ?? 'indisponível'}\nFonte: ${context.stream.addonName || 'direta'}\nHDR e saída de áudio: não medidos\nTransporte: player nativo / HTTP(S)`;
+    const videoMbps = decodedMbps(Number(video.webkitVideoDecodedByteCount));
+    const audioMbps = decodedMbps(Number(video.webkitAudioDecodedByteCount));
+    const audio = mediaTracks(video, 'audio').find(track => track.selected);
+    const lines = [
+      `Resolução decodificada: ${video.videoWidth || '—'} × ${video.videoHeight || '—'}`,
+      videoMbps ? `Bitrate de vídeo (média medida): ≈ ${videoMbps.toFixed(videoMbps >= 10 ? 0 : 1).replace('.', ',')} Mbps` : 'Bitrate de vídeo: a TV não expõe os bytes decodificados',
+      audioMbps ? `Bitrate de áudio (média medida): ≈ ${audioMbps.toFixed(1).replace('.', ',')} Mbps` : 'Bitrate de áudio: a TV não expõe os bytes decodificados',
+      `Buffer disponível: ${buffered.toFixed(1)} s${playbackPrefs().customBuffer ? ` (alvo ${initialTarget(playbackPrefs())} s / ${rebufferTarget(playbackPrefs())} s)` : ''}`,
+      q ? `Frames: ${q.droppedVideoFrames} perdidos de ${q.totalVideoFrames}` : 'Frames: indisponível nesta TV',
+      `Faixa de áudio: ${audio ? `${audio.name} · ${audio.language}` : 'a TV não expõe a lista de faixas'}`,
+      `Fonte: ${context.stream.addonName || 'direta'}`,
+      transportText(),
+      'HDR e saída de áudio: não medidos pela TV'
+    ];
+    stats.textContent = lines.join('\n');
   }
   on('loadedmetadata', () => { timeline.disabled = !Number.isFinite(video.duration) || video.duration <= 0; timeline.max = timeline.disabled ? 1 : video.duration; if (!resumeApplied && resume && !resume.complete && resume.time < video.duration - 10) { video.currentTime = resume.time; toast(`Retomando em ${clock(resume.time)}.`); } resumeApplied = true; if (pendingStart) { const target = pendingStart; pendingStart = 0; (async () => { try { await waitBuffer(target); } catch { return; } if (!disposed) await beginPlayback(); })(); } });
   // Buffer e Rede: the visual series needs the initial play, not a stall before it started.
@@ -1289,8 +1338,20 @@ function showPlayer(context) {
     if (!pauseOverlay?.isOpen()) play();
   }
   if (issue) loading.show(issue);
-  else {
-    video.src = context.stream.url;
+  else prepareSource();
+  // Buffer e Rede: com o serviço de mídia local ligado, o player lê de 127.0.0.1 e o serviço
+  // busca as faixas em paralelo (com os cabeçalhos da fonte). Sem o serviço, sem suporte a
+  // Range na fonte ou sem memória para as faixas, a URL original é usada — nunca tela preta.
+  async function prepareSource() {
+    const prefs = playbackPrefs();
+    if (localTransportEnabled(prefs) && directFileURL(context.stream.url)) {
+      loading.show('Abrindo o transporte local…');
+      const started = await startLocalMedia({ stream: context.stream, prefs, signal: request.signal }).catch(error => ({ ok: false, reason: error?.message }));
+      if (disposed) { if (started?.token) stopLocalMedia(started.token); return; }
+      if (started?.ok) { localMedia = started; localStats = null; localStatsAt = 0; }
+      else if (!started?.aborted) toast(`Transporte local indisponível: ${started?.reason || 'motivo desconhecido'}. Reproduzindo a fonte direta.`);
+    }
+    video.src = localMedia ? localMedia.url : context.stream.url;
     pendingStart = initialTarget(playbackPrefs());
     if (pendingStart) { tracks?.prepareSubtitles?.().catch(() => {}); } // prepara junto com a espera de buffer
     else beginPlayback();
@@ -1321,7 +1382,7 @@ function showPlayer(context) {
     if(chrome.key(key,hideControls)){e.preventDefault();return true;}
     reveal(); return false;
   } };
-  cleanupPlayer = () => { disposed = true; trailerPlayer.close(); loading.dispose(); segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
+  cleanupPlayer = () => { disposed = true; if (localMedia) { stopLocalMedia(localMedia.token); localMedia = null; localStats = null; } trailerPlayer.close(); loading.dispose(); segments.dispose(); thumbnails.dispose(); pauseOverlay.dispose(); parental.dispose(); postPlay.dispose(); save(); seekPreview.dispose(); clearInterval(clockTimer); upNext.dispose(); episodes.dispose(); aspect.dispose(); tracks.dispose(); for (const [event, fn] of listeners) video.removeEventListener(event, fn); video.pause(); video.removeAttribute('src'); video.load(); clearTimeout(hideTimer); document.removeEventListener('visibilitychange', visibility); };
   const controlSize=new ResizeObserver(()=>screen.style.setProperty('--subtitle-control-clearance',`${controls.offsetHeight+8}px`));controlSize.observe(controls);
   const disposeBase=cleanupPlayer;cleanupPlayer=()=>{controlSize.disconnect();disposeBase();};
   const artworkSignal=request.signal;
