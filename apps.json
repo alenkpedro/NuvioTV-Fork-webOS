@@ -9,24 +9,24 @@
     {
       "id": "org.nuviofork.webos",
       "title": "Nuvio Fork",
-      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.31.0/webos/public/assets/icon.png",
+      "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTVSmart-Fork-webOS/main/assets/images/icon.png",
       "manifest": {
         "id": "org.nuviofork.webos",
-        "version": "0.31.0",
+        "version": "1.1.3",
         "type": "web",
         "title": "Nuvio Fork",
-        "appDescription": "Trailer tocando dentro do app e serviço de rede local com cabeçalhos.",
-        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTV-Fork-webOS/webos-v0.31.0/webos/public/assets/icon.png",
-        "sourceUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/tree/webos-v0.31.0",
+        "appDescription": "Nuvio TV com os recursos do fork Android",
+        "iconUri": "https://raw.githubusercontent.com/alenkpedro/NuvioTVSmart-Fork-webOS/main/assets/images/icon.png",
+        "sourceUrl": "https://github.com/alenkpedro/NuvioTVSmart-Fork-webOS/tree/main",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/alenkpedro/NuvioTV-Fork-webOS/releases/download/webos-v0.31.0/org.nuviofork.webos_0.31.0_all.ipk",
+        "ipkUrl": "https://github.com/alenkpedro/NuvioTVSmart-Fork-webOS/releases/download/webos-v1.1.3/org.nuviofork.webos_1.1.3_all.ipk",
         "ipkHash": {
-          "sha256": "4fb25b9788379b3d6a8ff7dca26e5c0a1dc8ff267752c89e9ad39954b1235373"
+          "sha256": "f60f2a9d0b4f6bada95d0413a713093c5d1d97560d587f05a4092b230e426153"
         },
-        "ipkSize": 940062
+        "ipkSize": 5455914
       },
       "pool": "main",
-      "shortDescription": "Player do fork com trailer no app, coleções no tamanho do fork e serviço de rede."
+      "shortDescription": "Base oficial 1.1.2 com o buffer do fork, id e servi\u00e7os pr\u00f3prios."
     }
   ]
 }
