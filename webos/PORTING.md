@@ -237,6 +237,14 @@ recomendações e `PostPlayRecommendationOverlay.kt`/`PostPlayOverlay.kt` o layo
 `PlayerSettingsDataStore.kt` fornece os padrões e a faixa de 80–100% do limite.
 Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).
 
+## Entrega 0.33 — varredura de transporte
+
+`core/network/StreamSweepEngine.kt` escolhe a configuração de rede medindo a fonte real. No
+port a varredura mede o **serviço de mídia local** (`service/media.js: measure`) e aplica a
+vencedora na configuração do transporte: as escadas, os estágios (linha de base, subida de
+faixa, subida de conexões, vizinhança), as paradas assimétricas, o alvo de 2× o bitrate e o
+portão de memória estão em `src/core/transport-sweep.js`. Ver [MEDIA_SERVICE.md](MEDIA_SERVICE.md).
+
 ## Entrega 0.32 — serviço de mídia local
 
 `ui/screens/player/ParallelRangeDataSource.kt` abre várias conexões por faixa e só

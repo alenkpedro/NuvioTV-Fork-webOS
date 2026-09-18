@@ -1,4 +1,4 @@
-# Checklist de validação na LG 55UT8050 — versão 0.32.0
+# Checklist de validação na LG 55UT8050 — versão 0.33.0
 
 Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
 deve acontecer**; a validação física é a única coisa que os testes de navegador não
@@ -6,7 +6,7 @@ substituem. Veja também as pendências conhecidas no fim: elas já estão docum
 são falhas novas.
 
 > Esta versão nasceu das suas rodadas na TV: o **Bloco R** lista exatamente o que foi
-> corrigido a partir do seu relato, para conferência rápida. O **R11** é o desta versão.
+> corrigido a partir do seu relato, para conferência rápida. O **R12** é o desta versão.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -42,6 +42,20 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
 ## Bloco R — correções das rodadas na TV (0.31 a 0.25)
 
 Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R12. Nona rodada (0.33.0)
+- [ ] **Varredura de transporte** (lista de fontes de um filme com o transporte local ligado):
+      esperado aparecerem linhas por célula (`1× 1 MB`, `2× 1 MB`, …) com a taxa medida e o texto
+      de estabilidade, e no fim um veredito em português explicando o ganho.
+- [ ] **Uma conexão já alimenta o título**: esperado o veredito dizer para deixar em 1 e o botão de
+      aplicar mostrar `1× ...`.
+- [ ] **Aplicar**: tocar em **Usar N× M MB** e reproduzir de novo. Esperado o HUD mostrar a nova
+      configuração (`N×`) e a reprodução não travar.
+- [ ] **Células que não cabem**: com a janela em 8 MB, esperado as células de `2× 8 MB` aparecerem
+      como *não cabe na janela* e não serem medidas (o serviço não é chamado).
+- [ ] **Fonte limitando**: se a fonte cortar o tráfego, esperado o veredito dizer que ela está
+      limitando e a varredura parar sozinha.
+- [ ] **Voltar no meio da varredura**: esperado ela cancelar sem deixar bytes baixando em segundo plano.
 
 ### R11. Oitava rodada (0.32.0)
 - [ ] **Ligar o transporte local**: Ajustes → Reprodução → Buffer e Rede → **Serviço de mídia local**.

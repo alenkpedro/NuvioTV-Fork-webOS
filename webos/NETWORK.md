@@ -39,11 +39,10 @@ Port do que o player da TV consegue obedecer de `PlayerSettingsDataStore`
   (`9,4 Mbps · 230 ms`). Um corpo que chega em um único bloco não tem janela
   própria, então a taxa usa o tempo total da requisição (latência incluída) e o
   valor sai com `~`, marcando que é aproximado.
-- **A lista não muda**: a medição é informação, não um novo ranking. O port não
-  tem o `StreamSweepEngine` do fork (que testa conexões paralelas para escolher
-  uma configuração de rede) — as faixas paralelas vivem agora no
-  [serviço de mídia local](MEDIA_SERVICE.md), e a varredura de configurações é a
-  próxima entrega sobre aquele serviço.
+- **A lista não muda**: a medição é informação, não um novo ranking. O port também tem a
+  **varredura** do fork: **Varredura de transporte** na lista de fontes testa
+  combinações de conexões e faixas pelo [serviço de mídia local](MEDIA_SERVICE.md) e
+  aplica a vencedora no transporte, com as mesmas paradas e o mesmo alvo de 2× o bitrate.
 - Falha por fonte é reportada por fonte (`HTTP 403`, `tempo esgotado`, `falha de
   rede`, `nenhum byte recebido`) sem interromper a lista, como o fork registra uma
   célula que falhou e continua a varredura.

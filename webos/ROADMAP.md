@@ -106,10 +106,15 @@ de mudar o índice. Não colocar senhas ou dados reais da conta nos testes/captu
    `MemoryBudget.kt`), ajuste em Reprodução → Buffer e Rede — e o **HUD do player**
    passou a medir bitrate de vídeo/áudio pelos bytes decodificados, buffer, frames,
    faixa de áudio e os contadores do transporte. Ver [MEDIA_SERVICE.md](MEDIA_SERVICE.md).
-   **Próxima prioridade:** a varredura de transporte (`StreamSweepEngine`) sobre este
-   serviço, o início rápido (busca de fontes antecipada), o acompanhamento MDBList como
-   fonte de progresso, a avaliação do dispositivo e a transferência de biblioteca — a
-   lista do que falta para paridade. Depois, validação na LG.
+   **Varredura 0.33:** o `StreamSweepEngine.kt` passou a rodar sobre o serviço de mídia
+   local (`measure`): linha de base de uma conexão, subida de faixa a 2 conexões, subida
+   de conexões e vizinhança, paradas assimétricas (qualquer ganho abaixo do alvo, ≥10%
+   depois dele), alvo de 2× o bitrate, portão de memória por célula e detecção de fonte
+   limitando. O veredito aplica a configuração no transporte com um botão. Ver
+   [MEDIA_SERVICE.md](MEDIA_SERVICE.md).
+   **Próxima prioridade:** o início rápido (busca de fontes antecipada), o acompanhamento
+   MDBList como fonte de progresso, a avaliação do dispositivo e a transferência de
+   biblioteca — o resto da lista de paridade. Depois, validação na LG.
 5. **Integrações específicas do fork.** Direct Debrid, Trakt, Simkl, recursos de
    plugins e demais ajustes. Para cada integração, rastrear APIs e separar o que
    é portável do que depende de serviço/binário Android.

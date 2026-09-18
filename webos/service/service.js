@@ -25,4 +25,9 @@ service.register('mediastats',function(message){
 service.register('mediastop',function(message){
  message.respond({returnValue:true,data:media.stop(message.payload)});
 });
+// Uma célula da varredura: mede o transporte com a configuração pedida e devolve a taxa, as
+// sub-janelas e o motivo quando falhou. É o `StreamSpeedTester` do fork dentro do serviço.
+service.register('measure',function(message){
+ media.measure(message.payload).then(function(data){message.respond({returnValue:true,data:data});},function(error){message.respond({returnValue:false,errorText:String(error&&error.message||'Measure failed')});});
+});
 

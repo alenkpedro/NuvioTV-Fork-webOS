@@ -85,6 +85,15 @@ export async function startLocalMedia({ stream, prefs, signal, Bridge } = {}) {
     return { ok: false, reason: error?.message || 'falha do serviço local' };
   }
 }
+export function measureTransport({ stream, connections, chunkMb, windowMb, signal, Bridge } = {}) {
+  return callService('measure', {
+    url: stream?.url,
+    headers: stream?.behaviorHints?.proxyHeaders?.request || stream?.headers || {},
+    connections, chunkMb, windowMb
+  }, signal, Bridge, 30000)
+    .then(result => result || { ok: false, failure: 'o serviço não respondeu' })
+    .catch(error => ({ ok: false, failure: error?.name === 'AbortError' ? 'cancelado' : (error?.message || 'falha do serviço local') }));
+}
 export function stopLocalMedia(token, Bridge) {
   if (!token) return Promise.resolve(null);
   return callService('mediastop', { token }, undefined, Bridge, 5000).catch(() => null);

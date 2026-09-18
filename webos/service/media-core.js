@@ -136,6 +136,22 @@ function createChunkStore(windowBytes, chunkBytes) {
     stats: function () { return { chunks: entries.size, storedBytes: stored, windowBytes: windowBytes, chunkBytes: chunkBytes, counters: counters }; }
   };
 }
+// Sub-window rates from the tally samples: consecutive samples after the warm-up bytes. The
+// caller samples the same counter the headline uses, so this costs no extra traffic.
+function sampleRates(samples, warmupBytes) {
+  if (!Array.isArray(samples) || samples.length < 3) return [];
+  var rates = [], previous = null;
+  for (var index = 0; index < samples.length; index++) {
+    var sample = samples[index];
+    if (!sample || sample.bytes <= warmupBytes) { previous = null; continue; }
+    if (previous) {
+      var rate = mbpsFromBytes(sample.bytes - previous.bytes, sample.at - previous.at);
+      if (rate > 0) rates.push(rate);
+    }
+    previous = sample;
+  }
+  return rates;
+}
 // StreamSweepEngine's economy rule, applied to the transport the port actually owns: a
 // configuration is worth adopting only when it beats the current one by the same 10% bar.
 function betterCell(candidateMbps, currentMbps, tolerance) {
@@ -160,6 +176,7 @@ module.exports = {
   readAheadOffsets: readAheadOffsets,
   chunkLength: chunkLength,
   createChunkStore: createChunkStore,
+  sampleRates: sampleRates,
   betterCell: betterCell,
   mbpsFromBytes: mbpsFromBytes
 };

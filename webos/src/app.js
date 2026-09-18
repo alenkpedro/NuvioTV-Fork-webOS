@@ -16,9 +16,10 @@ import { autoPlayConfigured, autoPlayModeLabel, selectAutoPlayStream } from './c
 import { cacheDurationLabel, clearLinkCache, linkKey, readLink, writeLink } from './core/link-cache.js';
 import { postPlayCountdown, postPlayTrailerCountdown, shouldCountTrailer } from './core/trailer.js';
 import { bufferedAhead, bufferStatusText, initialTarget, rebufferTarget, waitForBuffer } from './core/buffer.js';
-import { formatSpeed, measureSources, speedBudget } from './core/speed-test.js';
-import { directFileURL, localTransportEnabled, readLocalMediaStats, startLocalMedia, stopLocalMedia, transportLabel } from './core/media-service.js';
+import { formatMbps, formatSpeed, measureSources, speedBudget } from './core/speed-test.js';
+import { directFileURL, localTransportEnabled, measureTransport, readLocalMediaStats, readMediaTransport, startLocalMedia, stopLocalMedia, transportLabel } from './core/media-service.js';
 import { mediaTracks } from './core/media-tracks.js';
+import { runSweep, stabilityText, sweepTarget } from './core/transport-sweep.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -825,10 +826,15 @@ async function showStreams(main, signal) {
   }, { class: provider === view.provider ? 'selected' : '', 'data-provider': String(provider), 'data-focus': `source-addon-${provider}` }));
   const speedNote = el('p', { class: 'stream-speed-note muted', role: 'status' }, 'A medição usa a fonte real, com um orçamento pequeno de bytes.');
   const speedButton = button('Testar velocidade', () => runSpeedTest(), { 'data-focus': 'source-speed', 'aria-label': 'Testar velocidade das fontes' });
+  // Varredura de transporte: o StreamSweepEngine do fork, medindo o serviço que o player usa.
+  // Cada célula custa bytes reais, então o orçamento, a escada e as paradas são os do fork,
+  // reduzidos ao que esta TV pode guardar na memória.
+  const sweepPanel = el('div', { class: 'sweep-panel', hidden: true });
+  const sweepButton = button('Varredura de transporte', () => runTransportSweep(sweepButton), { 'data-focus': 'source-sweep', 'aria-label': 'Varredura de transporte' });
   const actions = el('div', { class: 'stream-actions' }, button('Reproduzir melhor fonte', () => {
     const best = chooseBest(subset()); best ? playStream(context, best) : toast('Não há fonte HTTP(S) elegível nesta seleção.');
-  }, { 'data-focus': 'source-best' }), speedButton, toggle);
-  main.append(chips, count, list, speedNote, actions); display();
+  }, { 'data-focus': 'source-best' }), speedButton, sweepButton, toggle);
+  main.append(chips, count, list, speedNote, sweepPanel, actions); display();
   view.speed ||= {};
   // A medição roda sobre a fonte real, pelo mesmo transporte do player. O orçamento é
   // pequeno de propósito: são bytes do usuário (e do debrid), não um benchmark de banda.
@@ -853,6 +859,55 @@ async function showStreams(main, signal) {
       host.textContent = result ? formatSpeed(result) : '';
       host.hidden = !result;
     }
+  }
+  // StreamSweepEngine.run: as células, as paradas e o veredito vivem em
+  // core/transport-sweep.js; aqui a TV mostra as linhas, aplica o vencedor e explica o alvo.
+  // O alvo é 2× o bitrate médio do último título — o medido pelo HUD, quando ele já rodou, ou
+  // o que a própria fonte informa quando o tamanho e a duração são conhecidos.
+  function sourceBitrateMbps(stream, meta) {
+    const bytes = sizeBytes(stream);
+    const minutes = Number(String(meta?.runtime || '').match(/\d+/)?.[0]);
+    if (!(bytes > 0) || !(minutes > 0)) return null;
+    return (bytes * 8) / (minutes * 60) / 1e6;
+  }
+  async function runTransportSweep(trigger) {
+    const settings = readMediaTransport(readPlayback(state.settings.playback));
+    const candidates = subset().filter(s => directFileURL(s?.url) && !playbackIssue(s, state.settings.avoidDvOnly));
+    const target = rankStreams(candidates, state.settings.preferences)[0];
+    if (!target) { toast('Nenhuma fonte HTTP(S) direta nesta seleção. Playlists e torrents não passam pelo serviço.'); return; }
+    const bitrate = sourceBitrateMbps(target, context.meta);
+    const targetMbps = sweepTarget(bitrate);
+    sweepPanel.hidden = false;
+    sweepPanel.replaceChildren(
+      el('h3', {}, 'Varredura de transporte'),
+      el('p', { class: 'muted' }, `Fonte medida: ${target.name || target.title || 'fonte'} · janela de ${settings.windowMb} MB · ${targetMbps ? `alvo 2× o bitrate informado (${(bitrate).toFixed(1).replace('.', ',')} Mbps)` : 'sem bitrate conhecido: a varredura mede o transporte e para no vencedor'}`),
+      el('div', { class: 'sweep-rows' }),
+      el('p', { class: 'sweep-verdict muted', role: 'status' }, 'Medindo…'));
+    trigger.disabled = true;
+    const rowHost = sweepPanel.querySelector('.sweep-rows'), verdictHost = sweepPanel.querySelector('.sweep-verdict');
+    const renderRow = row => {
+      const cell = `${row.connections}:${row.chunkMb}`;
+      const existing = rowHost.querySelector(`[data-cell="${cell}"]`);
+      const node = existing || el('div', { class: 'sweep-row', 'data-cell': cell });
+      const detail = row.measuring ? 'medindo…' : row.skipped ? row.note : row.ok ? [formatMbps(row.mbps), stabilityText(row.stability), row.note].filter(Boolean).join(' · ') : row.note;
+      node.replaceChildren(el('strong', {}, row.label), el('span', { class: 'muted' }, detail || ''));
+      if (!existing) rowHost.append(node);
+    };
+    try {
+      const outcome = await runSweep({ windowMb: settings.windowMb, targetMbps, signal, onCell: renderRow, measure: cell => measureTransport({ stream: target, ...cell, signal }) });
+      if (signal.aborted) return;
+      verdictHost.textContent = outcome.verdict.text;
+      const winner = outcome.verdict.apply ? outcome.verdict.settings : null;
+      if (winner) sweepPanel.append(el('div', { class: 'toolbar' }, button(`Usar ${winner.connections}× ${winner.chunkMb} MB`, () => {
+        const prefs = readPlayback(state.settings.playback);
+        state.settings.playback = { ...prefs, localMediaService: true, mediaConnections: winner.connections, mediaChunkMb: winner.chunkMb, mediaWindowMb: Math.max(settings.windowMb, winner.connections * winner.chunkMb) };
+        persist();
+        toast(`Transporte local: ${winner.connections}× ${winner.chunkMb} MB. Vale para as próximas reproduções.`);
+        sweepButton.focus();
+      }, { 'data-focus': 'sweep-apply' })));
+    } catch (error) {
+      if (!signal.aborted) verdictHost.textContent = error?.name === 'AbortError' ? 'Varredura cancelada.' : `Não foi possível medir: ${error.message}`;
+    } finally { if (document.body.contains(trigger)) trigger.disabled = false; }
   }
 }
 function sourceCard(s,providers,choose,initial=false) {

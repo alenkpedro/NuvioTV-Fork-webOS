@@ -27,7 +27,7 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
-## Serviço de mídia local (0.32)
+## Serviço de mídia local e varredura (0.32–0.33)
 
 O port ganhou o **transporte de faixas paralelas** do fork. Em **Ajustes → Reprodução →
 Buffer e Rede**, **Serviço de mídia local** faz o player ler de `127.0.0.1`: o serviço
@@ -43,6 +43,14 @@ informações) passou a medir: bitrate médio de vídeo e áudio pelos bytes dec
 buffer com os alvos, frames perdidos, faixa de áudio e os contadores do transporte
 (buscados, entregues, descartados). HDR e saída de áudio continuam declarados como não
 medidos. [Regras, recusas e testes](MEDIA_SERVICE.md).
+
+**Varredura de transporte** (lista de fontes) roda o `StreamSweepEngine` do fork sobre este
+serviço: linha de base com uma conexão, subida de faixa, subida de conexões e vizinhança,
+parando quando uma conexão já alimenta o título (2× o bitrate, com a tolerância do fork) ou
+quando a fonte colapsa duas células seguidas. Cada célula mostra a taxa medida e a
+estabilidade das sub-janelas, e o veredito traz um botão **Usar N× M MB** que liga o
+transporte local com aquela configuração. Células que não caberiam na janela de memória são
+marcadas como ignoradas, nunca executadas.
 
 ## Trailer no app e serviço de rede (0.31)
 

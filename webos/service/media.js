@@ -249,6 +249,71 @@ function createSession(options) {
   };
 }
 
+var MEASURE = { warmupBytes: 256 * 1024, minBytes: 2 * MB, maxBytes: 8 * MB, minMs: 800, maxMs: 5000, subWindowMs: 500, timeoutMs: 20000 };
+// The cell under test pays for one window of blocks at least; never more than the ceiling,
+// because every cell is the user's own traffic (and the debrid provider's bandwidth).
+function measureBudget(config) {
+  var bytes = Math.max(MEASURE.minBytes, config.cellBytes);
+  return {
+    warmupBytes: MEASURE.warmupBytes,
+    measureBytes: Math.min(MEASURE.maxBytes, bytes),
+    minMs: MEASURE.minMs, maxMs: MEASURE.maxMs, subWindowMs: MEASURE.subWindowMs, timeoutMs: MEASURE.timeoutMs
+  };
+}
+// One sweep cell: read the transport with this configuration and report what was measured.
+// StreamSpeedTester's clock starts after the warm-up bytes and stops at the byte budget or
+// the window, whichever comes first; the sub-window series comes from a timer that samples
+// the same tally, never from the read loop (the fork learned that the hard way).
+function measure(payload) {
+  return new Promise(function (resolve) {
+    if (!valid(payload)) { resolve({ ok: false, failure: 'requisição inválida' }); return; }
+    var target = parseTarget(payload.url), headers = cleanHeaders(payload.headers);
+    var settings = core.readMediaSettings(payload), config = core.mediaConfig(settings);
+    if (!config.fitsWindow) { resolve({ ok: false, failure: 'a memória reservada é menor que os blocos em paralelo' }); return; }
+    probe(target, headers, { transports: payload.transports, timeoutMs: payload.timeoutMs }).then(function (info) {
+      var budget = measureBudget(config);
+      var session = createSession({ target: target, headers: headers, settings: settings, size: info.size, contentType: info.contentType, transports: payload.transports, timeoutMs: payload.timeoutMs });
+      var samples = [], started = Date.now(), stopped = false, failure = null;
+      var sampler = setInterval(function () { samples.push({ at: Date.now(), bytes: session.stats().bytesFetched }); }, budget.subWindowMs);
+      var end = Math.min(info.size - 1, budget.warmupBytes + budget.measureBytes - 1);
+      session.readRange(0, end, function () {
+        var stats = session.stats();
+        // The budget stops the cell: the transport answered, the clock is what ran out.
+        if (stats.bytesFetched >= budget.warmupBytes + budget.measureBytes || (Date.now() - started >= budget.maxMs && samples.length >= 2)) {
+          stopped = true;
+          throw new Error('__budget__');
+        }
+      }).then(function () { /* leu o arquivo inteiro */ }, function (error) {
+        var message = String(error && error.message || 'falha de rede');
+        if (message !== '__budget__') failure = message;
+      }).then(function () {
+        clearInterval(sampler);
+        var stats = session.stats();
+        session.dispose();
+        samples.push({ at: Date.now(), bytes: stats.bytesFetched });
+        resolve(measureResult(samples, stats, budget, failure, info.size, stopped));
+      });
+    }, function (error) { resolve({ ok: false, failure: String(error && error.message || 'a sonda recusou a fonte') }); });
+  });
+}
+function measureResult(samples, stats, budget, failure, size, stopped) {
+  var first = null;
+  for (var index = 0; index < samples.length; index++) {
+    if (samples[index].bytes > budget.warmupBytes) { first = samples[index]; break; }
+  }
+  var last = samples[samples.length - 1];
+  var measured = first ? Math.max(0, stats.bytesFetched - budget.warmupBytes) : 0;
+  var ms = first ? Math.max(0, last.at - first.at) : 0;
+  return {
+    ok: !failure && measured > 0,
+    failure: failure || (measured > 0 ? null : 'nenhum byte medido'),
+    mbps: core.mbpsFromBytes(measured, ms),
+    bytes: measured, ms: ms,
+    subWindows: core.sampleRates(samples, budget.warmupBytes),
+    truncated: !stopped && size > budget.warmupBytes + budget.measureBytes,
+    chunks: stats.chunks, failedChunks: stats.failed
+  };
+}
 function token() {
   var value = '';
   while (value.length < 24) value += Math.random().toString(36).slice(2);
@@ -363,6 +428,8 @@ module.exports = {
   probe: probe,
   createSession: createSession,
   createHandler: handleRequest,
+  measure: measure,
+  measureBudget: measureBudget,
   start: start,
   stats: stats,
   stop: stop,

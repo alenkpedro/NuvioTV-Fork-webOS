@@ -42,6 +42,45 @@ Ajuste em **Ajustes → Reprodução → Buffer e Rede → Serviço de mídia lo
 Um aviso na tela do player diz o motivo quando o transporte local foi pedido e não
 pôde ser usado. Nada é silencioso e nada é prometido sem medição.
 
+## Varredura de transporte (0.33)
+
+**Lista de fontes → Varredura de transporte** roda o `core/network/StreamSweepEngine.kt` do
+fork sobre o transporte que existe aqui: as células são medidas pelo **serviço de mídia
+local** (`measure`), e a vencedora é aplicada com um botão (`Usar N× M MB`), que liga o
+transporte local com aquela configuração.
+
+As escadas são menores que as do fork (8/16/32/64/128 MB e até 16 conexões) porque cada
+célula é tráfego real do usuário e a memória é compartilhada com o app:
+
+| | Fork | Port |
+|---|---|---|
+| Faixas | 8, 16, 32, 64, 128 MB | 1, 2, 4, 8 MB |
+| Conexões | 1 → 16 | 1, 2, 3, 4, 6, 8 |
+| Células por varredura | até 12 (+2) | até 8 (+1) |
+| Orçamento por célula | 8 MB de aquecimento + 64 MB medidos | 256 KB de aquecimento + até 8 MB medidos |
+| Sub-janelas | 500 ms | 500 ms |
+
+As regras de decisão são as do fork, e continuam sendo rastreáveis:
+
+- **Estágio 1 — linha de base (1 conexão).** Se uma conexão já alimenta o título, o veredito
+  é *deixe em 1* e a varredura encerra. Se a linha de base não transfere nada, ela também
+  encerra, como no fork.
+- **Estágio 2 — subida de faixa** a 2 conexões na escada 1/2/4/8 MB.
+- **Estágio 3/4 — subida de conexões e vizinhança** em torno da melhor célula.
+- **Paradas assimétricas**: enquanto o alvo não é atingido, qualquer ganho conta e **uma**
+  regressão ganha um passo de graça (duas seguidas param); com o alvo atingido, só ganhos de
+  **≥10%** são adotados (`betterCell`) e no máximo **uma** célula extra roda.
+- **Suficiência**: alvo = **2× o bitrate do título** (o informe da própria fonte quando
+  tamanho e duração são conhecidos), com a tolerância de 0,95 do fork.
+- **Memória**: uma célula que não cabe na janela é **marcada como ignorada**, nunca executada
+  (`MemoryBudget.overbudget`).
+- **Fonte limitando**: duas células colapsadas (falha ou abaixo do piso de 5% da linha de
+  base) param a subida e o veredito diz que a fonte está limitando o tráfego.
+
+O painel mostra cada célula com a taxa medida e a **estabilidade** (coeficiente de variação
+das sub-janelas: estável / oscilando / instável) e, no fim, o veredito com o ganho sobre uma
+conexão. Nada é aplicado sem o usuário mandar.
+
 ## HUD de diagnóstico (item 1 do fork: "proof, not vibes")
 
 O painel de informações do player (ícone de informações) passou a mostrar o que a TV
@@ -77,3 +116,8 @@ sufixo e o `416`, o cache com os contadores de descarte, a recusa de bloco trunc
 sessão com 1 e com 2 conexões (paralelismo medido no transporte falso), a falha de
 bloco, a sonda que exige `206 + Content-Range`, o payload enviado ao serviço, cada
 motivo de recusa e o cancelamento pelo controle remoto.
+
+A varredura tem o seu próprio arquivo de teste: `tests/transport-sweep.test.mjs` cobre as
+escadas, o portão de memória, o alvo de 2×, a estabilidade, a linha de base que já alimenta
+o título (para em 1 conexão), a linha de base que falha, as duas células colapsadas, as
+células ignoradas por memória, o teto de passagens e o cancelamento pelo controle remoto.
