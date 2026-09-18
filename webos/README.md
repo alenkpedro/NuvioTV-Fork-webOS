@@ -27,6 +27,16 @@ Depois abra **Início** ou **Busca**, selecione um título, episódio e fonte.
 Nenhum add-on, conta ou credencial vem instalado. A importação da conta inclui os addons habilitados do perfil selecionado.
 Outras configurações do Android ainda não são sincronizadas.
 
+## Início rápido das fontes (0.34)
+
+Abrir os **detalhes** de um título já busca e ranqueia as fontes em segundo plano: entrar em
+**Assistir** mostra a lista sem esqueleto e sem perguntar de novo aos add-ons, e apertar
+Assistir antes de a busca terminar espera a **mesma** requisição em vez de disparar outra.
+Escolher uma fonte abre a conexão daquele host com um `Range` de **um byte** antes de o
+player abrir a URL. O cache da busca vale 2 minutos e guarda 3 títulos. Desligue em
+**Ajustes → Reprodução → Player e Seleção de Fontes → Início rápido das fontes**.
+[Comportamento, limites e testes](START_SPEED.md).
+
 ## Serviço de mídia local e varredura (0.32–0.33)
 
 O port ganhou o **transporte de faixas paralelas** do fork. Em **Ajustes → Reprodução →

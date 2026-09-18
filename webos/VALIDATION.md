@@ -1,4 +1,4 @@
-# Checklist de validação na LG 55UT8050 — versão 0.33.0
+# Checklist de validação na LG 55UT8050 — versão 0.34.0
 
 Documento para uso na frente da TV (**webOS 25**). Cada item diz **o que fazer** e **o que
 deve acontecer**; a validação física é a única coisa que os testes de navegador não
@@ -6,7 +6,7 @@ substituem. Veja também as pendências conhecidas no fim: elas já estão docum
 são falhas novas.
 
 > Esta versão nasceu das suas rodadas na TV: o **Bloco R** lista exatamente o que foi
-> corrigido a partir do seu relato, para conferência rápida. O **R12** é o desta versão.
+> corrigido a partir do seu relato, para conferência rápida. O **R13** é o desta versão.
 
 > Versão para imprimir/levar para a TV: gere o PDF bonito com
 > `npm run checklist:pdf` (sai em `outputs/nuvio-lg-webos-checklist-tv.pdf`; use
@@ -42,6 +42,18 @@ Roteiro mínimo, se você só tiver 3 minutos: A1 → A2 → A3.
 ## Bloco R — correções das rodadas na TV (0.31 a 0.25)
 
 Confira nesta ordem; cada item foi corrigido a partir do que você viu na TV.
+
+### R13. Décima rodada (0.34.0)
+- [ ] **Abrir um título e ir direto em Assistir**: esperado a lista de fontes aparecer **sem o esqueleto**
+      (a busca aconteceu enquanto você lia os detalhes) e sem travar a navegação.
+- [ ] **Assistir imediatamente** (antes de a busca terminar): esperado o esqueleto aparecer e a lista chegar,
+      com os add-ons respondendo **uma vez** só (compare com o comportamento anterior na tela de fontes).
+- [ ] **Escolher uma fonte**: esperado o player abrir com o tempo de sempre ou um pouco melhor; um atraso
+      maior pode ser da própria fonte.
+- [ ] **Desligar o início rápido** (Ajustes → Reprodução → Player e Seleção de Fontes) e repetir: esperado
+      voltar ao comportamento antigo, com a busca só na lista de fontes.
+- [ ] **Voltar da lista de fontes** (retornar aos detalhes e entrar de novo): esperado a lista ser buscada
+      outra vez, sem mostrar resultado antigo.
 
 ### R12. Nona rodada (0.33.0)
 - [ ] **Varredura de transporte** (lista de fontes de um filme com o transporte local ligado):

@@ -20,6 +20,7 @@ import { formatMbps, formatSpeed, measureSources, speedBudget } from './core/spe
 import { directFileURL, localTransportEnabled, measureTransport, readLocalMediaStats, readMediaTransport, startLocalMedia, stopLocalMedia, transportLabel } from './core/media-service.js';
 import { mediaTracks } from './core/media-tracks.js';
 import { runSweep, stabilityText, sweepTarget } from './core/transport-sweep.js';
+import { createStreamPrewarmer } from './core/stream-prewarm.js';
 import { playbackSettingsScreen } from './playback-settings.js';
 import { settingsScreen } from './settings-screen.js';
 import { readAppearance, applyAppearance } from './core/appearance.js';
@@ -60,6 +61,27 @@ import './loading.css';
 
 const root = document.querySelector('#app');
 const state = readState(localStorage);
+// Início rápido: as fontes do título são buscadas e ranqueadas enquanto você lê os detalhes,
+// e a conexão é aberta no toque do botão. É o "faster stream start" do fork na parte que um
+// aplicativo web possui; o índice final de MP4 não-faststart pertence ao analisador do
+// elemento de mídia e não é prometido aqui.
+const prewarmEnabled = () => readPlayback(state.settings.playback).prewarmStreams !== false;
+const playbackRanking = rows => rankStreams(rows.filter(stream => !playbackIssue(stream, state.settings.avoidDvOnly)), state.settings.preferences);
+const prewarm = createStreamPrewarmer({
+  loadStreams: (context, options) => loadStreamRows(context, options),
+  rank: rows => ({ best: playbackRanking(rows)[0] || null })
+});
+// Stream search shared by the browse-time prewarm and the sources screen, so both see the same
+// rows, the same provider order and the same per-addon failure count.
+async function loadStreamRows(context, { signal } = {}) {
+  const providers = state.addons.filter(addon => supports(addon, 'stream', context.type, context.id)).slice(0, 30);
+  const responses = await mapLimit(providers, async (addon, provider) => {
+    const result = await getJSON(resourceURL(addon, 'stream', context.type, context.id), { signal });
+    if (!Array.isArray(result.streams)) throw Error('Resposta de fontes inválida.');
+    return result.streams.slice(0, 300).filter(s => s && typeof s === 'object').map((s, index) => ({ ...s, addonName: addon.manifest.name, sourceProvider: provider, sourceKey: `source-${provider}-${index}` }));
+  }, signal);
+  return { providers, rows: responses.flatMap(r => r.value ?? []), failed: responses.filter(r => r.error).length };
+}
 state.collections = readCollections(state.collections);
 state.settings.layout = readLayout(state.settings.layout);
 state.settings.appearance = readAppearance(state.settings.appearance);
@@ -733,10 +755,16 @@ async function showDetail(main, signal) {
   const extrasReady=detailExtras(metadataContext(main,signal),meta,addon);
   if(route.restoreFocus)await extrasReady;
   main.querySelectorAll('.detail-actions button, .synopsis').forEach(b => b.addEventListener('focus', () => { if (!pointerFocus) main.scrollTop = 0; }));
+  // Início rápido: enquanto você lê os detalhes, as fontes já estão sendo buscadas e
+  // ranqueadas — a lista abre com o que chegou e o toque em Reproduzir abre a conexão.
+  if (prewarmEnabled() && !signal.aborted) prewarm.prepare({ type: meta.type, id: meta.id, episode: route.episode || null, title: meta.name });
 }
 // One path for every way a source reaches the player, so the link cache sees the
 // same choice the fork saves in PlayerRuntimeControllerStreams.
 function playStream(context, stream) {
+  // Início rápido: a conexão com a fonte é aberta no toque (um Range de 1 byte), antes de o
+  // player abrir a URL — é o "opens the network connection at the press" do fork.
+  if (prewarmEnabled()) prewarm.warm(stream?.url);
   rememberLink(context, stream);
   navigate({ ...context, name: 'player', stream });
 }
@@ -780,16 +808,21 @@ async function showStreams(main, signal) {
       if (!document.hidden) { playStream(context, cachedStream(cached.link)); return; }
     }
   }
-  if (!view.rows || Date.now() - view.loadedAt > 120000) {
+  if (view.rows && Date.now() - view.loadedAt > 120000) view.rows = null;
+  // Início rápido: o que a tela de detalhes já buscou é usado aqui, sem esqueleto e sem
+  // perguntar de novo aos add-ons; se a busca ainda está em voo, esta tela espera a mesma
+  // requisição em vez de disparar uma segunda.
+  if (!view.rows) {
+    const prepared = prewarmEnabled() ? prewarm.take(context) : null;
+    if (prepared?.rows?.length) { view.rows = prepared.rows; view.failed = prepared.failed; view.loadedAt = Date.now(); }
+  }
+  if (!view.rows) {
+    const pending = prewarmEnabled() ? prewarm.prepare(context) : null;
     const loading = streamsSkeleton(el, { addons: providers.map(addon => addon.manifest.name) }); main.append(loading);
-    const responses = await mapLimit(providers, async (addon, provider) => {
-      const result = await getJSON(resourceURL(addon, 'stream', context.type, context.id), { signal });
-      if (!Array.isArray(result.streams)) throw Error('Resposta de fontes inválida.');
-      return result.streams.slice(0, 300).filter(s => s && typeof s === 'object').map((s, index) => ({ ...s, addonName: addon.manifest.name, sourceProvider: provider, sourceKey: `source-${provider}-${index}` }));
-    }, signal);
+    const loaded = pending ? await pending.promise : await loadStreamRows(context, { signal });
     if (!current(signal)) return; loading.remove();
-    view.rows = responses.flatMap(r => r.value ?? []);
-    view.failed = responses.filter(r => r.error).length; view.loadedAt = Date.now();
+    view.rows = loaded.rows ?? [];
+    view.failed = loaded.failed ?? 0; view.loadedAt = Date.now();
   }
   const all = view.rows;
   const chooseBest = rows => rankStreams(rows.filter(s => !playbackIssue(s, state.settings.avoidDvOnly)), state.settings.preferences)[0];

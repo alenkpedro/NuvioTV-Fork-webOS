@@ -242,6 +242,7 @@ export function settingsScreen(context) {
         toggle('Avisos de conteúdo', 'Exibir aviso de classificação indicativa ao iniciar a reprodução.', () => play().parentalGuide, value => updatePlayback({ parentalGuide: value }))),
       group('Pular automaticamente', 'Escolha quais trechos pular automaticamente', ...segmentTypes.map(([type, title, description]) => toggle(title, description, () => play().autoSkipTypes.includes(type), value => { const list = new Set(play().autoSkipTypes); value ? list.add(type) : list.delete(type); updatePlayback({ autoSkipTypes: [...list] }); }))),
       group('Player e Seleção de Fontes', 'Preferência, reprodução e filtros',
+        toggle('Início rápido das fontes', 'Busca e ranqueia as fontes enquanto você lê os detalhes e abre a conexão no toque. São requisições aos seus add-ons; desligado, a lista é buscada só ao entrar nela.', () => play().prewarmStreams, value => updatePlayback({ prewarmStreams: value })),
         row('Idiomas e próximo episódio', 'Áudio, legendas e continuidade de séries', () => navigate({ name: 'playback-settings' }), { leading: 'play' }),
         row('Preferências de fontes', 'Filtros, grupos de release e reprodução automática', () => navigate({ name: 'preferences' }))),
       group('Legendas', 'Idioma, estilo e renderização',

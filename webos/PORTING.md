@@ -237,6 +237,14 @@ recomendações e `PostPlayRecommendationOverlay.kt`/`PostPlayOverlay.kt` o layo
 `PlayerSettingsDataStore.kt` fornece os padrões e a faixa de 80–100% do limite.
 Ver [PARENTAL_POST_PLAY.md](PARENTAL_POST_PLAY.md).
 
+## Entrega 0.34 — início rápido das fontes
+
+`ui/screens/player/PlayerRuntimeControllerStreams.kt` e o pré-carregamento enquanto se
+navega: as fontes do título são buscadas e ranqueadas ao abrir os detalhes, a lista usa
+essa busca e a conexão é aberta no toque. `src/core/stream-prewarm.js`. O fim do
+over-fetch do índice final de MP4 pertence ao analisador do elemento de mídia e não é
+reivindicado. Ver [START_SPEED.md](START_SPEED.md).
+
 ## Entrega 0.33 — varredura de transporte
 
 `core/network/StreamSweepEngine.kt` escolhe a configuração de rede medindo a fonte real. No
